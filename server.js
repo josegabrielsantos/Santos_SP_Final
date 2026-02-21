@@ -1,5 +1,5 @@
+import 'dotenv/config';
 import express from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { v2 as cloudinary } from 'cloudinary';
@@ -14,8 +14,6 @@ import organizationRoutes from './routes/organization_routes.js';
 import paperRoutes from './routes/paper_routes.js';
 import adminRoutes from './routes/admin_routes.js';
 import searchRoutes from './routes/search_routes.js';
-
-dotenv.config();
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,

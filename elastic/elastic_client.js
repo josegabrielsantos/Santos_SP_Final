@@ -38,7 +38,6 @@ const kmsPostsMapping = {
   },
   mappings: {
     properties: {
-      _id:              { type: 'keyword' },
       title:            {
         type: 'text',
         analyzer: 'english',
@@ -68,7 +67,6 @@ const kmsPapersMapping = {
   },
   mappings: {
     properties: {
-      _id:              { type: 'keyword' },
       title:            {
         type: 'text',
         analyzer: 'english',
@@ -123,8 +121,6 @@ export async function ensureIndexes() {
 
 export async function syncExistingData() {
   try {
-    // Ensure indexes exist first
-    await ensureIndexes();
 
     // Dynamic imports to avoid circular dependency with models that import esSync
     const { default: Post } = await import('../models/post_model.js');

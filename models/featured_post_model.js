@@ -6,12 +6,10 @@ const featuredPostSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Post',
       required: true,
-      unique: true, // A post can only be featured once
     },
     order: {
       type: Number,
       required: true,
-      index: true,
     },
     addedBy: {
       type: mongoose.Schema.Types.ObjectId,
