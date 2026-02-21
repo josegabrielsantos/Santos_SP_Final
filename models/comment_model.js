@@ -1,28 +1,50 @@
-import mongoose, { mongo } from "mongoose";
+import mongoose from 'mongoose';
 
-const commentSchema = new mongoose.Schema({
-    text: {
-        type: String,
-        required: true,
+const commentSchema = new mongoose.Schema(
+  {
+    postId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Post',
+      required: true,
+      index: true,
     },
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
+    authorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
     },
-    post: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Post',
-        required: true,
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Comment',
+      default: null,
+      index: true,
     },
-    comment: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Comment',
-        required: true,
+    body: {
+      type: String,
+      required: true,
+      maxlength: 2000,
     },
-    
-}, {timestamps: true});
+    likeCount: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    isHidden: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    isDeleted: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+  },
+  { timestamps: true }
+);
 
-const Comment = mongoose.model("Comment", commentSchema);
+// Compound index for comment thread queries
+commentSchema.index({ postId: 1, parentId: 1, createdAt: 1 });
 
+const Comment = mongoose.model('Comment', commentSchema);
 export default Comment;

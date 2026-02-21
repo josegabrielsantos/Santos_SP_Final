@@ -1,445 +1,194 @@
-import bcrypt from 'bcryptjs';
-import {v2 as cloudinary} from 'cloudinary';
-
-import User from "../models/user_model.js";
-import Notification from "../models/notification_model.js";
+import User from '../models/user_model.js';
 import Organization from '../models/organization_model.js';
-const getMe = async (req, res) => {
-    try {
-        const user = await User.findById(req.user._id).select("-password");
-        res.status(200).json(user);
-    } catch (error) {
-        console.log("Error in getMe controller", error.message);
-        res.status(500).json({ error: "Internal Server Error."});
+import Post from '../models/post_model.js';
+import { v2 as cloudinary } from 'cloudinary';
+
+/**
+ * GET /api/users/:id
+ * Public profile
+ */
+const getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-__v');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
     }
-}
-const getUserProfile = async (req, res) => {
-    const {id} = req.params;
+    res.status(200).json(user);
+  } catch (error) {
+    console.log('Error in getUserById:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
 
-    try {
-        const user = await User.findById(id).select("-password");
-
-        if(!user){
-            return res.status(404).json({message: "User not found."});
-        }
-        res.status(200).json(user);
-    } catch (error) {
-        console.log("Error in getUserProfile");
-        res.status(500).json({error:error.message});
-    }
-}
-
-const updateUserProfile = async (req, res) => {
-    const {firstName, lastName, middleName, currentPassword, newPassword, affiliation, researchInterests, expertiseAreas} = req.body;
-    let profilePicture = req.body.profilePicture;
+/**
+ * PUT /api/users/profile
+ * Update own profile (displayName, avatar, bio, dateOfBirth, expertise, certifications)
+ */
+const updateProfile = async (req, res) => {
+  try {
     const userId = req.user._id;
+    const { displayName, bio, dateOfBirth, expertise, certifications } = req.body;
+    let { avatar } = req.body;
 
-    try {
-        let user = await User.findById(userId);
-        
-        if(!user) return res.status(404).json({error: "User not found." });
-
-        if((!newPassword && currentPassword) || (!currentPassword && newPassword)){
-            return res.status(400).json({error: "Provide current and new password." });
-        }
-
-        if(currentPassword && newPassword){
-            const isMatch = await bcrypt.compare(currentPassword, user.password);
-            if(!isMatch) return res.status(400).json({error: "Password provided is incorrect." });
-            if(newPassword.length < 8) return res.status(400).json({error: "Password must be at least 8 characters long." });
-
-            const salt = await bcrypt.genSalt(10);
-            user.password = await bcrypt.hash(newPassword, salt);
-        }
-
-        // Check email uniqueness if email is being updated
-        // if(email && email !== user.email) {
-        //     const existingUser = await User.findOne({ email: email.toLowerCase() });
-        //     if(existingUser) {
-        //         return res.status(400).json({error: "Email already exists." });
-        //     }
-        // }
-
-        // Handle profile picture upload
-        if(profilePicture){
-            // Only destroy if it's a Cloudinary URL (not the default URL)
-            if(user.profilePicture && user.profilePicture.includes('cloudinary')) {
-                try {
-                    await cloudinary.uploader.destroy(user.profilePicture.split("/").pop().split(".")[0]);
-                } catch (cloudinaryError) {
-                    console.log("Error destroying old image:", cloudinaryError);
-                    // Continue execution even if destroy fails
-                }
-            }
-
-            const uploadedPicture = await cloudinary.uploader.upload(profilePicture);
-            profilePicture = uploadedPicture.secure_url;
-        }
-
-        // Update basic fields
-        user.firstName = firstName || user.firstName;
-        user.lastName = lastName || user.lastName;
-        user.middleName = middleName || user.middleName;
-        user.email = email || user.email;
-        user.profilePicture = profilePicture || user.profilePicture;
-        
-        // Update new profile fields
-        user.affiliation = affiliation !== undefined ? affiliation : user.affiliation;
-        user.researchInterests = researchInterests !== undefined ? researchInterests : user.researchInterests;
-        user.expertiseAreas = expertiseAreas !== undefined ? expertiseAreas : user.expertiseAreas;
-
-        user = await user.save();
-        
-        // Return user without password
-        const userResponse = user.toObject();
-        delete userResponse.password;
-
-        return res.status(200).json(userResponse);
-    } catch (error) {
-        console.log("Error in updateUserProfile");
-        res.status(500).json({error: error.message});
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
     }
-}
 
-
-const getMyFollowedOrganizations = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        
-        const user = await User.findById(userId)
-            .populate('followingOrganization', 'name description logo website email followers members')
-            .select('followingOrganization');
-        
-        if(!user) {
-            return res.status(404).json({error: "User not found."});
-        }
-        
-        res.status(200).json({
-            followedOrganizations: user.followingOrganization,
-            count: user.followingOrganization.length
-        });
-    } catch (error) {
-        console.log("Error in getUserFollowedOrganizations");
-        res.status(500).json({error: error.message});
+    // Handle avatar upload
+    if (avatar) {
+      // Delete old avatar from Cloudinary if it existed
+      if (user.avatar) {
+        const publicId = user.avatar.split('/').pop().split('.')[0];
+        await cloudinary.uploader.destroy(publicId);
+      }
+      const uploadResponse = await cloudinary.uploader.upload(avatar, {
+        folder: 'kms/avatars',
+      });
+      avatar = uploadResponse.secure_url;
     }
-}
 
-const getMyMemberships = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        
-        const user = await User.findById(userId)
-            .populate('memberOrganizations', 'name description logo website email followers members')
-            .select('memberOrganizations');
-        
-        if(!user) {
-            return res.status(404).json({error: "User not found."});
-        }
-        
-        res.status(200).json({
-            memberships: user.memberOrganizations,
-            count: user.memberOrganizations.length
-        });
-    } catch (error) {
-        console.log("Error in getUserMemberships");
-        res.status(500).json({error: error.message});
-    }
-}
+    if (displayName !== undefined) user.displayName = displayName;
+    if (avatar !== undefined) user.avatar = avatar;
+    if (bio !== undefined) user.bio = bio;
+    if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
+    if (expertise !== undefined) user.expertise = expertise;
+    if (certifications !== undefined) user.certifications = certifications;
 
-const getMyLikedPosts = async (req, res) => {
-    try {
-        const {id} = req.params;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-        
-        const user = await User.findById(id)
-            .populate({
-                path: 'likedPosts',
-                populate: [
-                    {
-                        path: 'author',
-                        select: 'firstName lastName profilePicture'
-                    },
-                    {
-                        path: 'organization',
-                        select: 'name logo'
-                    }
-                ],
-                options: {
-                    sort: { createdAt: -1 },
-                    skip: skip,
-                    limit: limit
-                }
-            })
-            .select('likedPosts');
-        
-        if(!user) {
-            return res.status(404).json({error: "User not found."});
-        }
-        
-        // Get total count for pagination
-        const totalLikedPosts = await User.findById(id).select('likedPosts');
-        const totalCount = totalLikedPosts.likedPosts.length;
-        
-        res.status(200).json({
-            likedPosts: user.likedPosts,
-            pagination: {
-                currentPage: page,
-                totalPages: Math.ceil(totalCount / limit),
-                totalPosts: totalCount,
-                hasNextPage: page < Math.ceil(totalCount / limit),
-                hasPrevPage: page > 1
-            }
-        });
-    } catch (error) {
-        console.log("Error in getUserLikedPosts");
-        res.status(500).json({error: error.message});
-    }
-}
+    await user.save();
+    res.status(200).json(user);
+  } catch (error) {
+    console.log('Error in updateProfile:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
 
-const getMyPosts = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-        
-        const user = await User.findById(userId)
-            .populate({
-                path: 'posts',
-                populate: [
-                    {
-                        path: 'organization',
-                        select: 'name logo'
-                    }
-                ],
-                options: {
-                    sort: { createdAt: -1 },
-                    skip: skip,
-                    limit: limit
-                }
-            })
-            .select('posts');
-        
-        if(!user) {
-            return res.status(404).json({error: "User not found."});
-        }
-        
-        // Get total count for pagination
-        const totalUserPosts = await User.findById(userId).select('posts');
-        const totalCount = totalUserPosts.posts.length;
-        
-        res.status(200).json({
-            posts: user.posts,
-            pagination: {
-                currentPage: page,
-                totalPages: Math.ceil(totalCount / limit),
-                totalPosts: totalCount,
-                hasNextPage: page < Math.ceil(totalCount / limit),
-                hasPrevPage: page > 1
-            }
-        });
-    } catch (error) {
-        console.log("Error in getUserPosts");
-        res.status(500).json({error: error.message});
-    }
-}
+/**
+ * GET /api/users/:id/organizations
+ * Return organizations where user is admin or member
+ */
+const getUserOrganizations = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const orgs = await Organization.find({
+      $or: [{ adminIds: userId }, { memberIds: userId }],
+      isActive: true,
+    }).select('name slug avatar memberCount postCount');
 
-const getMyPendingPosts = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        
-        const user = await User.findById(userId)
-            .populate({
-                path: 'applicationsForPosts',
-                populate: [
-                    {
-                        path: 'organization',
-                        select: 'name logo'
-                    }
-                ],
-                options: {
-                    sort: { createdAt: -1 },
-                    skip,
-                    limit,
-                }
-            })
-            .select('applicationsForPosts');
-        
-        if(!user) {
-            return res.status(404).json({error: "User not found."});
-        }
-        
-        res.status(200).json({
-            applicationsForPosts: user.applicationsForPosts,
-            count: user.applicationsForPosts.length
-        });
-    } catch (error) {
-        console.log("Error in getmyPendingPosts");
-        res.status(500).json({error: error.message});
-    }
-}
+    res.status(200).json(orgs);
+  } catch (error) {
+    console.log('Error in getUserOrganizations:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
 
-const getUserFollowedOrganizations = async (req, res) => {
-    try {
-        const {id} = req.params;
-        
-        const user = await User.findById(id)
-            .populate('followingOrganization', 'name description logo website email followers members')
-            .select('followingOrganization');
-        
-        if(!user) {
-            return res.status(404).json({error: "User not found."});
-        }
-        
-        res.status(200).json({
-            followedOrganizations: user.followingOrganization,
-            count: user.followingOrganization.length
-        });
-    } catch (error) {
-        console.log("Error in getUserFollowedOrganizations");
-        res.status(500).json({error: error.message});
-    }
-}
-
-// Get user's organization memberships
-const getUserMemberships = async (req, res) => {
-    try {
-        const {id} = req.params;
-    
-        const user = await User.findById(id)
-            .populate('memberOrganizations', 'name description logo website email followers members')
-            .select('memberOrganizations');
-        
-        if(!user) {
-            return res.status(404).json({error: "User not found."});
-        }
-        
-        res.status(200).json({
-            memberships: user.memberOrganizations,
-            count: user.memberOrganizations.length
-        });
-    } catch (error) {
-        console.log("Error in getUserMemberships");
-        res.status(500).json({error: error.message});
-    }
-}
-
-// Get user's liked posts
-const getUserLikedPosts = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-        
-        const user = await User.findById(userId)
-            .populate({
-                path: 'likedPosts',
-                populate: [
-                    {
-                        path: 'author',
-                        select: 'firstName lastName profilePicture'
-                    },
-                    {
-                        path: 'organization',
-                        select: 'name logo'
-                    }
-                ],
-                options: {
-                    sort: { createdAt: -1 },
-                    skip: skip,
-                    limit: limit
-                }
-            })
-            .select('likedPosts');
-        
-        if(!user) {
-            return res.status(404).json({error: "User not found."});
-        }
-        
-        // Get total count for pagination
-        const totalLikedPosts = await User.findById(userId).select('likedPosts');
-        const totalCount = totalLikedPosts.likedPosts.length;
-        
-        res.status(200).json({
-            likedPosts: user.likedPosts,
-            pagination: {
-                currentPage: page,
-                totalPages: Math.ceil(totalCount / limit),
-                totalPosts: totalCount,
-                hasNextPage: page < Math.ceil(totalCount / limit),
-                hasPrevPage: page > 1
-            }
-        });
-    } catch (error) {
-        console.log("Error in getUserLikedPosts");
-        res.status(500).json({error: error.message});
-    }
-}
-
-// Get user's created postsawda
+/**
+ * GET /api/users/:id/posts
+ * Return published posts by the user
+ */
 const getUserPosts = async (req, res) => {
-    try {
-        const {id} = req.params;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-        
-        const user = await User.findById(id)
-            .populate({
-                path: 'posts',
-                populate: [
-                    {
-                        path: 'organization',
-                        select: 'name logo'
-                    }
-                ],
-                options: {
-                    sort: { createdAt: -1 },
-                    skip: skip,
-                    limit: limit
-                }
-            })
-            .select('posts');
-        
-        if(!user) {
-            return res.status(404).json({error: "User not found."});
-        }
-        
-        // Get total count for pagination
-        const totalUserPosts = await User.findById(id).select('posts');
-        const totalCount = totalUserPosts.posts.length;
-        
-        res.status(200).json({
-            posts: user.posts,
-            pagination: {
-                currentPage: page,
-                totalPages: Math.ceil(totalCount / limit),
-                totalPosts: totalCount,
-                hasNextPage: page < Math.ceil(totalCount / limit),
-                hasPrevPage: page > 1
-            }
-        });
-    } catch (error) {
-        console.log("Error in getUserPosts");
-        res.status(500).json({error: error.message});
+  try {
+    const userId = req.params.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const posts = await Post.find({ authorId: userId, status: 'published' })
+      .sort({ publishedAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('authorId', 'displayName avatar')
+      .populate('organizationId', 'name slug avatar');
+
+    const total = await Post.countDocuments({ authorId: userId, status: 'published' });
+
+    res.status(200).json({ posts, total, page, pages: Math.ceil(total / limit) });
+  } catch (error) {
+    console.log('Error in getUserPosts:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * GET /api/users
+ * List all users (admin only via route middleware)
+ */
+const getAllUsers = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const users = await User.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select('-__v');
+
+    const total = await User.countDocuments();
+
+    res.status(200).json({ users, total, page, pages: Math.ceil(total / limit) });
+  } catch (error) {
+    console.log('Error in getAllUsers:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * PATCH /api/users/:id/role
+ * Change a user's role (website_admin only)
+ */
+const updateUserRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['user', 'website_admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role.' });
     }
-}
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.log('Error in updateUserRole:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * PATCH /api/users/:id/deactivate
+ * Toggle isActive (website_admin only)
+ */
+const toggleUserActive = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    user.isActive = !user.isActive;
+    await user.save();
+
+    res.status(200).json({ _id: user._id, isActive: user.isActive });
+  } catch (error) {
+    console.log('Error in toggleUserActive:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
 
 export {
-    getMe,
-    getMyMemberships,
-    getMyPosts,
-    getMyLikedPosts,
-    getMyFollowedOrganizations,
-    getMyPendingPosts,
-
-    getUserProfile,
-    updateUserProfile,
-    getUserFollowedOrganizations,
-    getUserMemberships,
-    getUserLikedPosts,
-    getUserPosts,
+  getUserById,
+  updateProfile,
+  getUserOrganizations,
+  getUserPosts,
+  getAllUsers,
+  updateUserRole,
+  toggleUserActive,
 };

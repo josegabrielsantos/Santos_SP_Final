@@ -1,190 +1,76 @@
-// import mongoose, { mongo } from "mongoose";
+import mongoose from 'mongoose';
+import slugify from 'slugify';
 
-// const organizationSchema = new mongoose.Schema(
-//     {
-//       name: {
-//         type: String,
-//         required: true,
-//         unique: true,
-//         trim: true,
-//       },
-//       description: {
-//         type: String,
-//         required: true,
-//         trim: true,
-//       },
-//       logo: {
-//         type: String, // URL to the organization's logo
-//         default: 'https://example.com/default-logo.png', // Optional default logo
-//       },
-//       website: {
-//         type: String, // URL to the organization's website
-//         default: null,
-//       },
-//       email: {
-//         type: String,
-//         required: true,
-//         unique: true,
-//         lowercase: true,
-//         trim: true,
-//       },
-//       password: {
-//         type: String,
-//         required: true,
-//         min: 8,
-//       },
-//       followers: [
-//         {
-//           type: mongoose.Schema.Types.ObjectId,
-//           ref: 'User', // Reference to the User collection
-//         },
-//       ],
-//       members: [
-//         {
-//           type: mongoose.Schema.Types.ObjectId,
-//           ref: 'User', // Reference to the User collection
-//         }
-//       ],
-//       applicants: [
-//         {
-//           type: mongoose.Schema.Types.ObjectId,
-//           ref: 'User', // Reference to the User collection
-//         }
-//       ],
-//       posts: [
-//         {
-//           type: mongoose.Schema.Types.ObjectId,
-//           ref: 'Post', // Reference to the Post collection
-//         },
-//       ],
-//       pendingPosts: [
-//         {
-//           type: mongoose.Schema.Types.ObjectId,
-//           ref: 'Post', // Reference to the Post collection
-//         },
-//       ],
-//     },
-//     {
-//       timestamps: true,
-//     }
-// );
-
-// const Organization = mongoose.model("Organization", organizationSchema);
-
-// export default Organization;
-
-import mongoose from "mongoose";
-
-const topicSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 50
-  },
-  color: {
-    type: String,
-    default: '#3b82f6',
-    match: /^#[0-9A-Fa-f]{6}$/
-  },
-  backgroundColor: {
-    type: String,
-    default: '#eff6ff',
-    match: /^#[0-9A-Fa-f]{6}$/
-  },
-  icon: {
-    type: String,
-    maxlength: 10 // emoji or icon identifier
-  }
-}, { _id: false });
-
-const organizationSchema = new mongoose.Schema({
-    organizationName: {
-        type: String,
-        required: true,
-        trim: true
+const organizationSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+    slug: {
+      type: String,
+      unique: true,
+      index: true,
     },
     description: {
-        type: String,
-        default: "",
-        trim: true
+      type: String,
+      maxlength: 1000,
+      default: null,
     },
-    contactNumber: {
-        type: String,
-        default: "",
-        trim: true
+    bannerImage: {
+      type: String,
+      default: null,
     },
-    website: {
-        type: String,
-        default: "",
-        trim: true
+    avatar: {
+      type: String,
+      default: null,
     },
-    profilePicture: {
-        type: String,
-        default: ""
+    adminIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      required: true,
+      validate: {
+        validator: (v) => v.length >= 1,
+        message: 'At least one admin is required.',
+      },
     },
-    coverPhoto: {
-        type: String,
-        default: ""
+    memberIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
     },
-    owner: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
+    followerIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
     },
-    admins: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
-    }],
-    topics: {
-        type: [topicSchema],
-        default: []
+    isActive: {
+      type: Boolean,
+      required: true,
+      default: true,
     },
-    followers: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
-    }],
-    members: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
-    }],
-    posts: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Post"
-    }],
-    pendingPosts: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Post"
-    }],
-    authors: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
-    }],
-    statistics: {
-        totalPosts: {
-            type: Number,
-            default: 0
-        },
-        totalMembers: {
-            type: Number,
-            default: 0
-        },
-        totalFollowers: {
-            type: Number,
-            default: 0
-        } 
-    }
-}, {
-    timestamps: true
+    postCount: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    memberCount: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+  },
+  { timestamps: true }
+);
+
+// Auto-generate slug from name before saving
+organizationSchema.pre('save', function (next) {
+  if (this.isModified('name') || !this.slug) {
+    this.slug = slugify(this.name, { lower: true, strict: true });
+  }
+  // Keep memberCount in sync with memberIds array
+  this.memberCount = this.memberIds.length;
+  next();
 });
 
-organizationSchema.pre("save", function() {
-    this.statistics.totalMembers = this.members.length;
-    this.statistics.totalFollowers = this.followers.length;
-    this.statistics.totalPosts = this.posts.length;
-});
-
-const Organization = mongoose.model("Organization", organizationSchema);
-
+const Organization = mongoose.model('Organization', organizationSchema);
 export default Organization;

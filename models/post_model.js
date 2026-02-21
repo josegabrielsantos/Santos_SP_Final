@@ -1,635 +1,182 @@
-// import mongoose from 'mongoose';
+import mongoose from 'mongoose';
 
-// const postSchema = new mongoose.Schema({
-//     title: {
-//         type: String,
-//         required: true,
-//         trim: true,
-//         maxLength: 200
-//     },
-    
-//     content: {
-//         type: String,
-//         required: true,
-//         trim: true,
-//         maxLength: 10000
-//     },
-    
-//     // Post type/category
-//     category: {
-//         type: String,
-//         enum: ['announcement', 'research', 'discussion', 'news', 'event', 'question', 'other'],
-//         default: 'other'
-//     },
-    
-//     // Tags for categorization
-//     tags: [{
-//         type: String,
-//         trim: true,
-//         lowercase: true
-//     }],
-    
-//     // Author (user who created the post)
-//     author: {
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref: 'User',
-//         required: true
-//     },
-    
-//     // Organization where post is published
-//     organization: {
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref: 'Organization',
-//         required: true
-//     },
-    
-//     // Post visibility
-//     isPublic: {
-//         type: Boolean,
-//         default: true
-//     },
-    
-//     // Post status for approval workflow
-//     status: {
-//         type: String,
-//         enum: ['draft', 'pending', 'approved', 'rejected', 'archived'],
-//         default: 'pending'
-//     },
-    
-//     // Likes
-//     likes: [{
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref: 'User'
-//     }],
-    
-//     // Comments
-//     comments: [{
-//         author: {
-//             type: mongoose.Schema.Types.ObjectId,
-//             ref: 'User',
-//             required: true
-//         },
-//         content: {
-//             type: String,
-//             required: true,
-//             trim: true,
-//             maxLength: 1000
-//         },
-//         createdAt: {
-//             type: Date,
-//             default: Date.now
-//         },
-//         likes: [{
-//             type: mongoose.Schema.Types.ObjectId,
-//             ref: 'User'
-//         }],
-//         replies: [{
-//             author: {
-//                 type: mongoose.Schema.Types.ObjectId,
-//                 ref: 'User',
-//                 required: true
-//             },
-//             content: {
-//                 type: String,
-//                 required: true,
-//                 trim: true,
-//                 maxLength: 500
-//             },
-//             createdAt: {
-//                 type: Date,
-//                 default: Date.now
-//             }
-//         }]
-//     }],
-    
-//     // Images/attachments
-//     images: [{
-//         url: String,
-//         caption: String,
-//         uploadedAt: {
-//             type: Date,
-//             default: Date.now
-//         }
-//     }],
-    
-//     // Link preview (if post contains links)
-//     linkPreview: {
-//         url: String,
-//         title: String,
-//         description: String,
-//         image: String
-//     },
-    
-//     // Priority/pinned status
-//     isPinned: {
-//         type: Boolean,
-//         default: false
-//     },
-    
-//     // View count
-//     viewCount: {
-//         type: Number,
-//         default: 0
-//     },
-    
-//     // Scheduled publishing
-//     scheduledAt: {
-//         type: Date
-//     },
-    
-//     // Admin who approved/rejected the post
-//     reviewedBy: {
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref: 'User'
-//     },
-    
-//     reviewedAt: {
-//         type: Date
-//     },
-    
-//     rejectionReason: {
-//         type: String,
-//         trim: true
-//     }
-// }, {
-//     timestamps: true
-// });
+// -- Poll sub-schemas --
 
-// // Indexes for better query performance
-// postSchema.index({ organization: 1, createdAt: -1 });
-// postSchema.index({ author: 1, createdAt: -1 });
-// postSchema.index({ status: 1 });
-// postSchema.index({ category: 1 });
-// postSchema.index({ tags: 1 });
-// postSchema.index({ title: 'text', content: 'text', tags: 'text' });
-// postSchema.index({ likes: 1 });
-// postSchema.index({ isPinned: 1, createdAt: -1 });
-
-// // Virtual for like count
-// postSchema.virtual('likeCount').get(function() {
-//     return this.likes.length;
-// });
-
-// // Virtual for comment count
-// postSchema.virtual('commentCount').get(function() {
-//     return this.comments.length;
-// });
-
-// // Virtual for total engagement (likes + comments)
-// postSchema.virtual('engagementCount').get(function() {
-//     return this.likes.length + this.comments.length;
-// });
-
-// // Method to check if user liked the post
-// postSchema.methods.isLikedBy = function(userId) {
-//     return this.likes.includes(userId);
-// };
-
-// // Method to get excerpt
-// postSchema.methods.getExcerpt = function(length = 150) {
-//     return this.content.length > length 
-//         ? this.content.substring(0, length) + '...'
-//         : this.content;
-// };
-
-// // Static method to find posts by organization with filters
-// postSchema.statics.findByOrganization = function(organizationId, filters = {}) {
-//     let query = { organization: organizationId };
-    
-//     if (filters.status) query.status = filters.status;
-//     if (filters.category) query.category = filters.category;
-//     if (filters.author) query.author = filters.author;
-//     if (filters.tags) query.tags = { $in: filters.tags };
-//     if (filters.isPublic !== undefined) query.isPublic = filters.isPublic;
-    
-//     return this.find(query)
-//         .populate('author', 'firstName lastName profilePicture')
-//         .populate('organization', 'organizationName profilePicture')
-//         .sort({ isPinned: -1, createdAt: -1 });
-// };
-
-// // Static method for trending posts (high engagement recently)
-// postSchema.statics.findTrending = function(timeframe = 7) {
-//     const daysAgo = new Date(Date.now() - timeframe * 24 * 60 * 60 * 1000);
-    
-//     return this.aggregate([
-//         {
-//             $match: {
-//                 createdAt: { $gte: daysAgo },
-//                 status: 'approved',
-//                 isPublic: true
-//             }
-//         },
-//         {
-//             $addFields: {
-//                 engagementScore: {
-//                     $add: [
-//                         { $size: '$likes' },
-//                         { $multiply: [{ $size: '$comments' }, 2] }, // Comments weight more
-//                         '$viewCount'
-//                     ]
-//                 }
-//             }
-//         },
-//         {
-//             $sort: { engagementScore: -1 }
-//         },
-//         {
-//             $limit: 20
-//         }
-//     ]);
-// };
-
-// // Pre-save middleware to handle status changes
-// postSchema.pre('save', function(next) {
-//     if (this.isModified('status')) {
-//         if (this.status === 'approved' || this.status === 'rejected') {
-//             this.reviewedAt = new Date();
-//         }
-//     }
-//     next();
-// });
-
-// // Pre-save middleware to update organization post count (you'd implement this)
-// postSchema.post('save', async function(doc) {
-//     if (doc.isNew && doc.status === 'approved') {
-//         // Update organization post count
-//         await mongoose.model('Organization').findByIdAndUpdate(
-//             doc.organization,
-//             { $inc: { 'statistics.totalPosts': 1 } }
-//         );
-//     }
-// });
-
-// const Post = mongoose.model('Post', postSchema);
-
-// export default Post;
-
-import mongoose, { Schema } from "mongoose";
-
-
-const pollOptionSchema = new mongoose.Schema({
-  optionText: {
-    type: String,
-    required: true,
-    maxlength: 200
+const pollOptionSchema = new mongoose.Schema(
+  {
+    optionId: { type: String, required: true },
+    text:     { type: String, required: true },
+    votes:    { type: Number, default: 0 },
   },
-  votes: [{
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  voteCount: {
-    type: Number,
-    default: 0
-  }
-}, { _id: true });
+  { _id: false }
+);
 
-const commentSchema = new mongoose.Schema({
-  author: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+const pollVoterSchema = new mongoose.Schema(
+  {
+    userId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    optionIds: { type: [String], default: [] },
   },
-  content: {
-    type: String,
-    required: true,
-    maxlength: 2000
+  { _id: false }
+);
+
+const pollSchema = new mongoose.Schema(
+  {
+    question:   { type: String, required: true },
+    isMultiple: { type: Boolean, required: true },
+    options:    { type: [pollOptionSchema], required: true },
+    voters:     { type: [pollVoterSchema], default: [] },
+    closesAt:   { type: Date, default: null },
   },
-  likes: [{
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  dislikes: [{
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  likeCount: {
-    type: Number,
-    default: 0
-  },
-  dislikeCount: {
-    type: Number,
-    default: 0
-  },
-  replies: [{
-    author: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    content: {
+  { _id: false }
+);
+
+// -- Post schema --
+
+const postSchema = new mongoose.Schema(
+  {
+    title: {
       type: String,
       required: true,
-      maxlength: 2000
+      maxlength: 200,
     },
-    likes: [{
-      type: Schema.Types.ObjectId,
-      ref: 'User'
-    }],
-    dislikes: [{
-      type: Schema.Types.ObjectId,
-      ref: 'User'
-    }],
+    body: {
+      type: mongoose.Schema.Types.Mixed, // TipTap / ProseMirror JSON
+      required: true,
+    },
+    bodyText: {
+      type: String,
+      required: true, // Plaintext extraction for ES - never displayed in UI
+    },
+    tags: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: (v) => v.length <= 10,
+        message: 'A post can have at most 10 tags.',
+      },
+    },
+    authorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    organizationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organization',
+      default: null,
+    },
+    status: {
+      type: String,
+      enum: ['draft', 'pending', 'published', 'hidden'],
+      required: true,
+      default: 'draft',
+      index: true,
+    },
     likeCount: {
       type: Number,
-      default: 0
+      required: true,
+      default: 0,
     },
-    dislikeCount: {
+    commentCount: {
       type: Number,
-      default: 0
+      required: true,
+      default: 0,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now
+    likedBy: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
     },
-    updatedAt: {
-      type: Date,
-      default: Date.now
+    reportedBy: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
     },
-    isEdited: {
+    isReported: {
       type: Boolean,
-      default: false
-    }
-  }],
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  },
-  isEdited: {
-    type: Boolean,
-    default: false
-  }
-}, { _id: true });
-
-const postSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 300
-  },
-  
-  author: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  
-  organization: {
-    type: Schema.Types.ObjectId,
-    ref: 'Organization',
-    required: true
-  },
-  
-  topic: {
-    type: String,
-    required: true,
-  },
-  
-  // Body content with different content types
-  body: {
-    text: {
-      type: String,
-      trim: true,
-      maxlength: 50000
+      required: true,
+      default: false,
+      index: true,
     },
-    
-    photos: [{
-      url: {
-        type: String,
-        required: true
-      },
-      caption: {
-        type: String,
-        maxlength: 500
-      },
-      publicId: String, // For cloud storage reference (e.g., Cloudinary)
-      order: Number
-    }],
-    
-    videos: [{
-      url: {
-        type: String,
-        required: true
-      },
-      thumbnail: String,
-      caption: {
-        type: String,
-        maxlength: 500
-      },
-      publicId: String,
-      duration: Number, // in seconds
-      order: Number
-    }],
-    
-    links: [{
-      url: {
-        type: String,
-        required: true
-      },
-      title: String,
-      description: String,
-      thumbnail: String,
-      order: Number
-    }],
-    
-    dataSnapshots: [{
-      type: {
-        type: String,
-        enum: ['chart', 'infographic', 'table', 'graph'],
-        required: true
-      },
-      title: String,
-      imageUrl: {
-        type: String,
-        required: true
-      },
-      publicId: String,
-      description: String,
-      dataSource: String,
-      order: Number
-    }],
-    
-    // Interactive poll
+    mediaUrls: {
+      type: [String],
+      default: [],
+    },
+    paperIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Paper' }],
+      default: [],
+    },
     poll: {
-      question: {
-        type: String,
-        maxlength: 500
-      },
-      options: [pollOptionSchema],
-      allowMultipleVotes: {
-        type: Boolean,
-        default: false
-      },
-      expiresAt: Date,
-      totalVotes: {
-        type: Number,
-        default: 0
-      }
-    }
-  },
-  
-  // Post type classification
-  postType: {
-    type: String,
-    enum: ['discussion', 'question', 'poll', 'article', 'announcement', 'data-share'],
-    default: 'discussion'
-  },
-  
-  // For question-type posts
-  // isQuestion: {
-  //   type: Boolean,
-  //   default: false
-  // },
-  
-  // acceptedAnswer: {
-  //   type: Schema.Types.ObjectId,
-  //   ref: 'Comment'
-  // },
-  
-  // Engagement metrics
-  likes: [{
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  
-  dislikes: [{
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  
-  likeCount: {
-    type: Number,
-    default: 0
-  },
-  
-  dislikeCount: {
-    type: Number,
-    default: 0
-  },
-  
-  viewCount: {
-    type: Number,
-    default: 0
-  },
-  
-  // Comments
-  comments: [commentSchema],
-  
-  commentCount: {
-    type: Number,
-    default: 0
-  },
-  
-  // Post status
-  status: {
-    type: String,
-    enum: ['active', 'archived', 'deleted', 'flagged', 'hidden'],
-    default: 'active'
-  },
-  
-  isPinned: {
-    type: Boolean,
-    default: false
-  },
-  
-  isEdited: {
-    type: Boolean,
-    default: false
-  },
-  
-  editHistory: [{
-    editedAt: Date,
-    editedBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'User'
+      type: pollSchema,
+      default: null,
     },
-    reason: String
-  }],
-  
-  // Tags for better searchability
-  tags: [{
-    type: String,
-    trim: true,
-    lowercase: true
-  }],
-  
-  // Moderation
-  flagCount: {
-    type: Number,
-    default: 0
-  },
-  
-  flags: [{
-    user: {
-      type: Schema.Types.ObjectId,
-      ref: 'User'
+    type: {
+      type: String,
+      enum: ['post', 'announcement', 'poll', 'paper_share', 'update'],
+      required: true,
+      default: 'post',
+      index: true,
     },
-    reason: String,
-    createdAt: {
+    publishedAt: {
       type: Date,
-      default: Date.now
-    }
-  }],
-
-  status: {
-    type: String,
-    enum: ['pending', 'approved', 'rejected', 'archived', 'deleted', 'flagged', 'hidden'],
-    default: 'pending'
-  },
-  
-  // Approval tracking
-  approvalStatus: {
-    approvedBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'User'
+      default: null,
     },
-    approvedAt: Date,
-    rejectedBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    rejectedAt: Date,
-    rejectionReason: String
   },
-  
-}, {
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
+  { timestamps: true }
+);
 
-// Indexes for better query performance
-postSchema.index({ organization: 1, createdAt: -1 });
-postSchema.index({ author: 1 });
-postSchema.index({ topic: 1 });
-postSchema.index({ status: 1 });
-postSchema.index({ tags: 1 });
-postSchema.index({ 'body.poll.expiresAt': 1 });
+// -- Indexes --
 
-// Virtual for engagement score (can be used for ranking/sorting)
-postSchema.virtual('engagementScore').get(function() {
-  return this.likeCount + (this.commentCount * 2) + (this.viewCount * 0.1);
-});
+postSchema.index({ organizationId: 1, status: 1, publishedAt: -1 });
+postSchema.index({ authorId: 1, publishedAt: -1 });
+postSchema.index({ status: 1, publishedAt: -1 });
+postSchema.index({ type: 1, status: 1, publishedAt: -1 });
+postSchema.index({ isReported: 1, status: 1 });
 
-// Pre-save middleware to update counts
-postSchema.pre('save', function(next) {
-  if (this.isModified('likes')) {
-    this.likeCount = this.likes.length;
+// -- Pre-save hooks --
+
+postSchema.pre('save', function (next) {
+  // Set publishedAt exactly once when status first becomes 'published'
+  if (
+    this.isModified('status') &&
+    this.status === 'published' &&
+    !this.publishedAt
+  ) {
+    this.publishedAt = new Date();
   }
-  if (this.isModified('dislikes')) {
-    this.dislikeCount = this.dislikes.length;
-  }
-  if (this.isModified('comments')) {
-    this.commentCount = this.comments.length;
-  }
+
+  // Keep isReported in sync with reportedBy array
+  this.isReported = this.reportedBy.length > 0;
+
   next();
 });
 
-const Post = mongoose.model('Post', postSchema);
+// -- Post-save ES sync hook --
 
+import { indexPost, deletePost } from '../elastic/esSync.js';
+
+postSchema.post('save', async function (doc) {
+  try {
+    if (doc.status === 'published') {
+      await indexPost(doc);
+    } else {
+      await deletePost(doc._id.toString());
+    }
+  } catch (err) {
+    console.error('[ES sync] post save failed:', err.message);
+  }
+});
+
+postSchema.post('findOneAndUpdate', async function (doc) {
+  if (!doc) return;
+  try {
+    if (doc.status === 'published') {
+      await indexPost(doc);
+    } else {
+      await deletePost(doc._id.toString());
+    }
+  } catch (err) {
+    console.error('[ES sync] post update failed:', err.message);
+  }
+});
+
+const Post = mongoose.model('Post', postSchema);
 export default Post;
