@@ -5,8 +5,48 @@ import { OAuth2Client } from 'google-auth-library';
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 /**
+ * Resolve Google user info from either an ID-token (credential)
+ * or an OAuth2 access-token (from the implicit flow).
+ */
+async function resolveGoogleUser(credential) {
+  // Try ID-token verification first (one-tap / credential flow)
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    return {
+      googleId: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+    };
+  } catch {
+    // Fall through — credential may be an access_token instead
+  }
+
+  // Try as an access token — call Google's userinfo endpoint
+  const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: `Bearer ${credential}` },
+  });
+
+  if (!res.ok) {
+    throw new Error('Invalid Google credential.');
+  }
+
+  const info = await res.json();
+  return {
+    googleId: info.sub,
+    email: info.email,
+    name: info.name,
+    picture: info.picture,
+  };
+}
+
+/**
  * POST /api/auth/google
- * Accepts { credential } (Google ID token from frontend).
+ * Accepts { credential } (Google ID token OR access token from frontend).
  * Creates the user on first visit; logs them in on subsequent visits.
  */
 const googleAuth = async (req, res) => {
@@ -17,14 +57,8 @@ const googleAuth = async (req, res) => {
       return res.status(400).json({ error: 'Google credential is required.' });
     }
 
-    // Verify the Google token
-    const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name, picture } = payload;
+    // Resolve user info from the credential
+    const { googleId, email, name, picture } = await resolveGoogleUser(credential);
 
     // Find or create user
     let user = await User.findOne({ googleId });

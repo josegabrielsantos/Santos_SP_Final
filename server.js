@@ -25,9 +25,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // CORS
+const FRONTEND_ORIGIN = (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/+$/, '');
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    origin: FRONTEND_ORIGIN,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
