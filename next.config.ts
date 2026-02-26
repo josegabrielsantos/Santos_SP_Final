@@ -9,7 +9,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'res.cloudinary.com',
+        hostname: '*.digitaloceanspaces.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.cdn.digitaloceanspaces.com',
       },
     ],
   },

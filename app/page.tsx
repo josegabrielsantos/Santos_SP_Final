@@ -1,8 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/navbar';
+import { useAppSelector } from '@/store/hooks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +23,15 @@ import {
 } from 'lucide-react';
 
 export default function LandingPage() {
+  const { isAuthenticated } = useAppSelector((s) => s.auth);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/home');
+    }
+  }, [isAuthenticated, router]);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
