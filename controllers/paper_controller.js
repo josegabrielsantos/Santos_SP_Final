@@ -1,6 +1,6 @@
 import Paper from '../models/paper_model.js';
 import Organization from '../models/organization_model.js';
-import { v2 as cloudinary } from 'cloudinary';
+import { uploadToSpaces } from '../lib/spaces.js';
 
 /**
  * POST /api/papers
@@ -171,25 +171,26 @@ const downloadPaper = async (req, res) => {
 
 /**
  * POST /api/papers/upload
- * Upload a paper file to Cloudinary and return the URL
+ * Upload a paper file to DigitalOcean Spaces and return the URL.
+ * Expects multipart/form-data with field "file".
  */
 const uploadPaperFile = async (req, res) => {
   try {
-    const { file } = req.body;
-    if (!file) return res.status(400).json({ error: 'File is required.' });
+    if (!req.file) {
+      return res.status(400).json({ error: 'File is required.' });
+    }
 
-    const uploadResponse = await cloudinary.uploader.upload(file, {
-      folder: 'kms/papers',
-      resource_type: 'raw',
-    });
+    const { url, size } = await uploadToSpaces(
+      req.file.buffer,
+      req.file.originalname,
+      'papers',
+      req.file.mimetype
+    );
 
-    res.status(200).json({
-      fileUrl: uploadResponse.secure_url,
-      fileSize: uploadResponse.bytes,
-    });
+    res.status(200).json({ fileUrl: url, fileSize: size });
   } catch (error) {
     console.log('Error in uploadPaperFile:', error.message);
-    res.status(500).json({ error: 'Internal Server Error.' });
+    res.status(500).json({ error: 'File upload failed.' });
   }
 };
 

@@ -1,4 +1,5 @@
 import express from 'express';
+import multer from 'multer';
 import {
   createPaper,
   getPapers,
@@ -11,8 +12,9 @@ import {
 import { protectRoute } from '../middleware/protectRoute.js';
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
-router.post('/upload', protectRoute, uploadPaperFile);
+router.post('/upload', protectRoute, upload.single('file'), uploadPaperFile);
 router.post('/', protectRoute, createPaper);
 router.get('/', getPapers);
 router.get('/:id', getPaper);

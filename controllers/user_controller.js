@@ -1,7 +1,6 @@
 import User from '../models/user_model.js';
 import Organization from '../models/organization_model.js';
 import Post from '../models/post_model.js';
-import { v2 as cloudinary } from 'cloudinary';
 
 /**
  * GET /api/users/:id
@@ -35,19 +34,7 @@ const updateProfile = async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Handle avatar upload
-    if (avatar) {
-      // Delete old avatar from Cloudinary if it existed
-      if (user.avatar) {
-        const publicId = user.avatar.split('/').pop().split('.')[0];
-        await cloudinary.uploader.destroy(publicId);
-      }
-      const uploadResponse = await cloudinary.uploader.upload(avatar, {
-        folder: 'kms/avatars',
-      });
-      avatar = uploadResponse.secure_url;
-    }
-
+    // Avatar is expected to be a URL (uploaded via /api/upload)
     if (displayName !== undefined) user.displayName = displayName;
     if (avatar !== undefined) user.avatar = avatar;
     if (bio !== undefined) user.bio = bio;

@@ -2,7 +2,6 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { v2 as cloudinary } from 'cloudinary';
 import connectDB from './database/connectDB.js';
 import { ensureIndexes, syncExistingData } from './elastic/elastic_client.js';
 
@@ -14,15 +13,10 @@ import organizationRoutes from './routes/organization_routes.js';
 import paperRoutes from './routes/paper_routes.js';
 import adminRoutes from './routes/admin_routes.js';
 import searchRoutes from './routes/search_routes.js';
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+import uploadRoutes from './routes/upload_routes.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // CORS
 const FRONTEND_ORIGIN = (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/+$/, '');
@@ -49,6 +43,7 @@ app.use('/api/organizations', organizationRoutes);
 app.use('/api/papers', paperRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));

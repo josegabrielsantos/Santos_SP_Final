@@ -2,7 +2,6 @@ import Post from '../models/post_model.js';
 import Comment from '../models/comment_model.js';
 import FeaturedPost from '../models/featured_post_model.js';
 import Organization from '../models/organization_model.js';
-import { v2 as cloudinary } from 'cloudinary';
 
 /*  POST CRUD  */
 

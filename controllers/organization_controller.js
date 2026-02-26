@@ -1,7 +1,6 @@
 import Organization from '../models/organization_model.js';
 import Post from '../models/post_model.js';
 import User from '../models/user_model.js';
-import { v2 as cloudinary } from 'cloudinary';
 
 /*  CRUD  */
 
@@ -18,15 +17,7 @@ const createOrganization = async (req, res) => {
       return res.status(400).json({ error: 'Organization name is required.' });
     }
 
-    // Upload images to Cloudinary if provided
-    if (bannerImage) {
-      const r = await cloudinary.uploader.upload(bannerImage, { folder: 'kms/org_banners' });
-      bannerImage = r.secure_url;
-    }
-    if (avatar) {
-      const r = await cloudinary.uploader.upload(avatar, { folder: 'kms/org_avatars' });
-      avatar = r.secure_url;
-    }
+    // bannerImage and avatar are expected to be URLs (uploaded via /api/upload)
 
     const org = new Organization({
       name,
@@ -113,22 +104,7 @@ const updateOrganization = async (req, res) => {
       return res.status(404).json({ error: 'Organization not found.' });
     }
 
-    if (bannerImage) {
-      if (org.bannerImage) {
-        const pid = org.bannerImage.split('/').pop().split('.')[0];
-        await cloudinary.uploader.destroy(pid);
-      }
-      const r = await cloudinary.uploader.upload(bannerImage, { folder: 'kms/org_banners' });
-      bannerImage = r.secure_url;
-    }
-    if (avatar) {
-      if (org.avatar) {
-        const pid = org.avatar.split('/').pop().split('.')[0];
-        await cloudinary.uploader.destroy(pid);
-      }
-      const r = await cloudinary.uploader.upload(avatar, { folder: 'kms/org_avatars' });
-      avatar = r.secure_url;
-    }
+    // bannerImage and avatar are expected to be URLs (uploaded via /api/upload)
 
     if (name !== undefined) org.name = name;
     if (description !== undefined) org.description = description;
