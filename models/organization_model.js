@@ -76,7 +76,7 @@ const organizationSchema = new mongoose.Schema(
 organizationSchema.pre('save', function (next) {
   if (this.isModified('name') || !this.slug) {
     this.slug = slugify(this.name, { lower: true, strict: true });
-  }
+  } 
   // Keep memberCount in sync with memberIds array
   this.memberCount = this.memberIds.length;
   next();
