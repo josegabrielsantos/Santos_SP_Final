@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, User, Settings, LogOut } from 'lucide-react';
+import { Search, User, Settings, LogOut, ShieldCheck } from 'lucide-react';
 
 export function AuthenticatedNavbar() {
   const { user } = useAppSelector((s) => s.auth);
@@ -98,6 +98,12 @@ export function AuthenticatedNavbar() {
               <Settings className="h-4 w-4" />
               Settings
             </DropdownMenuItem>
+            {user?.role === 'website_admin' && (
+              <DropdownMenuItem onClick={() => router.push('/admin')} className="cursor-pointer gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                Admin Panel
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
