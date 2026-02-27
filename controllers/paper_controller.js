@@ -194,6 +194,76 @@ const uploadPaperFile = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/papers/parse-pdf
+ * Download a PDF from the given URL, extract metadata, and return it.
+ * Body: { fileUrl: string }
+ */
+const parsePdf = async (req, res) => {
+  try {
+    const { fileUrl } = req.body;
+    if (!fileUrl) return res.status(400).json({ error: 'fileUrl is required.' });
+
+    // Download the PDF from storage
+    const response = await fetch(fileUrl);
+    if (!response.ok) return res.status(400).json({ error: 'Could not download PDF file.' });
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Dynamic import handles CJS/ESM interop for pdf-parse
+    const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
+    const data = await pdfParse(buffer);
+
+    const info = data.info || {};
+
+    // Extract title
+    const title = info.Title || '';
+
+    // Extract authors (often comma or semicolon separated)
+    const authors = info.Author
+      ? info.Author.split(/[,;&]/).map((a) => a.trim()).filter(Boolean)
+      : [];
+
+    // Extract keywords
+    const keywords = info.Keywords
+      ? info.Keywords.split(/[,;]/).map((k) => k.trim()).filter(Boolean)
+      : [];
+
+    // Try to extract year from CreationDate (format: D:YYYYMMDDHHmmss)
+    let year = null;
+    if (info.CreationDate) {
+      const match = info.CreationDate.match(/D:(\d{4})/);
+      if (match) year = parseInt(match[1]);
+    }
+
+    // Try to extract abstract from text content
+    let abstract = null;
+    if (data.text) {
+      const abstractMatch = data.text.match(
+        /abstract[:\s]*\n?([\s\S]{10,1500}?)(?:\n\s*\n|\bintroduction\b|\bkeywords?\b|\b1[\.]\s)/i
+      );
+      if (abstractMatch) {
+        abstract = abstractMatch[1].trim().replace(/\s+/g, ' ').slice(0, 1000);
+      }
+    }
+
+    res.status(200).json({
+      title,
+      authors,
+      abstract,
+      keywords,
+      year,
+      journal: null,
+      doi: null,
+      pageCount: data.numpages || null,
+    });
+  } catch (error) {
+    console.log('Error in parsePdf:', error.message);
+    res.status(500).json({ error: 'Failed to parse PDF.' });
+  }
+};
+
 export {
   createPaper,
   getPapers,
@@ -202,4 +272,5 @@ export {
   deletePaper,
   downloadPaper,
   uploadPaperFile,
+  parsePdf,
 };

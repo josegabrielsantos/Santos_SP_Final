@@ -25,6 +25,7 @@
     "mongoosastic": "^5.0.0",
     "mongoose": "^8.19.2",
     "multer": "^2.0.2",
+    "pdf-parse": "^2.4.5",
     "slugify": "^1.6.6",
     "uuid": "^11.1.0"
   },

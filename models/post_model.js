@@ -19,6 +19,7 @@ const pollSchema = new mongoose.Schema(
     options:       { type: [pollOptionSchema], required: true },
     totalVotes:    { type: Number, default: 0 },
     closesAt:      { type: Date, default: null },
+    isClosed:      { type: Boolean, default: false },
   },
   { _id: false }
 );

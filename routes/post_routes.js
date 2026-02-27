@@ -15,6 +15,7 @@ import {
   addFeaturedPost,
   removeFeaturedPost,
   votePoll,
+  closePoll,
   toggleCommentLike,
 } from '../controllers/post_controller.js';
 import { protectRoute, requireWebsiteAdmin } from '../middleware/protectRoute.js';
@@ -46,7 +47,8 @@ router.post('/:id/comments/:commentId/like', protectRoute, toggleCommentLike);
 // Report
 router.post('/:id/report', protectRoute, reportPost);
 
-// Poll vote
+// Poll vote & close
 router.post('/:id/vote', protectRoute, votePoll);
+router.post('/:id/close-poll', protectRoute, closePoll);
 
 export default router;

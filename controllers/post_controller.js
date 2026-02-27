@@ -457,7 +457,7 @@ const votePoll = async (req, res) => {
     if (!post || !post.poll) return res.status(404).json({ error: 'Poll not found.' });
 
     // Check if poll is closed
-    if (post.poll.closesAt && new Date() > post.poll.closesAt) {
+    if (post.poll.isClosed || (post.poll.closesAt && new Date() > post.poll.closesAt)) {
       return res.status(400).json({ error: 'This poll has closed.' });
     }
 
@@ -518,6 +518,32 @@ const votePoll = async (req, res) => {
 /*  COMMENT LIKES  */
 
 /**
+ * POST /api/posts/:id/close-poll
+ * Close a poll. Only the post author or admin can close it.
+ */
+const closePoll = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post || !post.poll) return res.status(404).json({ error: 'Poll not found.' });
+
+    const isOwner = post.authorId.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'website_admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'Only the poll creator can close this poll.' });
+    }
+
+    post.poll.isClosed = true;
+    post.markModified('poll');
+    await post.save();
+
+    res.status(200).json({ poll: post.poll });
+  } catch (error) {
+    console.log('Error in closePoll:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
  * POST /api/posts/:id/comments/:commentId/like
  * Toggle like on a comment.
  */
@@ -563,5 +589,6 @@ export {
   addFeaturedPost,
   removeFeaturedPost,
   votePoll,
+  closePoll,
   toggleCommentLike,
 };
