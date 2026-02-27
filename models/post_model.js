@@ -4,28 +4,21 @@ import mongoose from 'mongoose';
 
 const pollOptionSchema = new mongoose.Schema(
   {
-    optionId: { type: String, required: true },
-    text:     { type: String, required: true },
-    votes:    { type: Number, default: 0 },
-  },
-  { _id: false }
-);
-
-const pollVoterSchema = new mongoose.Schema(
-  {
-    userId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    optionIds: { type: [String], default: [] },
+    optionId:  { type: String, required: true },
+    text:      { type: String, required: true },
+    voteCount: { type: Number, default: 0 },
+    voterIds:  { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] },
   },
   { _id: false }
 );
 
 const pollSchema = new mongoose.Schema(
   {
-    question:   { type: String, required: true },
-    isMultiple: { type: Boolean, required: true },
-    options:    { type: [pollOptionSchema], required: true },
-    voters:     { type: [pollVoterSchema], default: [] },
-    closesAt:   { type: Date, default: null },
+    question:      { type: String, required: true },
+    isMultiple:    { type: Boolean, required: true, default: false },
+    options:       { type: [pollOptionSchema], required: true },
+    totalVotes:    { type: Number, default: 0 },
+    closesAt:      { type: Date, default: null },
   },
   { _id: false }
 );

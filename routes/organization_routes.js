@@ -13,22 +13,32 @@ import {
   unfollowOrganization,
   getOrganizationPosts,
   getOrganizationMembers,
+  requestJoin,
+  approveJoin,
+  rejectJoin,
+  leaveOrganization,
 } from '../controllers/organization_controller.js';
-import { protectRoute, requireWebsiteAdmin, requireOrgAdmin } from '../middleware/protectRoute.js';
+import { protectRoute, requireWebsiteAdmin, requireOrgAdmin, optionalAuth } from '../middleware/protectRoute.js';
 
 const router = express.Router();
 
-// CRUD
-router.post('/', protectRoute, createOrganization);
+// CRUD (only website_admin can create)
+router.post('/', protectRoute, requireWebsiteAdmin, createOrganization);
 router.get('/', getOrganizations);
 router.get('/:id', getOrganization);
 router.put('/:id', protectRoute, requireOrgAdmin, updateOrganization);
 router.delete('/:id', protectRoute, requireWebsiteAdmin, deleteOrganization);
 
-// Members
-router.get('/:id/members', getOrganizationMembers);
+// Members (optionalAuth on GET so admins see pending list)
+router.get('/:id/members', optionalAuth, getOrganizationMembers);
 router.post('/:id/members', protectRoute, requireOrgAdmin, addMember);
 router.delete('/:id/members/:userId', protectRoute, requireOrgAdmin, removeMember);
+
+// Join request flow
+router.post('/:id/join', protectRoute, requestJoin);
+router.post('/:id/join/:userId/approve', protectRoute, requireOrgAdmin, approveJoin);
+router.post('/:id/join/:userId/reject', protectRoute, requireOrgAdmin, rejectJoin);
+router.post('/:id/leave', protectRoute, leaveOrganization);
 
 // Admins
 router.post('/:id/admins', protectRoute, requireOrgAdmin, promoteToAdmin);

@@ -46,6 +46,29 @@ export const requireWebsiteAdmin = (req, res, next) => {
 };
 
 /**
+ * Optional authentication — attaches req.user if a valid JWT is present,
+ * but does NOT block the request if there is no token.
+ */
+export const optionalAuth = async (req, res, next) => {
+  try {
+    const token = req.cookies.jwt;
+    if (!token) return next();
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded) return next();
+
+    const user = await User.findById(decoded.userId);
+    if (user && user.isActive) {
+      req.user = user;
+    }
+    next();
+  } catch {
+    // Token invalid / expired — proceed without user
+    next();
+  }
+};
+
+/**
  * Require the user to be one of the organization admins.
  * Expects :id param to contain the organization ID.
  * Website admins bypass the check.

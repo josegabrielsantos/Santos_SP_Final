@@ -105,14 +105,23 @@ const getAllUsers = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
+    const search = req.query.search;
 
-    const users = await User.find()
+    const filter = {};
+    if (search) {
+      filter.$or = [
+        { displayName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const users = await User.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .select('-__v');
 
-    const total = await User.countDocuments();
+    const total = await User.countDocuments(filter);
 
     res.status(200).json({ users, total, page, pages: Math.ceil(total / limit) });
   } catch (error) {
@@ -170,6 +179,43 @@ const toggleUserActive = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/admin/stats
+ * Dashboard statistics (website_admin only)
+ */
+const getAdminStats = async (req, res) => {
+  try {
+    const [totalUsers, totalPosts, totalOrgs, activeUsers, totalAdmins] = await Promise.all([
+      User.countDocuments(),
+      Post.countDocuments(),
+      Organization.countDocuments({ isActive: true }),
+      User.countDocuments({ isActive: true }),
+      User.countDocuments({ role: 'website_admin' }),
+    ]);
+
+    // Recent signups (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recentSignups = await User.countDocuments({ createdAt: { $gte: thirtyDaysAgo } });
+
+    // Posts this month
+    const postsThisMonth = await Post.countDocuments({ createdAt: { $gte: thirtyDaysAgo } });
+
+    res.status(200).json({
+      totalUsers,
+      totalPosts,
+      totalOrgs,
+      activeUsers,
+      totalAdmins,
+      recentSignups,
+      postsThisMonth,
+    });
+  } catch (error) {
+    console.log('Error in getAdminStats:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
 export {
   getUserById,
   updateProfile,
@@ -178,4 +224,5 @@ export {
   getAllUsers,
   updateUserRole,
   toggleUserActive,
+  getAdminStats,
 };

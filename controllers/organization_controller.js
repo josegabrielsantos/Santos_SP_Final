@@ -6,26 +6,39 @@ import User from '../models/user_model.js';
 
 /**
  * POST /api/organizations
- * Create a new organization. The authenticated user becomes the first admin.
+ * Create a new organization. Only website_admin can create.
+ * The requesting admin becomes the owner and first admin.
  */
 const createOrganization = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, ownerId } = req.body;
     let { bannerImage, avatar } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Organization name is required.' });
     }
 
-    // bannerImage and avatar are expected to be URLs (uploaded via /api/upload)
+    // Determine the owner: if ownerId is provided (super admin assigning someone), use it;
+    // otherwise the requesting website_admin becomes the owner.
+    const resolvedOwnerId = ownerId || req.user._id;
+
+    // Verify the owner user exists
+    if (ownerId) {
+      const ownerUser = await User.findById(ownerId);
+      if (!ownerUser) {
+        return res.status(404).json({ error: 'Specified owner user not found.' });
+      }
+    }
 
     const org = new Organization({
       name,
       description: description || '',
       bannerImage: bannerImage || null,
       avatar: avatar || null,
-      adminIds: [req.user._id],
+      ownerId: resolvedOwnerId,
+      adminIds: [resolvedOwnerId],
       memberIds: [],
+      pendingMemberIds: [],
       followerIds: [],
     });
 
@@ -77,6 +90,7 @@ const getOrganization = async (req, res) => {
       : { slug: identifier };
 
     const org = await Organization.findOne(query)
+      .populate('ownerId', 'displayName avatar')
       .populate('adminIds', 'displayName avatar')
       .populate('memberIds', 'displayName avatar');
 
@@ -223,14 +237,31 @@ const promoteToAdmin = async (req, res) => {
 
 /**
  * DELETE /api/organizations/:id/admins/:userId
- * Demote an admin back to member
+ * Demote an admin back to member.
+ * Only the organization owner (or website_admin) can remove admins.
+ * The owner cannot be demoted.
  */
 const demoteAdmin = async (req, res) => {
   try {
     const org = await Organization.findById(req.params.id);
     if (!org) return res.status(404).json({ error: 'Organization not found.' });
 
-    const idx = org.adminIds.indexOf(req.params.userId);
+    const requesterId = req.user._id.toString();
+    const targetId = req.params.userId;
+
+    // Only the owner or website_admin can remove admins
+    const isOwner = org.ownerId.toString() === requesterId;
+    const isWebAdmin = req.user.role === 'website_admin';
+    if (!isOwner && !isWebAdmin) {
+      return res.status(403).json({ error: 'Only the organization owner can remove admins.' });
+    }
+
+    // Cannot demote the owner
+    if (org.ownerId.toString() === targetId) {
+      return res.status(400).json({ error: 'Cannot demote the organization owner.' });
+    }
+
+    const idx = org.adminIds.findIndex((aid) => aid.toString() === targetId);
     if (idx === -1) {
       return res.status(400).json({ error: 'User is not an admin.' });
     }
@@ -240,7 +271,7 @@ const demoteAdmin = async (req, res) => {
     }
 
     org.adminIds.splice(idx, 1);
-    org.memberIds.push(req.params.userId);
+    org.memberIds.push(targetId);
     await org.save();
     res.status(200).json({ message: 'Admin demoted to member.' });
   } catch (error) {
@@ -325,23 +356,171 @@ const getOrganizationPosts = async (req, res) => {
 
 /**
  * GET /api/organizations/:id/members
- * List admins + members for an organization
+ * List owner, admins, members (and pending if requester is admin) for an organization
  */
 const getOrganizationMembers = async (req, res) => {
   try {
     const org = await Organization.findById(req.params.id)
+      .populate('ownerId', 'displayName avatar email')
       .populate('adminIds', 'displayName avatar email')
-      .populate('memberIds', 'displayName avatar email');
+      .populate('memberIds', 'displayName avatar email')
+      .populate('pendingMemberIds', 'displayName avatar email');
 
     if (!org) return res.status(404).json({ error: 'Organization not found.' });
 
-    res.status(200).json({
+    const result = {
+      owner: org.ownerId,
       admins: org.adminIds,
       members: org.memberIds,
       followerCount: org.followerIds.length,
-    });
+    };
+
+    // Only show pending members to org admins / website admins
+    if (req.user) {
+      const uid = req.user._id.toString();
+      const isAdmin = org.adminIds.some((a) => (a._id || a).toString() === uid);
+      const isWebAdmin = req.user.role === 'website_admin';
+      if (isAdmin || isWebAdmin) {
+        result.pendingMembers = org.pendingMemberIds;
+      }
+    }
+
+    res.status(200).json(result);
   } catch (error) {
     console.log('Error in getOrganizationMembers:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/*  JOIN REQUEST FLOW  */
+
+/**
+ * POST /api/organizations/:id/join
+ * Authenticated user requests to join an organization.
+ */
+const requestJoin = async (req, res) => {
+  try {
+    const userId = req.user._id.toString();
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+
+    // Already a member or admin
+    if (org.adminIds.map(String).includes(userId) || org.memberIds.map(String).includes(userId)) {
+      return res.status(400).json({ error: 'You are already in this organization.' });
+    }
+
+    // Already pending
+    if (org.pendingMemberIds.map(String).includes(userId)) {
+      return res.status(400).json({ error: 'You have already requested to join.' });
+    }
+
+    org.pendingMemberIds.push(req.user._id);
+    await org.save();
+    res.status(200).json({ message: 'Join request submitted.' });
+  } catch (error) {
+    console.log('Error in requestJoin:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * POST /api/organizations/:id/join/:userId/approve
+ * Org admin approves a pending join request.
+ */
+const approveJoin = async (req, res) => {
+  try {
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+
+    const targetId = req.params.userId;
+    const pendingIdx = org.pendingMemberIds.findIndex((id) => id.toString() === targetId);
+    if (pendingIdx === -1) {
+      return res.status(400).json({ error: 'No pending request from this user.' });
+    }
+
+    // Move from pending to members
+    org.pendingMemberIds.splice(pendingIdx, 1);
+    org.memberIds.push(targetId);
+    await org.save();
+
+    res.status(200).json({ message: 'Member approved.', memberCount: org.memberCount });
+  } catch (error) {
+    console.log('Error in approveJoin:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * POST /api/organizations/:id/join/:userId/reject
+ * Org admin rejects a pending join request.
+ */
+const rejectJoin = async (req, res) => {
+  try {
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+
+    const targetId = req.params.userId;
+    const pendingIdx = org.pendingMemberIds.findIndex((id) => id.toString() === targetId);
+    if (pendingIdx === -1) {
+      return res.status(400).json({ error: 'No pending request from this user.' });
+    }
+
+    org.pendingMemberIds.splice(pendingIdx, 1);
+    await org.save();
+
+    res.status(200).json({ message: 'Join request rejected.' });
+  } catch (error) {
+    console.log('Error in rejectJoin:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * POST /api/organizations/:id/leave
+ * Authenticated user leaves an organization they are a member of.
+ * Admins must be demoted first; the owner cannot leave.
+ */
+const leaveOrganization = async (req, res) => {
+  try {
+    const userId = req.user._id.toString();
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+
+    // Owner cannot leave
+    if (org.ownerId.toString() === userId) {
+      return res.status(400).json({ error: 'The organization owner cannot leave. Transfer ownership first.' });
+    }
+
+    // If admin, remove from adminIds
+    const adminIdx = org.adminIds.findIndex((id) => id.toString() === userId);
+    if (adminIdx !== -1) {
+      if (org.adminIds.length <= 1) {
+        return res.status(400).json({ error: 'Cannot leave as the last admin.' });
+      }
+      org.adminIds.splice(adminIdx, 1);
+      await org.save();
+      return res.status(200).json({ message: 'Left the organization (was admin).' });
+    }
+
+    // If member, remove from memberIds
+    const memberIdx = org.memberIds.findIndex((id) => id.toString() === userId);
+    if (memberIdx !== -1) {
+      org.memberIds.splice(memberIdx, 1);
+      await org.save();
+      return res.status(200).json({ message: 'Left the organization.', memberCount: org.memberCount });
+    }
+
+    // If pending, withdraw request
+    const pendingIdx = org.pendingMemberIds.findIndex((id) => id.toString() === userId);
+    if (pendingIdx !== -1) {
+      org.pendingMemberIds.splice(pendingIdx, 1);
+      await org.save();
+      return res.status(200).json({ message: 'Join request withdrawn.' });
+    }
+
+    return res.status(400).json({ error: 'You are not in this organization.' });
+  } catch (error) {
+    console.log('Error in leaveOrganization:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
   }
 };
@@ -360,4 +539,8 @@ export {
   unfollowOrganization,
   getOrganizationPosts,
   getOrganizationMembers,
+  requestJoin,
+  approveJoin,
+  rejectJoin,
+  leaveOrganization,
 };

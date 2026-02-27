@@ -226,15 +226,30 @@ const toggleLike = async (req, res) => {
 
 /**
  * GET /api/posts/:id/comments
- * Returns top-level comments (parentId == null) with nested replies if desired.
+ * Cursor-based pagination for top-level comments (parentId == null).
+ * Query params: cursor (ISO date string), limit (default 20)
  */
 const getComments = async (req, res) => {
   try {
-    const comments = await Comment.find({ postId: req.params.id, parentId: null, isDeleted: false })
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const cursor = req.query.cursor; // ISO date string of last comment's createdAt
+
+    const filter = { postId: req.params.id, parentId: null, isDeleted: false };
+    if (cursor) {
+      filter.createdAt = { $lt: new Date(cursor) };
+    }
+
+    const comments = await Comment.find(filter)
       .sort({ createdAt: -1 })
+      .limit(limit + 1) // fetch one extra to know if there's a next page
       .populate('authorId', 'displayName avatar');
 
-    res.status(200).json(comments);
+    const hasMore = comments.length > limit;
+    if (hasMore) comments.pop(); // remove the extra
+
+    const nextCursor = hasMore ? comments[comments.length - 1].createdAt.toISOString() : null;
+
+    res.status(200).json({ comments, nextCursor });
   } catch (error) {
     console.log('Error in getComments:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
@@ -243,14 +258,30 @@ const getComments = async (req, res) => {
 
 /**
  * GET /api/posts/:id/comments/:commentId/replies
+ * Cursor-based pagination for replies.
+ * Query params: cursor (ISO date string), limit (default 20)
  */
 const getReplies = async (req, res) => {
   try {
-    const replies = await Comment.find({ parentId: req.params.commentId, isDeleted: false })
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const cursor = req.query.cursor;
+
+    const filter = { parentId: req.params.commentId, isDeleted: false };
+    if (cursor) {
+      filter.createdAt = { $gt: new Date(cursor) }; // replies oldest-first
+    }
+
+    const replies = await Comment.find(filter)
       .sort({ createdAt: 1 })
+      .limit(limit + 1)
       .populate('authorId', 'displayName avatar');
 
-    res.status(200).json(replies);
+    const hasMore = replies.length > limit;
+    if (hasMore) replies.pop();
+
+    const nextCursor = hasMore ? replies[replies.length - 1].createdAt.toISOString() : null;
+
+    res.status(200).json({ replies, nextCursor });
   } catch (error) {
     console.log('Error in getReplies:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
@@ -411,33 +442,107 @@ const removeFeaturedPost = async (req, res) => {
 /*  POLL VOTING  */
 
 /**
- * POST /api/posts/:id/vote   { optionIndex }
+ * POST /api/posts/:id/vote   { optionIds: [String] }
+ * Vote on a poll. For single-choice polls, optionIds must have exactly 1 element.
+ * Only org members/admins can vote on org-scoped polls.
  */
 const votePoll = async (req, res) => {
   try {
-    const { optionIndex } = req.body;
+    const { optionIds } = req.body;
+    if (!optionIds || !Array.isArray(optionIds) || optionIds.length === 0) {
+      return res.status(400).json({ error: 'optionIds array is required.' });
+    }
+
     const post = await Post.findById(req.params.id);
     if (!post || !post.poll) return res.status(404).json({ error: 'Poll not found.' });
 
-    if (optionIndex < 0 || optionIndex >= post.poll.options.length) {
-      return res.status(400).json({ error: 'Invalid option index.' });
+    // Check if poll is closed
+    if (post.poll.closesAt && new Date() > post.poll.closesAt) {
+      return res.status(400).json({ error: 'This poll has closed.' });
     }
 
-    const userId = req.user._id.toString();
-    // Check if already voted
-    for (const opt of post.poll.options) {
-      if (opt.votes.map(String).includes(userId)) {
-        return res.status(400).json({ error: 'Already voted.' });
+    // If org post, only members/admins can vote
+    if (post.organizationId) {
+      const org = await Organization.findById(post.organizationId);
+      if (org) {
+        const uid = req.user._id.toString();
+        const isMember = org.adminIds.map(String).includes(uid) || org.memberIds.map(String).includes(uid);
+        if (!isMember && req.user.role !== 'website_admin') {
+          return res.status(403).json({ error: 'Only organization members can vote on this poll.' });
+        }
       }
     }
 
-    post.poll.options[optionIndex].votes.push(req.user._id);
+    // Validate single vs multi choice
+    if (!post.poll.isMultiple && optionIds.length > 1) {
+      return res.status(400).json({ error: 'This poll allows only one choice.' });
+    }
+
+    const userId = req.user._id;
+    const userIdStr = userId.toString();
+
+    // Check if user already voted on any option
+    for (const opt of post.poll.options) {
+      if (opt.voterIds.map(String).includes(userIdStr)) {
+        return res.status(400).json({ error: 'You have already voted.' });
+      }
+    }
+
+    // Validate all optionIds exist
+    const validOptionIds = post.poll.options.map((o) => o.optionId);
+    for (const oid of optionIds) {
+      if (!validOptionIds.includes(oid)) {
+        return res.status(400).json({ error: `Invalid option: ${oid}` });
+      }
+    }
+
+    // Cast votes
+    for (const opt of post.poll.options) {
+      if (optionIds.includes(opt.optionId)) {
+        opt.voterIds.push(userId);
+        opt.voteCount += 1;
+      }
+    }
+    post.poll.totalVotes += 1;
+
     post.markModified('poll');
     await post.save();
 
     res.status(200).json({ poll: post.poll });
   } catch (error) {
     console.log('Error in votePoll:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/*  COMMENT LIKES  */
+
+/**
+ * POST /api/posts/:id/comments/:commentId/like
+ * Toggle like on a comment.
+ */
+const toggleCommentLike = async (req, res) => {
+  try {
+    const comment = await Comment.findById(req.params.commentId);
+    if (!comment || comment.isDeleted) {
+      return res.status(404).json({ error: 'Comment not found.' });
+    }
+
+    const userId = req.user._id;
+    const alreadyLiked = comment.likedBy.map(String).includes(userId.toString());
+
+    if (alreadyLiked) {
+      comment.likedBy.pull(userId);
+      comment.likeCount = Math.max(0, comment.likeCount - 1);
+    } else {
+      comment.likedBy.push(userId);
+      comment.likeCount += 1;
+    }
+
+    await comment.save();
+    res.status(200).json({ liked: !alreadyLiked, likeCount: comment.likeCount });
+  } catch (error) {
+    console.log('Error in toggleCommentLike:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
   }
 };
@@ -458,4 +563,5 @@ export {
   addFeaturedPost,
   removeFeaturedPost,
   votePoll,
+  toggleCommentLike,
 };

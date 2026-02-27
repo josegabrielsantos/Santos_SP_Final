@@ -24,6 +24,10 @@ const commentSchema = new mongoose.Schema(
       required: true,
       maxlength: 2000,
     },
+    likedBy: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
+    },
     likeCount: {
       type: Number,
       required: true,
@@ -43,8 +47,10 @@ const commentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Compound index for comment thread queries
-commentSchema.index({ postId: 1, parentId: 1, createdAt: 1 });
+// Compound index for comment thread queries (supports cursor-based pagination)
+commentSchema.index({ postId: 1, parentId: 1, createdAt: -1 });
+// Cursor pagination: fetch next page of top-level comments by createdAt
+commentSchema.index({ postId: 1, createdAt: -1 });
 
 const Comment = mongoose.model('Comment', commentSchema);
 export default Comment;

@@ -27,6 +27,12 @@ const organizationSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    ownerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
     adminIds: {
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
       required: true,
@@ -36,6 +42,10 @@ const organizationSchema = new mongoose.Schema(
       },
     },
     memberIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
+    },
+    pendingMemberIds: {
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
       default: [],
     },

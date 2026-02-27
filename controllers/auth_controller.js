@@ -64,15 +64,28 @@ const googleAuth = async (req, res) => {
     let user = await User.findOne({ googleId });
 
     if (!user) {
-      // First-time login - create user
-      user = new User({
-        googleId,
-        email,
-        displayName: name,
-        avatar: picture || null,
-        lastLogin: new Date(),
-      });
-      await user.save();
+      // Check if a user with this email already exists (e.g. manually created admin)
+      user = await User.findOne({ email });
+
+      if (user) {
+        // Link the existing account to this Google ID
+        user.googleId = googleId;
+        user.lastLogin = new Date();
+        if (!user.avatar && picture) {
+          user.avatar = picture;
+        }
+        await user.save();
+      } else {
+        // First-time login - create user
+        user = new User({
+          googleId,
+          email,
+          displayName: name,
+          avatar: picture || null,
+          lastLogin: new Date(),
+        });
+        await user.save();
+      }
     } else {
       // Returning user - update lastLogin and optionally refresh profile info
       user.lastLogin = new Date();

@@ -15,6 +15,7 @@ import {
   addFeaturedPost,
   removeFeaturedPost,
   votePoll,
+  toggleCommentLike,
 } from '../controllers/post_controller.js';
 import { protectRoute, requireWebsiteAdmin } from '../middleware/protectRoute.js';
 
@@ -40,6 +41,7 @@ router.get('/:id/comments', getComments);
 router.post('/:id/comments', protectRoute, createComment);
 router.get('/:id/comments/:commentId/replies', getReplies);
 router.delete('/:id/comments/:commentId', protectRoute, deleteComment);
+router.post('/:id/comments/:commentId/like', protectRoute, toggleCommentLike);
 
 // Report
 router.post('/:id/report', protectRoute, reportPost);
