@@ -32,6 +32,7 @@ export interface Poll {
   options: PollOption[];
   totalVotes: number;
   closesAt?: string | null;
+  isClosed?: boolean;
 }
 
 // ─── Post ────────────────────────────────────────────────────────
@@ -166,4 +167,17 @@ export interface UploadResponse {
   url: string;
   key: string;
   size: number;
+}
+
+// ─── Paper Metadata (from PDF parsing) ──────────────────────────
+
+export interface PaperMetadata {
+  title: string;
+  authors: string[];
+  abstract: string | null;
+  keywords: string[];
+  year: number | null;
+  journal: string | null;
+  doi: string | null;
+  pageCount?: number | null;
 }

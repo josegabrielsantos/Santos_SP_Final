@@ -4,6 +4,7 @@ import type {
   Post,
   PostsResponse,
   CreatePostPayload,
+  PaperMetadata,
 } from '@/lib/types';
 
 // ─── Get paginated posts (public feed) ──────────────────────────
@@ -140,6 +141,34 @@ export function useVotePoll() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['posts', vars.postId] });
       qc.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+}
+
+// ─── Close poll ─────────────────────────────────────────────────
+
+export function useClosePoll() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      const { data } = await axiosInstance.post(`/posts/${postId}/close-poll`);
+      return data;
+    },
+    onSuccess: (_data, postId) => {
+      qc.invalidateQueries({ queryKey: ['posts', postId] });
+      qc.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+}
+
+// ─── Parse PDF metadata ─────────────────────────────────────────
+
+export function useParsePdf() {
+  return useMutation({
+    mutationFn: async (fileUrl: string) => {
+      const { data } = await axiosInstance.post<PaperMetadata>('/papers/parse-pdf', { fileUrl });
+      return data;
     },
   });
 }

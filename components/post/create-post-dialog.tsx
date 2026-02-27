@@ -9,10 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -20,11 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCreatePost } from '@/lib/api/posts';
+import { useCreatePost, useParsePdf } from '@/lib/api/posts';
 import { useUploadFile } from '@/lib/api/upload';
 import { useOrganizations } from '@/lib/api/organizations';
 import { useAppSelector } from '@/store/hooks';
-import type { PostType } from '@/lib/types';
+import type { PostType, PaperMetadata } from '@/lib/types';
 import {
   Plus,
   X,
@@ -42,6 +40,10 @@ import {
   Loader2,
   Trash2,
   FileText,
+  Hash,
+  Upload,
+  BookOpen,
+  AlertCircle,
 } from 'lucide-react';
 
 // generate a short unique id for poll options
@@ -53,7 +55,6 @@ interface PostFormValues {
   title: string;
   type: PostType;
   organizationId: string;
-  tags: string;
   pollQuestion: string;
   pollIsMultiple: boolean;
   pollOptions: { id: string; text: string }[];
@@ -63,10 +64,14 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [tags, setTags] = useState<string[]>(['']);
+  const [paperMeta, setPaperMeta] = useState<PaperMetadata | null>(null);
+  const [parsingPdf, setParsingPdf] = useState(false);
 
   const user = useAppSelector((s) => s.auth.user);
   const createPost = useCreatePost();
   const uploadFile = useUploadFile();
+  const parsePdf = useParsePdf();
   const { data: orgsData } = useOrganizations({ limit: 100 });
 
   const {
@@ -75,13 +80,14 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
     control,
     watch,
     reset,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<PostFormValues>({
     defaultValues: {
       title: '',
       type: 'post',
       organizationId: 'personal',
-      tags: '',
       pollQuestion: '',
       pollIsMultiple: false,
       pollOptions: [
@@ -117,6 +123,22 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
       if (!files?.length) return;
+
+      // For non-paper_share posts, enforce document file limit (max 5)
+      if (selectedType !== 'paper_share') {
+        const currentDocCount = mediaUrls.filter(
+          (u) => !/\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|avi|mkv)$/i.test(u)
+        ).length;
+        const newDocCount = Array.from(files).filter(
+          (f) => !f.type.startsWith('image/') && !f.type.startsWith('video/')
+        ).length;
+        if (currentDocCount + newDocCount > 5) {
+          alert('Maximum 5 document files (PDFs, etc.) allowed per post. Images and videos are unlimited.');
+          e.target.value = '';
+          return;
+        }
+      }
+
       setUploading(true);
       try {
         const urls: string[] = [];
@@ -125,27 +147,71 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
           urls.push(result.url);
         }
         setMediaUrls((prev) => [...prev, ...urls]);
+
+        // Auto-parse first PDF for paper_share posts
+        if (selectedType === 'paper_share' && !paperMeta) {
+          const firstPdf = urls.find((u) => /\.pdf$/i.test(u));
+          if (firstPdf) {
+            setParsingPdf(true);
+            try {
+              const meta = await parsePdf.mutateAsync(firstPdf);
+              setPaperMeta(meta);
+              // Auto-fill title if empty
+              if (!getValues('title') && meta.title) {
+                setValue('title', meta.title);
+              }
+              // Auto-fill tags from keywords
+              if (meta.keywords?.length > 0) {
+                setTags((prev) => {
+                  const existing = prev.filter((t) => t.trim());
+                  if (existing.length === 0 || (existing.length === 1 && !existing[0])) {
+                    return meta.keywords.slice(0, 10);
+                  }
+                  return prev;
+                });
+              }
+            } catch {
+              // Parsing failed - not critical
+            } finally {
+              setParsingPdf(false);
+            }
+          }
+        }
       } catch (err) {
         console.error('Upload failed:', err);
       } finally {
         setUploading(false);
+        e.target.value = '';
       }
     },
-    [uploadFile]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [uploadFile, selectedType, mediaUrls, paperMeta, parsePdf, getValues, setValue]
   );
 
   const removeMedia = (idx: number) => {
     setMediaUrls((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  // ── Tag management ────────────────────
+  const addTag = () => {
+    if (tags.length < 10) {
+      setTags((prev) => [...prev, '']);
+    }
+  };
+
+  const removeTag = (idx: number) => {
+    setTags((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateTag = (idx: number, value: string) => {
+    setTags((prev) => prev.map((t, i) => (i === idx ? value : t)));
+  };
+
   const onSubmit = async (values: PostFormValues) => {
     const bodyJson = editor?.getJSON() ?? null;
     const bodyText = editor?.getText() ?? '';
 
-    const tags = values.tags
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
+    const cleanTags = tags.map((t) => t.trim()).filter(Boolean);
 
     const poll =
       selectedType === 'poll'
@@ -163,7 +229,7 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
       title: values.title,
       body: bodyJson,
       bodyText,
-      tags,
+      tags: cleanTags,
       organizationId: values.organizationId === 'personal' ? null : values.organizationId,
       type: values.type,
       status: 'published',
@@ -175,6 +241,9 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
     reset();
     editor?.commands.clearContent();
     setMediaUrls([]);
+    setTags(['']);
+    setPaperMeta(null);
+    setParsingPdf(false);
     setOpen(false);
   };
 
@@ -191,27 +260,16 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
 
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Post</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            Create Post
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          {/* Title */}
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              placeholder="Give your post a title…"
-              {...register('title', { required: 'Title is required' })}
-            />
-            {errors.title && (
-              <p className="text-xs text-destructive">{errors.title.message}</p>
-            )}
-          </div>
-
           {/* Post type + Org selector row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label>Post Type</Label>
+              <Label className="text-xs font-medium text-muted-foreground">Post Type</Label>
               <Controller
                 name="type"
                 control={control}
@@ -232,7 +290,7 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label>Organization</Label>
+              <Label className="text-xs font-medium text-muted-foreground">Organization</Label>
               <Controller
                 name="organizationId"
                 control={control}
@@ -255,12 +313,28 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
             </div>
           </div>
 
+          {/* Title */}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="title" className="text-xs font-medium text-muted-foreground">
+              Title *
+            </Label>
+            <Input
+              id="title"
+              placeholder="Give your post a title…"
+              className="text-base font-medium"
+              {...register('title', { required: 'Title is required' })}
+            />
+            {errors.title && (
+              <p className="text-xs text-destructive">{errors.title.message}</p>
+            )}
+          </div>
+
           {/* Rich-text body */}
           <div className="flex flex-col gap-1.5">
-            <Label>Body</Label>
+            <Label className="text-xs font-medium text-muted-foreground">Body</Label>
             {/* Toolbar */}
             {editor && (
-              <div className="flex flex-wrap gap-1 rounded-t-md border border-b-0 border-border bg-muted/30 px-2 py-1.5">
+              <div className="flex flex-wrap items-center gap-0.5 rounded-t-lg border border-b-0 border-border bg-muted/30 px-2 py-1.5">
                 <ToolbarBtn
                   icon={Bold}
                   active={editor.isActive('bold')}
@@ -302,20 +376,83 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
                 />
               </div>
             )}
-            <div className="rounded-b-md border border-border">
+            <div className="rounded-b-lg border border-border transition-colors focus-within:border-primary/50">
               <EditorContent editor={editor} />
             </div>
           </div>
 
+          {/* Paper Share – Auto-parsed PDF metadata */}
+          {selectedType === 'paper_share' && (
+            <div className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50/30 p-4">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-blue-600" />
+                <Label className="font-semibold text-blue-900">Research Paper</Label>
+              </div>
+              <p className="text-xs text-blue-700/80">
+                Upload a PDF and we&apos;ll automatically extract paper metadata (title, authors, keywords).
+              </p>
+
+              {parsingPdf && (
+                <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-white p-3 text-sm text-blue-700">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Extracting metadata from PDF…
+                </div>
+              )}
+
+              {parsePdf.isError && !parsingPdf && (
+                <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  Could not extract metadata from this PDF. You can fill in details manually.
+                </div>
+              )}
+
+              {paperMeta && !parsingPdf && (
+                <div className="rounded-md border border-blue-200 bg-white p-3">
+                  {paperMeta.title && (
+                    <h4 className="text-sm font-semibold text-foreground line-clamp-2">{paperMeta.title}</h4>
+                  )}
+                  {paperMeta.authors.length > 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {paperMeta.authors.join(', ')}
+                    </p>
+                  )}
+                  <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                    {paperMeta.year && (
+                      <span className="rounded bg-muted px-1.5 py-0.5">{paperMeta.year}</span>
+                    )}
+                    {paperMeta.pageCount && (
+                      <span className="rounded bg-muted px-1.5 py-0.5">{paperMeta.pageCount} pages</span>
+                    )}
+                  </div>
+                  {paperMeta.abstract && (
+                    <p className="mt-2 text-xs text-muted-foreground line-clamp-3">{paperMeta.abstract}</p>
+                  )}
+                  {paperMeta.keywords.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {paperMeta.keywords.map((kw) => (
+                        <Badge key={kw} variant="secondary" className="text-[10px]">
+                          {kw}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <p className="mt-2 text-[10px] text-blue-600/70">
+                    Title and tags were auto-filled from this PDF.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Poll section */}
           {selectedType === 'poll' && (
-            <div className="flex flex-col gap-3 rounded-md border border-border p-4">
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-4">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-primary" />
-                <Label>Poll</Label>
+                <Label className="font-semibold">Poll</Label>
               </div>
               <Input
-                placeholder="Poll question…"
+                placeholder="What would you like to ask?"
                 {...register('pollQuestion', {
                   validate: (v) =>
                     selectedType !== 'poll' || v.trim().length > 0 || 'Poll question is required',
@@ -328,6 +465,9 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
               <div className="flex flex-col gap-2">
                 {pollFields.map((field, idx) => (
                   <div key={field.id} className="flex items-center gap-2">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-white text-xs text-muted-foreground">
+                      {idx + 1}
+                    </div>
                     <Input
                       placeholder={`Option ${idx + 1}`}
                       {...register(`pollOptions.${idx}.text` as const)}
@@ -337,10 +477,11 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon-xs"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => removePollOption(idx)}
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}
                   </div>
@@ -360,7 +501,7 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
               </div>
 
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" {...register('pollIsMultiple')} className="rounded" />
+                <input type="checkbox" {...register('pollIsMultiple')} className="rounded border-border" />
                 Allow multiple choices
               </label>
             </div>
@@ -368,31 +509,33 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
 
           {/* Media uploads */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <Label>Media</Label>
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*,video/*,application/pdf"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileUpload}
-                  disabled={uploading}
-                />
-                <span className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary">
-                  {uploading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <ImagePlus className="h-3.5 w-3.5" />
-                  )}
-                  {uploading ? 'Uploading…' : 'Add images / videos / PDFs'}
-                </span>
-              </label>
-            </div>
+            <Label className="text-xs font-medium text-muted-foreground">Attachments</Label>
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileUpload}
+                disabled={uploading}
+              />
+              <div className="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted/30 hover:text-primary">
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {uploading ? 'Uploading…' : 'Click to upload files (images, videos, PDFs, etc.)'}
+              </div>
+            </label>
+            {selectedType !== 'paper_share' && (
+              <p className="text-[11px] text-muted-foreground/70">
+                Images &amp; videos: unlimited · Documents/PDFs: max 5 per post
+              </p>
+            )}
             {mediaUrls.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {mediaUrls.map((url, idx) => (
-                  <div key={url} className="group relative h-20 w-20 overflow-hidden rounded-md border">
+                  <div key={url} className="group relative h-20 w-20 overflow-hidden rounded-lg border border-border">
                     {url.match(/\.pdf$/i) ? (
                       <div className="flex h-full w-full flex-col items-center justify-center bg-muted/30 text-muted-foreground">
                         <FileText className="h-6 w-6" />
@@ -407,7 +550,7 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
                     <button
                       type="button"
                       onClick={() => removeMedia(idx)}
-                      className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                      className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -417,14 +560,53 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
             )}
           </div>
 
-          {/* Tags */}
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="tags">Tags</Label>
-            <Input
-              id="tags"
-              placeholder="Comma-separated, e.g. nutrition, research, policy"
-              {...register('tags')}
-            />
+          {/* Tags – Individual inputs */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium text-muted-foreground">
+                Tags {tags.filter((t) => t.trim()).length > 0 && (
+                  <span className="text-muted-foreground/60">({tags.filter((t) => t.trim()).length}/10)</span>
+                )}
+              </Label>
+              {tags.length < 10 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs text-primary hover:text-primary/80"
+                  onClick={addTag}
+                >
+                  <Plus className="h-3 w-3" />
+                  Add Tag
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag, idx) => (
+                <div key={idx} className="flex items-center gap-1">
+                  <div className="relative">
+                    <Hash className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground/50" />
+                    <Input
+                      value={tag}
+                      onChange={(e) => updateTag(idx, e.target.value)}
+                      placeholder="tag name"
+                      className="h-8 w-36 pl-7 text-xs"
+                    />
+                  </div>
+                  {tags.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeTag(idx)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           <Separator />
@@ -471,7 +653,7 @@ function ToolbarBtn({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded p-1 transition-colors ${
+      className={`rounded-md p-1.5 transition-colors ${
         active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
       }`}
     >
