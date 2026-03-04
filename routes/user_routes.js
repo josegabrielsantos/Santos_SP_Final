@@ -3,6 +3,7 @@ import {
   getUserById,
   updateProfile,
   getUserOrganizations,
+  getUserFollowedOrganizations,
   getUserPosts,
   getAllUsers,
   updateUserRole,
@@ -23,6 +24,7 @@ router.patch('/:id/deactivate', protectRoute, requireWebsiteAdmin, toggleUserAct
 // Public-ish lookups
 router.get('/:id', getUserById);
 router.get('/:id/organizations', getUserOrganizations);
+router.get('/:id/followed-organizations', getUserFollowedOrganizations);
 router.get('/:id/posts', getUserPosts);
 
 export default router;

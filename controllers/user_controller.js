@@ -216,10 +216,30 @@ const getAdminStats = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/users/:id/followed-organizations
+ * Return organizations where user is a follower (but not a member)
+ */
+const getUserFollowedOrganizations = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const orgs = await Organization.find({
+      followerIds: userId,
+      isActive: true,
+    }).select('name slug avatar memberCount postCount');
+
+    res.status(200).json(orgs);
+  } catch (error) {
+    console.log('Error in getUserFollowedOrganizations:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
 export {
   getUserById,
   updateProfile,
   getUserOrganizations,
+  getUserFollowedOrganizations,
   getUserPosts,
   getAllUsers,
   updateUserRole,

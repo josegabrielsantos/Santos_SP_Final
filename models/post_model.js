@@ -24,6 +24,19 @@ const pollSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// -- Paper metadata sub-schema (user-provided) --
+
+const paperMetadataSchema = new mongoose.Schema(
+  {
+    datePublished: { type: Date, default: null },
+    doi:           { type: String, default: null },
+    isbn:          { type: String, default: null },
+    authors:       { type: [String], default: [] },
+    abstract:      { type: String, default: null },
+  },
+  { _id: false }
+);
+
 // -- Post schema --
 
 const postSchema = new mongoose.Schema(
@@ -80,6 +93,10 @@ const postSchema = new mongoose.Schema(
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
       default: [],
     },
+    dislikedBy: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
+    },
     reportedBy: {
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
       default: [],
@@ -101,6 +118,15 @@ const postSchema = new mongoose.Schema(
     poll: {
       type: pollSchema,
       default: null,
+    },
+    paperMetadata: {
+      type: paperMetadataSchema,
+      default: null,
+    },
+    hotScore: {
+      type: Number,
+      default: 0,
+      index: true,
     },
     type: {
       type: String,
@@ -124,6 +150,18 @@ postSchema.index({ authorId: 1, publishedAt: -1 });
 postSchema.index({ status: 1, publishedAt: -1 });
 postSchema.index({ type: 1, status: 1, publishedAt: -1 });
 postSchema.index({ isReported: 1, status: 1 });
+postSchema.index({ status: 1, hotScore: -1 });
+
+// -- Helper: compute Hacker News-style hot score --
+
+function computeHotScore(likeCount, commentCount, publishedAt) {
+  const now = Date.now();
+  const published = publishedAt ? new Date(publishedAt).getTime() : now;
+  const ageInHours = Math.max(0, (now - published) / 3600000);
+  const engagement = (likeCount || 0) + (commentCount || 0) * 2;
+  // Hacker News gravity formula: score / (age + 2)^1.8
+  return engagement / Math.pow(ageInHours + 2, 1.8);
+}
 
 // -- Pre-save hooks --
 
@@ -139,6 +177,9 @@ postSchema.pre('save', function (next) {
 
   // Keep isReported in sync with reportedBy array
   this.isReported = this.reportedBy.length > 0;
+
+  // Recalculate hot score whenever likes or comments change
+  this.hotScore = computeHotScore(this.likeCount, this.commentCount, this.publishedAt);
 
   next();
 });

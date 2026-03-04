@@ -1,7 +1,37 @@
 import Post from '../models/post_model.js';
 import Comment from '../models/comment_model.js';
+import Notification from '../models/notification_model.js';
 import FeaturedPost from '../models/featured_post_model.js';
 import Organization from '../models/organization_model.js';
+import User from '../models/user_model.js';
+
+/**
+ * Helper: check org-level access for a post interaction.
+ * Returns { role, allowed, canComment } or throws HTTP-friendly object.
+ *   role: 'member' | 'follower' | 'none'
+ *   allowed    – can like / dislike
+ *   canComment – can comment / reply
+ */
+async function checkOrgAccess(post, userId) {
+  if (!post.organizationId) return { role: 'member', allowed: true, canComment: true };
+
+  const orgId = typeof post.organizationId === 'object' ? (post.organizationId._id || post.organizationId) : post.organizationId;
+  const org = await Organization.findById(orgId);
+  if (!org) return { role: 'member', allowed: true, canComment: true }; // org deleted → fallback open
+
+  const uid = userId.toString();
+  const isMemberOrAdmin =
+    org.ownerId.toString() === uid ||
+    org.adminIds.map(String).includes(uid) ||
+    org.memberIds.map(String).includes(uid);
+
+  if (isMemberOrAdmin) return { role: 'member', allowed: true, canComment: true };
+
+  const isFollower = org.followerIds.map(String).includes(uid);
+  if (isFollower) return { role: 'follower', allowed: true, canComment: false };
+
+  return { role: 'none', allowed: false, canComment: false };
+}
 
 /*  POST CRUD  */
 
@@ -10,7 +40,7 @@ import Organization from '../models/organization_model.js';
  */
 const createPost = async (req, res) => {
   try {
-    const { title, body, bodyText, tags, organizationId, type, status, mediaUrls, paperIds, poll } = req.body;
+    const { title, body, bodyText, tags, organizationId, type, status, mediaUrls, paperIds, poll, paperMetadata } = req.body;
 
     if (!title) return res.status(400).json({ error: 'Title is required.' });
 
@@ -37,6 +67,7 @@ const createPost = async (req, res) => {
       mediaUrls: mediaUrls || [],
       paperIds: paperIds || [],
       poll: poll || undefined,
+      paperMetadata: (type === 'paper_share' && paperMetadata) ? paperMetadata : null,
       publishedAt: (status === 'published') ? new Date() : null,
     });
 
@@ -65,13 +96,29 @@ const getPosts = async (req, res) => {
     const skip = (page - 1) * limit;
     const tag = req.query.tag;
     const type = req.query.type;
+    const sort = req.query.sort || 'hot'; // 'hot' | 'new' | 'top'
 
     const filter = { status: 'published' };
     if (tag) filter.tags = tag;
     if (type) filter.type = type;
 
+    // Determine sort order
+    let sortOrder;
+    switch (sort) {
+      case 'new':
+        sortOrder = { publishedAt: -1 };
+        break;
+      case 'top':
+        sortOrder = { likeCount: -1, publishedAt: -1 };
+        break;
+      case 'hot':
+      default:
+        sortOrder = { hotScore: -1, publishedAt: -1 };
+        break;
+    }
+
     const posts = await Post.find(filter)
-      .sort({ publishedAt: -1 })
+      .sort(sortOrder)
       .skip(skip)
       .limit(limit)
       .populate('authorId', 'displayName avatar')
@@ -196,7 +243,8 @@ const deletePost = async (req, res) => {
 
 /**
  * POST /api/posts/:id/like
- * Toggle like
+ * Toggle like. If already disliked, removes dislike first.
+ * likeCount = likedBy.length - dislikedBy.length
  */
 const toggleLike = async (req, res) => {
   try {
@@ -204,20 +252,80 @@ const toggleLike = async (req, res) => {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found.' });
 
-    const alreadyLiked = post.likedBy.map(String).includes(userId.toString());
+    // Org restriction: non-members/non-followers cannot like
+    const access = await checkOrgAccess(post, userId);
+    if (!access.allowed) {
+      return res.status(403).json({ error: 'You must be a member or follower of this organization to like posts.' });
+    }
+
+    const userIdStr = userId.toString();
+    const alreadyLiked = post.likedBy.map(String).includes(userIdStr);
+    const alreadyDisliked = post.dislikedBy.map(String).includes(userIdStr);
 
     if (alreadyLiked) {
       post.likedBy.pull(userId);
-      post.likeCount = Math.max(0, post.likeCount - 1);
     } else {
+      // Remove dislike if present, then add like
+      if (alreadyDisliked) {
+        post.dislikedBy.pull(userId);
+      }
       post.likedBy.push(userId);
-      post.likeCount += 1;
     }
 
+    post.likeCount = post.likedBy.length - post.dislikedBy.length;
     await post.save();
-    res.status(200).json({ liked: !alreadyLiked, likeCount: post.likeCount });
+    res.status(200).json({
+      liked: !alreadyLiked,
+      disliked: false,
+      likeCount: post.likeCount,
+    });
   } catch (error) {
     console.log('Error in toggleLike:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * POST /api/posts/:id/dislike
+ * Toggle dislike. If already liked, removes like first.
+ * likeCount = likedBy.length - dislikedBy.length
+ */
+const togglePostDislike = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found.' });
+
+    // Org restriction: non-members/non-followers cannot dislike
+    const access = await checkOrgAccess(post, userId);
+    if (!access.allowed) {
+      return res.status(403).json({ error: 'You must be a member or follower of this organization to dislike posts.' });
+    }
+
+    const userIdStr = userId.toString();
+    const alreadyLiked = post.likedBy.map(String).includes(userIdStr);
+    const alreadyDisliked = post.dislikedBy.map(String).includes(userIdStr);
+
+    if (alreadyDisliked) {
+      // Un-dislike
+      post.dislikedBy.pull(userId);
+    } else {
+      // Remove like if present, then add dislike
+      if (alreadyLiked) {
+        post.likedBy.pull(userId);
+      }
+      post.dislikedBy.push(userId);
+    }
+
+    post.likeCount = post.likedBy.length - post.dislikedBy.length;
+    await post.save();
+    res.status(200).json({
+      liked: false,
+      disliked: !alreadyDisliked,
+      likeCount: post.likeCount,
+    });
+  } catch (error) {
+    console.log('Error in togglePostDislike:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
   }
 };
@@ -226,30 +334,41 @@ const toggleLike = async (req, res) => {
 
 /**
  * GET /api/posts/:id/comments
- * Cursor-based pagination for top-level comments (parentId == null).
- * Query params: cursor (ISO date string), limit (default 20)
+ * Offset-based pagination for top-level comments (parentId == null).
+ * Sorted by likeCount DESC, then createdAt ASC (oldest tiebreaker).
+ * Query params: page (default 1), limit (default 20)
  */
+const COMMENT_SORT_OPTIONS = {
+  top:     { likeCount: -1, createdAt: 1 },
+  new:     { createdAt: -1 },
+  old:     { createdAt: 1 },
+};
+
 const getComments = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 50);
-    const cursor = req.query.cursor; // ISO date string of last comment's createdAt
+    const skip = (page - 1) * limit;
+    const sortKey = COMMENT_SORT_OPTIONS[req.query.sort] ? req.query.sort : 'top';
+    const sortOrder = COMMENT_SORT_OPTIONS[sortKey];
 
     const filter = { postId: req.params.id, parentId: null, isDeleted: false };
-    if (cursor) {
-      filter.createdAt = { $lt: new Date(cursor) };
-    }
 
     const comments = await Comment.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(limit + 1) // fetch one extra to know if there's a next page
+      .sort(sortOrder)
+      .skip(skip)
+      .limit(limit)
       .populate('authorId', 'displayName avatar');
 
-    const hasMore = comments.length > limit;
-    if (hasMore) comments.pop(); // remove the extra
+    const total = await Comment.countDocuments(filter);
 
-    const nextCursor = hasMore ? comments[comments.length - 1].createdAt.toISOString() : null;
-
-    res.status(200).json({ comments, nextCursor });
+    res.status(200).json({
+      comments,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      hasMore: skip + comments.length < total,
+    });
   } catch (error) {
     console.log('Error in getComments:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
@@ -258,30 +377,34 @@ const getComments = async (req, res) => {
 
 /**
  * GET /api/posts/:id/comments/:commentId/replies
- * Cursor-based pagination for replies.
- * Query params: cursor (ISO date string), limit (default 20)
+ * Offset-based pagination for replies. Sorted by likeCount DESC, createdAt ASC.
+ * Query params: page (default 1), limit (default 20)
  */
 const getReplies = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 50);
-    const cursor = req.query.cursor;
+    const skip = (page - 1) * limit;
+    const sortKey = COMMENT_SORT_OPTIONS[req.query.sort] ? req.query.sort : 'top';
+    const sortOrder = COMMENT_SORT_OPTIONS[sortKey];
 
     const filter = { parentId: req.params.commentId, isDeleted: false };
-    if (cursor) {
-      filter.createdAt = { $gt: new Date(cursor) }; // replies oldest-first
-    }
 
     const replies = await Comment.find(filter)
-      .sort({ createdAt: 1 })
-      .limit(limit + 1)
+      .sort(sortOrder)
+      .skip(skip)
+      .limit(limit)
       .populate('authorId', 'displayName avatar');
 
-    const hasMore = replies.length > limit;
-    if (hasMore) replies.pop();
+    const total = await Comment.countDocuments(filter);
 
-    const nextCursor = hasMore ? replies[replies.length - 1].createdAt.toISOString() : null;
-
-    res.status(200).json({ replies, nextCursor });
+    res.status(200).json({
+      replies,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      hasMore: skip + replies.length < total,
+    });
   } catch (error) {
     console.log('Error in getReplies:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
@@ -290,27 +413,113 @@ const getReplies = async (req, res) => {
 
 /**
  * POST /api/posts/:id/comments
- * Create a comment (or reply if parentId is provided)
+ * Create a comment (or reply if parentId is provided).
+ * Sends a notification to the parent comment's author when replying.
  */
 const createComment = async (req, res) => {
   try {
-    const { body, parentId } = req.body;
+    const { body, parentCommentId, parentId: legacyParentId, replyToUser } = req.body;
+    const resolvedParentId = parentCommentId || legacyParentId || null;
     if (!body) return res.status(400).json({ error: 'Body is required.' });
 
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found.' });
 
+    // Org restriction: only members can comment (followers cannot)
+    const access = await checkOrgAccess(post, req.user._id);
+    if (!access.canComment) {
+      return res.status(403).json({
+        error: access.role === 'follower'
+          ? 'Followers cannot comment on organization posts. Join the organization to comment.'
+          : 'You must be a member of this organization to comment.',
+      });
+    }
+
+    let parentComment = null;
+    // If replying, verify parent comment exists
+    if (resolvedParentId) {
+      parentComment = await Comment.findById(resolvedParentId).populate('authorId', 'displayName avatar');
+      if (!parentComment || parentComment.isDeleted) {
+        return res.status(404).json({ error: 'Parent comment not found.' });
+      }
+    }
+
     const comment = new Comment({
       postId: post._id,
       authorId: req.user._id,
-      parentId: parentId || null,
+      parentId: resolvedParentId,
       body,
+      replyToUser: replyToUser || null,
     });
     await comment.save();
 
     // Increment post commentCount
     post.commentCount += 1;
     await post.save();
+
+    // Create notification for parent comment author (if replying and not self-reply)
+    if (parentComment && parentComment.authorId._id.toString() !== req.user._id.toString()) {
+      try {
+        const senderName = req.user.displayName || 'Someone';
+        await Notification.create({
+          recipientId: parentComment.authorId._id,
+          senderId: req.user._id,
+          type: 'reply',
+          postId: post._id,
+          commentId: comment._id,
+          message: `${senderName} replied to your comment`,
+        });
+      } catch (notifErr) {
+        console.log('Error creating notification:', notifErr.message);
+      }
+    }
+
+    // Also notify the post author if this is a top-level comment (not a reply) and commenter isn't the author
+    if (!resolvedParentId && post.authorId.toString() !== req.user._id.toString()) {
+      try {
+        const senderName = req.user.displayName || 'Someone';
+        await Notification.create({
+          recipientId: post.authorId,
+          senderId: req.user._id,
+          type: 'comment',
+          postId: post._id,
+          commentId: comment._id,
+          message: `${senderName} commented on your post`,
+        });
+      } catch (notifErr) {
+        console.log('Error creating notification:', notifErr.message);
+      }
+    }
+
+    // Detect @mentions in the comment body and notify mentioned users
+    try {
+      const mentionRegex = /@([\w\s]+?)(?=\s@|\s*$|[.,!?;])/g;
+      let match;
+      const mentionedNames = [];
+      while ((match = mentionRegex.exec(body)) !== null) {
+        mentionedNames.push(match[1].trim());
+      }
+      if (mentionedNames.length > 0) {
+        const mentionedUsers = await User.find({
+          displayName: { $in: mentionedNames },
+          _id: { $ne: req.user._id },
+        });
+        const senderName = req.user.displayName || 'Someone';
+        const mentionNotifs = mentionedUsers.map((mu) =>
+          Notification.create({
+            recipientId: mu._id,
+            senderId: req.user._id,
+            type: 'mention',
+            postId: post._id,
+            commentId: comment._id,
+            message: `${senderName} mentioned you in a comment`,
+          })
+        );
+        await Promise.allSettled(mentionNotifs);
+      }
+    } catch (mentionErr) {
+      console.log('Error creating mention notifications:', mentionErr.message);
+    }
 
     const populated = await comment.populate('authorId', 'displayName avatar');
     res.status(201).json(populated);
@@ -545,7 +754,8 @@ const closePoll = async (req, res) => {
 
 /**
  * POST /api/posts/:id/comments/:commentId/like
- * Toggle like on a comment.
+ * Toggle like on a comment. If already disliked, removes dislike first.
+ * likeCount = likedBy.length - dislikedBy.length (can be negative)
  */
 const toggleCommentLike = async (req, res) => {
   try {
@@ -554,21 +764,94 @@ const toggleCommentLike = async (req, res) => {
       return res.status(404).json({ error: 'Comment not found.' });
     }
 
-    const userId = req.user._id;
-    const alreadyLiked = comment.likedBy.map(String).includes(userId.toString());
-
-    if (alreadyLiked) {
-      comment.likedBy.pull(userId);
-      comment.likeCount = Math.max(0, comment.likeCount - 1);
-    } else {
-      comment.likedBy.push(userId);
-      comment.likeCount += 1;
+    // Org restriction: check via the parent post
+    const post = await Post.findById(comment.postId);
+    if (post) {
+      const access = await checkOrgAccess(post, req.user._id);
+      if (!access.allowed) {
+        return res.status(403).json({ error: 'You must be a member or follower of this organization to like comments.' });
+      }
     }
 
+    const userId = req.user._id;
+    const userIdStr = userId.toString();
+    const alreadyLiked = comment.likedBy.map(String).includes(userIdStr);
+    const alreadyDisliked = comment.dislikedBy.map(String).includes(userIdStr);
+
+    if (alreadyLiked) {
+      // Un-like
+      comment.likedBy.pull(userId);
+    } else {
+      // Remove dislike if present, then add like
+      if (alreadyDisliked) {
+        comment.dislikedBy.pull(userId);
+      }
+      comment.likedBy.push(userId);
+    }
+
+    // Recalculate: likes - dislikes
+    comment.likeCount = comment.likedBy.length - comment.dislikedBy.length;
+
     await comment.save();
-    res.status(200).json({ liked: !alreadyLiked, likeCount: comment.likeCount });
+    res.status(200).json({
+      liked: !alreadyLiked,
+      disliked: false,
+      likeCount: comment.likeCount,
+    });
   } catch (error) {
     console.log('Error in toggleCommentLike:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * POST /api/posts/:id/comments/:commentId/dislike
+ * Toggle dislike on a comment. If already liked, removes like first.
+ * likeCount = likedBy.length - dislikedBy.length (can be negative)
+ */
+const toggleCommentDislike = async (req, res) => {
+  try {
+    const comment = await Comment.findById(req.params.commentId);
+    if (!comment || comment.isDeleted) {
+      return res.status(404).json({ error: 'Comment not found.' });
+    }
+
+    // Org restriction: check via the parent post
+    const post = await Post.findById(comment.postId);
+    if (post) {
+      const access = await checkOrgAccess(post, req.user._id);
+      if (!access.allowed) {
+        return res.status(403).json({ error: 'You must be a member or follower of this organization to dislike comments.' });
+      }
+    }
+
+    const userId = req.user._id;
+    const userIdStr = userId.toString();
+    const alreadyLiked = comment.likedBy.map(String).includes(userIdStr);
+    const alreadyDisliked = comment.dislikedBy.map(String).includes(userIdStr);
+
+    if (alreadyDisliked) {
+      // Un-dislike
+      comment.dislikedBy.pull(userId);
+    } else {
+      // Remove like if present, then add dislike
+      if (alreadyLiked) {
+        comment.likedBy.pull(userId);
+      }
+      comment.dislikedBy.push(userId);
+    }
+
+    // Recalculate: likes - dislikes
+    comment.likeCount = comment.likedBy.length - comment.dislikedBy.length;
+
+    await comment.save();
+    res.status(200).json({
+      liked: false,
+      disliked: !alreadyDisliked,
+      likeCount: comment.likeCount,
+    });
+  } catch (error) {
+    console.log('Error in toggleCommentDislike:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
   }
 };
@@ -580,6 +863,7 @@ export {
   updatePost,
   deletePost,
   toggleLike,
+  togglePostDislike,
   getComments,
   getReplies,
   createComment,
@@ -591,4 +875,5 @@ export {
   votePoll,
   closePoll,
   toggleCommentLike,
+  toggleCommentDislike,
 };

@@ -22,9 +22,17 @@ const commentSchema = new mongoose.Schema(
     body: {
       type: String,
       required: true,
-      maxlength: 2000,
+      maxlength: 5000,
+    },
+    replyToUser: {
+      type: String,
+      default: null,
     },
     likedBy: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
+    },
+    dislikedBy: {
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
       default: [],
     },
@@ -51,6 +59,8 @@ const commentSchema = new mongoose.Schema(
 commentSchema.index({ postId: 1, parentId: 1, createdAt: -1 });
 // Cursor pagination: fetch next page of top-level comments by createdAt
 commentSchema.index({ postId: 1, createdAt: -1 });
+// Index for sorting comments by likes (most liked first, oldest tiebreaker)
+commentSchema.index({ postId: 1, parentId: 1, likeCount: -1, createdAt: 1 });
 
 const Comment = mongoose.model('Comment', commentSchema);
 export default Comment;

@@ -26,8 +26,8 @@ export async function indexPost(post) {
       populatedPost = await post.populate('authorId organizationId');
     }
 
+    const docId = populatedPost._id.toString();
     const doc = {
-      _id:              populatedPost._id.toString(),
       title:            populatedPost.title,
       bodyText:         populatedPost.bodyText,
       tags:             populatedPost.tags,
@@ -46,10 +46,10 @@ export async function indexPost(post) {
 
     await esClient.index({
       index: 'kms_posts',
-      id:    doc._id,
+      id:    docId,
       document: doc,
     });
-    console.log(`[ES sync] Post indexed: ${doc._id}`);
+    console.log(`[ES sync] Post indexed: ${docId}`);
   } catch (err) {
     console.error('[ES sync] indexPost failed:', err.message);
   }
@@ -82,8 +82,8 @@ export async function indexPaper(paper) {
       populatedPaper = await paper.populate('uploadedBy organizationId');
     }
 
+    const docId = populatedPaper._id.toString();
     const doc = {
-      _id:              populatedPaper._id.toString(),
       title:            populatedPaper.title,
       abstract:         populatedPaper.abstract,
       keywords:         populatedPaper.keywords,
@@ -100,10 +100,10 @@ export async function indexPaper(paper) {
 
     await esClient.index({
       index: 'kms_papers',
-      id:    doc._id,
+      id:    docId,
       document: doc,
     });
-    console.log(`[ES sync] Paper indexed: ${doc._id}`);
+    console.log(`[ES sync] Paper indexed: ${docId}`);
   } catch (err) {
     console.error('[ES sync] indexPaper failed:', err.message);
   }

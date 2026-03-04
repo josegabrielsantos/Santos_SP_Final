@@ -6,6 +6,7 @@ import {
   updatePost,
   deletePost,
   toggleLike,
+  togglePostDislike,
   getComments,
   getReplies,
   createComment,
@@ -17,6 +18,7 @@ import {
   votePoll,
   closePoll,
   toggleCommentLike,
+  toggleCommentDislike,
 } from '../controllers/post_controller.js';
 import { protectRoute, requireWebsiteAdmin } from '../middleware/protectRoute.js';
 
@@ -36,6 +38,7 @@ router.delete('/:id', protectRoute, deletePost);
 
 // Likes
 router.post('/:id/like', protectRoute, toggleLike);
+router.post('/:id/dislike', protectRoute, togglePostDislike);
 
 // Comments
 router.get('/:id/comments', getComments);
@@ -43,6 +46,7 @@ router.post('/:id/comments', protectRoute, createComment);
 router.get('/:id/comments/:commentId/replies', getReplies);
 router.delete('/:id/comments/:commentId', protectRoute, deleteComment);
 router.post('/:id/comments/:commentId/like', protectRoute, toggleCommentLike);
+router.post('/:id/comments/:commentId/dislike', protectRoute, toggleCommentDislike);
 
 // Report
 router.post('/:id/report', protectRoute, reportPost);

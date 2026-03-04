@@ -1,6 +1,7 @@
 import Organization from '../models/organization_model.js';
 import Post from '../models/post_model.js';
 import User from '../models/user_model.js';
+import Notification from '../models/notification_model.js';
 
 /*  CRUD  */
 
@@ -177,6 +178,9 @@ const addMember = async (req, res) => {
     }
 
     org.memberIds.push(userId);
+    if (!org.followerIds.map(String).includes(userId)) {
+      org.followerIds.push(userId);
+    }
     await org.save();           // pre-save hook syncs memberCount
     res.status(200).json({ message: 'Member added.', memberCount: org.memberCount });
   } catch (error) {
@@ -373,7 +377,15 @@ const getOrganizationMembers = async (req, res) => {
       admins: org.adminIds,
       members: org.memberIds,
       followerCount: org.followerIds.length,
+      followers: [],
     };
+
+    // Populate followers
+    const populatedOrg = await Organization.findById(req.params.id)
+      .populate('followerIds', 'displayName avatar email');
+    if (populatedOrg) {
+      result.followers = populatedOrg.followerIds;
+    }
 
     // Only show pending members to org admins / website admins
     if (req.user) {
@@ -416,6 +428,24 @@ const requestJoin = async (req, res) => {
 
     org.pendingMemberIds.push(req.user._id);
     await org.save();
+
+    // Notify all org admins about the join request
+    try {
+      const senderName = req.user.displayName || 'Someone';
+      const notifPromises = org.adminIds.map((adminId) =>
+        Notification.create({
+          recipientId: adminId,
+          senderId: req.user._id,
+          type: 'join_request',
+          organizationId: org._id,
+          message: `${senderName} requested to join ${org.name}`,
+        })
+      );
+      await Promise.allSettled(notifPromises);
+    } catch (notifErr) {
+      console.log('Error creating join request notifications:', notifErr.message);
+    }
+
     res.status(200).json({ message: 'Join request submitted.' });
   } catch (error) {
     console.log('Error in requestJoin:', error.message);
@@ -438,10 +468,26 @@ const approveJoin = async (req, res) => {
       return res.status(400).json({ error: 'No pending request from this user.' });
     }
 
-    // Move from pending to members
+    // Move from pending to members, and auto-follow
     org.pendingMemberIds.splice(pendingIdx, 1);
     org.memberIds.push(targetId);
+    if (!org.followerIds.map(String).includes(targetId)) {
+      org.followerIds.push(targetId);
+    }
     await org.save();
+
+    // Notify the approved user
+    try {
+      await Notification.create({
+        recipientId: targetId,
+        senderId: req.user._id,
+        type: 'join_approved',
+        organizationId: org._id,
+        message: `Your request to join ${org.name} has been approved`,
+      });
+    } catch (notifErr) {
+      console.log('Error creating approval notification:', notifErr.message);
+    }
 
     res.status(200).json({ message: 'Member approved.', memberCount: org.memberCount });
   } catch (error) {
@@ -467,6 +513,19 @@ const rejectJoin = async (req, res) => {
 
     org.pendingMemberIds.splice(pendingIdx, 1);
     await org.save();
+
+    // Notify the rejected user
+    try {
+      await Notification.create({
+        recipientId: targetId,
+        senderId: req.user._id,
+        type: 'join_rejected',
+        organizationId: org._id,
+        message: `Your request to join ${org.name} has been declined`,
+      });
+    } catch (notifErr) {
+      console.log('Error creating rejection notification:', notifErr.message);
+    }
 
     res.status(200).json({ message: 'Join request rejected.' });
   } catch (error) {
@@ -515,6 +574,24 @@ const leaveOrganization = async (req, res) => {
     if (pendingIdx !== -1) {
       org.pendingMemberIds.splice(pendingIdx, 1);
       await org.save();
+
+      // Notify admins that the join request was cancelled
+      try {
+        const senderName = req.user.displayName || 'Someone';
+        const notifPromises = org.adminIds.map((adminId) =>
+          Notification.create({
+            recipientId: adminId,
+            senderId: req.user._id,
+            type: 'join_cancelled',
+            organizationId: org._id,
+            message: `${senderName} cancelled their request to join ${org.name}`,
+          })
+        );
+        await Promise.allSettled(notifPromises);
+      } catch (notifErr) {
+        console.log('Error creating cancel notifications:', notifErr.message);
+      }
+
       return res.status(200).json({ message: 'Join request withdrawn.' });
     }
 

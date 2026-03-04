@@ -14,6 +14,7 @@ import paperRoutes from './routes/paper_routes.js';
 import adminRoutes from './routes/admin_routes.js';
 import searchRoutes from './routes/search_routes.js';
 import uploadRoutes from './routes/upload_routes.js';
+import notificationRoutes from './routes/notification_routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -44,6 +45,7 @@ app.use('/api/papers', paperRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
