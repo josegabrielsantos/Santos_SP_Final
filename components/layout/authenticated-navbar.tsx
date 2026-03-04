@@ -14,7 +14,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, User, Settings, LogOut, ShieldCheck } from 'lucide-react';
+import { Search, User, Settings, LogOut, ShieldCheck, Bell } from 'lucide-react';
+import { useUnreadNotificationCount, useMarkNotificationsRead } from '@/lib/api/notifications';
+import { NotificationDropdown } from './notification-dropdown';
 
 export function AuthenticatedNavbar() {
   const { user } = useAppSelector((s) => s.auth);
@@ -35,7 +37,7 @@ export function AuthenticatedNavbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/95 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-4 px-4 lg:px-6">
+      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 lg:px-6">
         {/* Left – Logos */}
         <Link href="/home" className="flex shrink-0 items-center gap-2">
           <Image
@@ -52,7 +54,7 @@ export function AuthenticatedNavbar() {
             height={32}
             className="rounded-full"
           />
-          <span className="hidden text-base font-bold tracking-tight text-foreground lg:block">
+          <span className="hidden text-lg font-bold tracking-tight text-foreground lg:block">
             UPLB KAIN
           </span>
         </Link>
@@ -64,12 +66,16 @@ export function AuthenticatedNavbar() {
             <Input
               type="search"
               placeholder="Search posts, papers, organizations…"
-              className="h-9 w-full rounded-full border-border/80 bg-muted/40 pl-9 pr-4 text-sm placeholder:text-muted-foreground/70 focus-visible:ring-primary/30"
+              className="h-10 w-full rounded-full border-border/80 bg-muted/40 pl-9 pr-4 text-[15px] placeholder:text-muted-foreground/70 focus-visible:ring-primary/30"
             />
           </div>
         </div>
 
-        {/* Right – Avatar dropdown */}
+        {/* Right – Notifications + Avatar dropdown */}
+        <div className="flex items-center gap-2">
+          {/* Notification dropdown */}
+          <NotificationDropdown />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex shrink-0 items-center gap-2 rounded-full outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-primary/40">
@@ -90,7 +96,7 @@ export function AuthenticatedNavbar() {
             </div>
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem onClick={() => router.push('/profile')} className="cursor-pointer gap-2">
+            <DropdownMenuItem onClick={() => router.push(`/profile/${user?._id}`)} className="cursor-pointer gap-2">
               <User className="h-4 w-4" />
               Profile
             </DropdownMenuItem>
@@ -115,6 +121,7 @@ export function AuthenticatedNavbar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
     </header>
   );

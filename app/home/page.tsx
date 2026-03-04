@@ -5,7 +5,6 @@ import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
 import { Sidebar } from '@/components/layout/sidebar';
 import { AnnouncementsPanel } from '@/components/home/announcements-panel';
 import { PostCard } from '@/components/post/post-card';
-import { CommentsSection } from '@/components/post/comments-section';
 import { CreatePostDialog } from '@/components/post/create-post-dialog';
 import { usePosts, useFeaturedPosts } from '@/lib/api/posts';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,7 +16,6 @@ export default function HomePage() {
   const [page, setPage] = useState(1);
   const { data, isLoading, isError } = usePosts({ page, limit: 20 });
   const { data: featuredPosts } = useFeaturedPosts();
-  const [expandedComments, setExpandedComments] = useState<string | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const scrollCarousel = (dir: 'left' | 'right') => {
@@ -36,13 +34,13 @@ export default function HomePage() {
 
         {/* Main content area */}
         <main className="flex flex-1 justify-center">
-          <div className="flex w-full max-w-3xl flex-col gap-4 px-4 py-6 lg:px-6">
+          <div className="flex w-full max-w-4xl flex-col gap-5 px-4 py-6 lg:px-6">
             {/* Featured Posts Carousel */}
             {featuredPosts && featuredPosts.length > 0 && (
               <div className="relative">
                 <div className="mb-2 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-amber-500" />
-                  <h2 className="text-sm font-semibold text-foreground">Featured</h2>
+                  <Sparkles className="h-5 w-5 text-amber-500" />
+                  <h2 className="text-[15px] font-semibold text-foreground">Featured</h2>
                 </div>
                 <div className="relative">
                   <button
@@ -77,7 +75,7 @@ export default function HomePage() {
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
                     <Plus className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-[15px] text-muted-foreground">
                     What&apos;s on your mind? Create a post…
                   </span>
                 </CardContent>
@@ -96,19 +94,7 @@ export default function HomePage() {
             )}
 
             {data?.posts.map((post) => (
-              <div key={post._id}>
-                <PostCard
-                  post={post}
-                  onCommentClick={(id) =>
-                    setExpandedComments(expandedComments === id ? null : id)
-                  }
-                />
-                {expandedComments === post._id && (
-                  <Card className="border-t-0 border-border/60 bg-white shadow-sm rounded-t-none -mt-1">
-                    <CommentsSection postId={post._id} />
-                  </Card>
-                )}
-              </div>
+              <PostCard key={post._id} post={post} />
             ))}
 
             {/* Pagination */}
@@ -158,13 +144,13 @@ function FeaturedCard({ post }: { post: Post }) {
     typeof post.authorId === 'object' ? post.authorId.displayName : 'Unknown';
 
   return (
-    <Card className="w-[280px] shrink-0 border-border/60 bg-white shadow-sm">
-      <CardContent className="p-3">
-        <h3 className="text-sm font-semibold leading-snug text-foreground line-clamp-2">
+    <Card className="w-[300px] shrink-0 border-border/60 bg-white shadow-sm">
+      <CardContent className="p-3.5">
+        <h3 className="text-[15px] font-semibold leading-snug text-foreground line-clamp-2">
           {post.title}
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{post.bodyText}</p>
-        <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
+        <p className="mt-1 text-[13px] text-muted-foreground line-clamp-2">{post.bodyText}</p>
+        <div className="mt-2 flex items-center gap-2 text-[12px] text-muted-foreground">
           <span>{authorName}</span>
           <span>·</span>
           <span>{post.likeCount} likes</span>

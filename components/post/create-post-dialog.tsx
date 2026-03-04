@@ -18,11 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCreatePost, useParsePdf } from '@/lib/api/posts';
+import { useCreatePost } from '@/lib/api/posts';
 import { useUploadFile } from '@/lib/api/upload';
 import { useOrganizations } from '@/lib/api/organizations';
 import { useAppSelector } from '@/store/hooks';
-import type { PostType, PaperMetadata } from '@/lib/types';
+import type { PostType, PaperMetadataInput } from '@/lib/types';
 import {
   Plus,
   X,
@@ -44,6 +44,7 @@ import {
   Upload,
   BookOpen,
   AlertCircle,
+  UserPlus,
 } from 'lucide-react';
 
 // generate a short unique id for poll options
@@ -60,18 +61,27 @@ interface PostFormValues {
   pollOptions: { id: string; text: string }[];
 }
 
-export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
+interface CreatePostDialogProps {
+  children?: React.ReactNode;
+  defaultOrgId?: string;
+}
+
+export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogProps) {
   const [open, setOpen] = useState(false);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [tags, setTags] = useState<string[]>(['']);
-  const [paperMeta, setPaperMeta] = useState<PaperMetadata | null>(null);
-  const [parsingPdf, setParsingPdf] = useState(false);
+
+  // Paper metadata fields (user-provided for paper_share)
+  const [paperAuthors, setPaperAuthors] = useState<string[]>(['']);
+  const [paperDoi, setPaperDoi] = useState('');
+  const [paperIsbn, setPaperIsbn] = useState('');
+  const [paperAbstract, setPaperAbstract] = useState('');
+  const [paperDatePublished, setPaperDatePublished] = useState('');
 
   const user = useAppSelector((s) => s.auth.user);
   const createPost = useCreatePost();
   const uploadFile = useUploadFile();
-  const parsePdf = useParsePdf();
   const { data: orgsData } = useOrganizations({ limit: 100 });
 
   const {
@@ -80,14 +90,12 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
     control,
     watch,
     reset,
-    getValues,
-    setValue,
     formState: { errors },
   } = useForm<PostFormValues>({
     defaultValues: {
       title: '',
       type: 'post',
-      organizationId: 'personal',
+      organizationId: defaultOrgId || 'personal',
       pollQuestion: '',
       pollIsMultiple: false,
       pollOptions: [
@@ -147,36 +155,6 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
           urls.push(result.url);
         }
         setMediaUrls((prev) => [...prev, ...urls]);
-
-        // Auto-parse first PDF for paper_share posts
-        if (selectedType === 'paper_share' && !paperMeta) {
-          const firstPdf = urls.find((u) => /\.pdf$/i.test(u));
-          if (firstPdf) {
-            setParsingPdf(true);
-            try {
-              const meta = await parsePdf.mutateAsync(firstPdf);
-              setPaperMeta(meta);
-              // Auto-fill title if empty
-              if (!getValues('title') && meta.title) {
-                setValue('title', meta.title);
-              }
-              // Auto-fill tags from keywords
-              if (meta.keywords?.length > 0) {
-                setTags((prev) => {
-                  const existing = prev.filter((t) => t.trim());
-                  if (existing.length === 0 || (existing.length === 1 && !existing[0])) {
-                    return meta.keywords.slice(0, 10);
-                  }
-                  return prev;
-                });
-              }
-            } catch {
-              // Parsing failed - not critical
-            } finally {
-              setParsingPdf(false);
-            }
-          }
-        }
       } catch (err) {
         console.error('Upload failed:', err);
       } finally {
@@ -185,7 +163,7 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [uploadFile, selectedType, mediaUrls, paperMeta, parsePdf, getValues, setValue]
+    [uploadFile, selectedType, mediaUrls]
   );
 
   const removeMedia = (idx: number) => {
@@ -225,6 +203,18 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
           }
         : null;
 
+    // Build paper metadata for paper_share
+    const paperMetadata: PaperMetadataInput | null =
+      selectedType === 'paper_share'
+        ? {
+            datePublished: paperDatePublished || null,
+            doi: paperDoi.trim() || null,
+            isbn: paperIsbn.trim() || null,
+            authors: paperAuthors.map((a) => a.trim()).filter(Boolean),
+            abstract: paperAbstract.trim() || null,
+          }
+        : null;
+
     await createPost.mutateAsync({
       title: values.title,
       body: bodyJson,
@@ -235,6 +225,7 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
       status: 'published',
       mediaUrls,
       poll,
+      paperMetadata,
     });
 
     // Reset form
@@ -242,8 +233,11 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
     editor?.commands.clearContent();
     setMediaUrls([]);
     setTags(['']);
-    setPaperMeta(null);
-    setParsingPdf(false);
+    setPaperAuthors(['']);
+    setPaperDoi('');
+    setPaperIsbn('');
+    setPaperAbstract('');
+    setPaperDatePublished('');
     setOpen(false);
   };
 
@@ -258,7 +252,7 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent className={`max-h-[90vh] overflow-y-auto ${selectedType === 'paper_share' ? 'max-w-4xl' : 'max-w-2xl'}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             Create Post
@@ -381,66 +375,110 @@ export function CreatePostDialog({ children }: { children?: React.ReactNode }) {
             </div>
           </div>
 
-          {/* Paper Share – Auto-parsed PDF metadata */}
+          {/* Paper Share – User-provided metadata */}
           {selectedType === 'paper_share' && (
             <div className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50/30 p-4">
               <div className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-blue-600" />
-                <Label className="font-semibold text-blue-900">Research Paper</Label>
+                <Label className="font-semibold text-blue-900">Research Paper Details</Label>
               </div>
               <p className="text-xs text-blue-700/80">
-                Upload a PDF and we&apos;ll automatically extract paper metadata (title, authors, keywords).
+                Please provide the metadata for your research paper.
               </p>
 
-              {parsingPdf && (
-                <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-white p-3 text-sm text-blue-700">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Extracting metadata from PDF…
-                </div>
-              )}
+              {/* Date Published */}
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Date Published</Label>
+                <Input
+                  type="date"
+                  value={paperDatePublished}
+                  onChange={(e) => setPaperDatePublished(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
 
-              {parsePdf.isError && !parsingPdf && (
-                <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
-                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                  Could not extract metadata from this PDF. You can fill in details manually.
-                </div>
-              )}
+              {/* DOI */}
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">DOI (optional)</Label>
+                <Input
+                  placeholder="e.g. 10.1000/xyz123"
+                  value={paperDoi}
+                  onChange={(e) => setPaperDoi(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
 
-              {paperMeta && !parsingPdf && (
-                <div className="rounded-md border border-blue-200 bg-white p-3">
-                  {paperMeta.title && (
-                    <h4 className="text-sm font-semibold text-foreground line-clamp-2">{paperMeta.title}</h4>
-                  )}
-                  {paperMeta.authors.length > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {paperMeta.authors.join(', ')}
-                    </p>
-                  )}
-                  <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                    {paperMeta.year && (
-                      <span className="rounded bg-muted px-1.5 py-0.5">{paperMeta.year}</span>
+              {/* ISBN */}
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">ISBN (optional)</Label>
+                <Input
+                  placeholder="e.g. 978-3-16-148410-0"
+                  value={paperIsbn}
+                  onChange={(e) => setPaperIsbn(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+
+              {/* Authors */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    Authors {paperAuthors.filter((a) => a.trim()).length > 0 && (
+                      <span className="text-muted-foreground/60">({paperAuthors.filter((a) => a.trim()).length})</span>
                     )}
-                    {paperMeta.pageCount && (
-                      <span className="rounded bg-muted px-1.5 py-0.5">{paperMeta.pageCount} pages</span>
-                    )}
-                  </div>
-                  {paperMeta.abstract && (
-                    <p className="mt-2 text-xs text-muted-foreground line-clamp-3">{paperMeta.abstract}</p>
-                  )}
-                  {paperMeta.keywords.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {paperMeta.keywords.map((kw) => (
-                        <Badge key={kw} variant="secondary" className="text-[10px]">
-                          {kw}
-                        </Badge>
-                      ))}
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 text-xs text-primary hover:text-primary/80"
+                    onClick={() => setPaperAuthors((prev) => [...prev, ''])}
+                  >
+                    <UserPlus className="h-3 w-3" />
+                    Add Author
+                  </Button>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {paperAuthors.map((author, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-blue-200 bg-white text-[10px] text-blue-600 font-medium">
+                        {idx + 1}
+                      </div>
+                      <Input
+                        value={author}
+                        onChange={(e) =>
+                          setPaperAuthors((prev) => prev.map((a, i) => (i === idx ? e.target.value : a)))
+                        }
+                        placeholder="Author full name"
+                        className="flex-1 text-sm"
+                      />
+                      {paperAuthors.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          onClick={() => setPaperAuthors((prev) => prev.filter((_, i) => i !== idx))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
-                  )}
-                  <p className="mt-2 text-[10px] text-blue-600/70">
-                    Title and tags were auto-filled from this PDF.
-                  </p>
+                  ))}
                 </div>
-              )}
+              </div>
+
+              {/* Abstract */}
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Abstract</Label>
+                <textarea
+                  value={paperAbstract}
+                  onChange={(e) => setPaperAbstract(e.target.value)}
+                  placeholder="Paste or type the abstract of the paper…"
+                  rows={4}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                />
+              </div>
             </div>
           )}
 

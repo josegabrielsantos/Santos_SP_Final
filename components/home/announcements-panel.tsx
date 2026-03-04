@@ -10,13 +10,13 @@ export function AnnouncementsPanel() {
   const { data, isLoading } = usePosts({ limit: 10, type: 'announcement' });
 
   return (
-    <div className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-72 shrink-0 border-l border-border/50 bg-white xl:block">
+    <div className="sticky top-16 hidden h-[calc(100vh-4rem)] w-72 shrink-0 border-l border-border/50 bg-white xl:block">
       <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
-        <Megaphone className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Announcements</h2>
+        <Megaphone className="h-5 w-5 text-primary" />
+        <h2 className="text-[15px] font-semibold text-foreground">Announcements</h2>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-3.5rem-3rem)]">
+      <ScrollArea className="h-[calc(100vh-4rem-3rem)]">
         <div className="flex flex-col gap-0.5 p-2">
           {isLoading && (
             <div className="flex justify-center py-8">
@@ -29,14 +29,14 @@ export function AnnouncementsPanel() {
               <div className="rounded-lg p-3 transition-colors hover:bg-muted/50 cursor-pointer">
                 <div className="flex items-center gap-2 mb-1">
                   <Pin className="h-3 w-3 text-primary shrink-0" />
-                  <h3 className="text-sm font-medium leading-snug text-foreground line-clamp-1">
+                  <h3 className="text-[15px] font-medium leading-snug text-foreground line-clamp-1">
                     {post.title}
                   </h3>
                 </div>
-                <p className="text-xs leading-relaxed text-muted-foreground line-clamp-2">
+                <p className="text-[13px] leading-relaxed text-muted-foreground line-clamp-2">
                   {post.bodyText}
                 </p>
-                <span className="mt-1.5 block text-[10px] text-muted-foreground/70">
+                <span className="mt-1.5 block text-[12px] text-muted-foreground/70">
                   {post.publishedAt
                     ? formatDistanceToNow(new Date(post.publishedAt), { addSuffix: true })
                     : ''}

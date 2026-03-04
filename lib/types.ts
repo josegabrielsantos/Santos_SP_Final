@@ -52,9 +52,12 @@ export interface Post {
   likeCount: number;
   commentCount: number;
   likedBy: string[];
+  dislikedBy: string[];
   mediaUrls: string[];
   paperIds: string[];
   poll?: Poll | null;
+  paperMetadata?: PaperMetadataInput | null;
+  hotScore?: number;
   type: PostType;
   publishedAt?: string | null;
   createdAt: string;
@@ -78,6 +81,7 @@ export interface CreatePostPayload {
   status?: PostStatus;
   mediaUrls?: string[];
   paperIds?: string[];
+  paperMetadata?: PaperMetadataInput | null;
   poll?: {
     question: string;
     isMultiple: boolean;
@@ -132,6 +136,7 @@ export interface OrgMembersResponse {
   admins: UserSummary[];
   members: UserSummary[];
   pendingMembers?: UserSummary[];
+  followers: UserSummary[];
   followerCount: number;
 }
 
@@ -143,7 +148,9 @@ export interface Comment {
   authorId: UserSummary;
   parentId?: string | null;
   body: string;
+  replyToUser?: string | null;
   likedBy: string[];
+  dislikedBy: string[];
   likeCount: number;
   isHidden: boolean;
   isDeleted: boolean;
@@ -153,12 +160,18 @@ export interface Comment {
 
 export interface CommentsResponse {
   comments: Comment[];
-  nextCursor: string | null;
+  total: number;
+  page: number;
+  pages: number;
+  hasMore: boolean;
 }
 
 export interface RepliesResponse {
   replies: Comment[];
-  nextCursor: string | null;
+  total: number;
+  page: number;
+  pages: number;
+  hasMore: boolean;
 }
 
 // ─── Upload ──────────────────────────────────────────────────────
@@ -180,4 +193,49 @@ export interface PaperMetadata {
   journal: string | null;
   doi: string | null;
   pageCount?: number | null;
+}
+
+// ─── Paper Metadata (user-provided for paper_share) ─────────────
+
+export interface PaperMetadataInput {
+  datePublished?: string | null;
+  doi?: string | null;
+  isbn?: string | null;
+  authors: string[];
+  abstract?: string | null;
+}
+
+// ─── Notification ────────────────────────────────────────────────
+
+export interface NotificationSender {
+  _id: string;
+  displayName: string;
+  avatar?: string | null;
+}
+
+export interface NotificationPost {
+  _id: string;
+  title: string;
+}
+
+export interface Notification {
+  _id: string;
+  recipientId: string;
+  senderId: NotificationSender;
+  type: 'reply' | 'comment' | 'like' | 'mention' | 'join_request' | 'join_approved' | 'join_rejected';
+  postId?: NotificationPost | null;
+  commentId?: string | null;
+  organizationId?: { _id: string; name: string; slug: string } | null;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  total: number;
+  page: number;
+  pages: number;
+  hasMore: boolean;
 }

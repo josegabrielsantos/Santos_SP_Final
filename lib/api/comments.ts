@@ -1,43 +1,64 @@
-import { useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useInfiniteQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import axiosInstance from '@/lib/axios';
-import type { Comment, CommentsResponse, RepliesResponse } from '@/lib/types';
+import { useAppSelector } from '@/store/hooks';
+import { AxiosError } from 'axios';
+import type { Comment, CommentsResponse, RepliesResponse, Post } from '@/lib/types';
 
-// ─── Get top-level comments (cursor-based) ──────────────────────
+// ─── Helper: patch a comment by id across all infinite-query pages ──
 
-export function useComments(postId: string | undefined) {
+function patchCommentInPages<T extends CommentsResponse | RepliesResponse>(
+  pages: T[],
+  commentId: string,
+  updater: (c: Comment) => Comment,
+): T[] {
+  return pages.map((page) => {
+    const key = 'comments' in page ? 'comments' : 'replies';
+    const list = (page as Record<string, unknown>)[key] as Comment[];
+    return {
+      ...page,
+      [key]: list.map((c) => (c._id === commentId ? updater(c) : c)),
+    } as T;
+  });
+}
+
+export type CommentSort = 'top' | 'new' | 'old';
+
+// ─── Get top-level comments (page-based, sortable) ─────────────
+
+export function useComments(postId: string | undefined, sort: CommentSort = 'top') {
   return useInfiniteQuery<CommentsResponse>({
-    queryKey: ['comments', postId],
+    queryKey: ['comments', postId, sort],
     queryFn: async ({ pageParam }) => {
-      const params: Record<string, string | number> = { limit: 20 };
-      if (pageParam) params.cursor = pageParam as string;
+      const page = (pageParam as number) ?? 1;
+      const params: Record<string, string | number> = { limit: 20, page, sort };
       const { data } = await axiosInstance.get<CommentsResponse>(
         `/posts/${postId}/comments`,
         { params }
       );
       return data;
     },
-    initialPageParam: null as string | null,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: 1 as number,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
     enabled: !!postId,
   });
 }
 
-// ─── Get replies (cursor-based, oldest first) ───────────────────
+// ─── Get replies (page-based, sortable) ─────────────────────────
 
-export function useReplies(postId: string | undefined, commentId: string | undefined) {
+export function useReplies(postId: string | undefined, commentId: string | undefined, sort: CommentSort = 'top') {
   return useInfiniteQuery<RepliesResponse>({
-    queryKey: ['replies', postId, commentId],
+    queryKey: ['replies', postId, commentId, sort],
     queryFn: async ({ pageParam }) => {
-      const params: Record<string, string | number> = { limit: 10 };
-      if (pageParam) params.cursor = pageParam as string;
+      const page = (pageParam as number) ?? 1;
+      const params: Record<string, string | number> = { limit: 20, page, sort };
       const { data } = await axiosInstance.get<RepliesResponse>(
         `/posts/${postId}/comments/${commentId}/replies`,
         { params }
       );
       return data;
     },
-    initialPageParam: null as string | null,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: 1 as number,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
     enabled: !!postId && !!commentId,
   });
 }
@@ -52,14 +73,17 @@ export function useCreateComment() {
       postId,
       body,
       parentCommentId,
+      replyToUser,
     }: {
       postId: string;
       body: string;
       parentCommentId?: string;
+      replyToUser?: string;
     }) => {
       const { data } = await axiosInstance.post<Comment>(`/posts/${postId}/comments`, {
         body,
         parentCommentId,
+        replyToUser,
       });
       return data;
     },
@@ -69,7 +93,12 @@ export function useCreateComment() {
         qc.invalidateQueries({ queryKey: ['replies', vars.postId, vars.parentCommentId] });
       }
       // Bump comment count on the post
+      qc.invalidateQueries({ queryKey: ['posts', vars.postId] });
       qc.invalidateQueries({ queryKey: ['posts'] });
+    },
+    onError: (err) => {
+      const msg = err instanceof AxiosError ? (err.response?.data as { error?: string })?.error : undefined;
+      if (msg) alert(msg);
     },
   });
 }
@@ -83,8 +112,44 @@ export function useDeleteComment() {
     mutationFn: async ({ postId, commentId }: { postId: string; commentId: string }) => {
       await axiosInstance.delete(`/posts/${postId}/comments/${commentId}`);
     },
-    onSuccess: (_d, vars) => {
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: ['comments', vars.postId] });
+      await qc.cancelQueries({ queryKey: ['replies'] });
+
+      const commentsSnap = qc.getQueriesData<InfiniteData<CommentsResponse>>({ queryKey: ['comments', vars.postId] });
+      const repliesSnap = qc.getQueriesData<InfiniteData<RepliesResponse>>({ queryKey: ['replies'] });
+
+      // Optimistically mark as deleted (hide from UI)
+      const markDeleted = (c: Comment) => ({ ...c, isDeleted: true, body: '[deleted]' });
+
+      qc.setQueriesData<InfiniteData<CommentsResponse>>(
+        { queryKey: ['comments', vars.postId] },
+        (old) => old ? { ...old, pages: patchCommentInPages(old.pages, vars.commentId, markDeleted) } : old,
+      );
+      qc.setQueriesData<InfiniteData<RepliesResponse>>(
+        { queryKey: ['replies'] },
+        (old) => old ? { ...old, pages: patchCommentInPages(old.pages, vars.commentId, markDeleted) } : old,
+      );
+
+      // Also optimistically decrement post commentCount
+      const postSnap = qc.getQueryData<Post>(['posts', vars.postId]);
+      if (postSnap) {
+        qc.setQueryData<Post>(['posts', vars.postId], { ...postSnap, commentCount: Math.max(0, postSnap.commentCount - 1) });
+      }
+
+      return { commentsSnap, repliesSnap, postSnap };
+    },
+    onError: (err, vars, ctx) => {
+      ctx?.commentsSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
+      ctx?.repliesSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
+      if (ctx?.postSnap) qc.setQueryData(['posts', vars.postId], ctx.postSnap);
+      const msg = err instanceof AxiosError ? (err.response?.data as { error?: string })?.error : undefined;
+      if (msg) alert(msg);
+    },
+    onSettled: (_d, _e, vars) => {
       qc.invalidateQueries({ queryKey: ['comments', vars.postId] });
+      qc.invalidateQueries({ queryKey: ['replies'] });
+      qc.invalidateQueries({ queryKey: ['posts', vars.postId] });
       qc.invalidateQueries({ queryKey: ['posts'] });
     },
   });
@@ -94,16 +159,104 @@ export function useDeleteComment() {
 
 export function useToggleCommentLike() {
   const qc = useQueryClient();
+  const userId = useAppSelector((s) => s.auth.user?._id);
 
   return useMutation({
     mutationFn: async ({ postId, commentId }: { postId: string; commentId: string }) => {
-      const { data } = await axiosInstance.post<{ liked: boolean; likeCount: number }>(
+      const { data } = await axiosInstance.post<{ liked: boolean; disliked: boolean; likeCount: number }>(
         `/posts/${postId}/comments/${commentId}/like`
       );
       return data;
     },
-    onSuccess: (_d, vars) => {
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: ['comments', vars.postId] });
+      await qc.cancelQueries({ queryKey: ['replies'] });
+
+      // Snapshot
+      const commentsSnap = qc.getQueriesData<InfiniteData<CommentsResponse>>({ queryKey: ['comments', vars.postId] });
+      const repliesSnap = qc.getQueriesData<InfiniteData<RepliesResponse>>({ queryKey: ['replies'] });
+
+      if (userId) {
+        const update = (c: Comment) => {
+          const alreadyLiked = c.likedBy.includes(userId);
+          const newLikedBy = alreadyLiked ? c.likedBy.filter((id) => id !== userId) : [...c.likedBy, userId];
+          const newDislikedBy = alreadyLiked ? c.dislikedBy : c.dislikedBy.filter((id) => id !== userId);
+          return { ...c, likedBy: newLikedBy, dislikedBy: newDislikedBy, likeCount: newLikedBy.length - newDislikedBy.length };
+        };
+
+        qc.setQueriesData<InfiniteData<CommentsResponse>>(
+          { queryKey: ['comments', vars.postId] },
+          (old) => old ? { ...old, pages: patchCommentInPages(old.pages, vars.commentId, update) } : old,
+        );
+        qc.setQueriesData<InfiniteData<RepliesResponse>>(
+          { queryKey: ['replies'] },
+          (old) => old ? { ...old, pages: patchCommentInPages(old.pages, vars.commentId, update) } : old,
+        );
+      }
+      return { commentsSnap, repliesSnap };
+    },
+    onError: (err, vars, ctx) => {
+      // Rollback
+      ctx?.commentsSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
+      ctx?.repliesSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
+      const msg = err instanceof AxiosError ? (err.response?.data as { error?: string })?.error : undefined;
+      if (msg) alert(msg);
+    },
+    onSettled: (_d, _e, vars) => {
       qc.invalidateQueries({ queryKey: ['comments', vars.postId] });
+      qc.invalidateQueries({ queryKey: ['replies'] });
+    },
+  });
+}
+
+// ─── Toggle comment dislike ─────────────────────────────────────
+
+export function useToggleCommentDislike() {
+  const qc = useQueryClient();
+  const userId = useAppSelector((s) => s.auth.user?._id);
+
+  return useMutation({
+    mutationFn: async ({ postId, commentId }: { postId: string; commentId: string }) => {
+      const { data } = await axiosInstance.post<{ liked: boolean; disliked: boolean; likeCount: number }>(
+        `/posts/${postId}/comments/${commentId}/dislike`
+      );
+      return data;
+    },
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: ['comments', vars.postId] });
+      await qc.cancelQueries({ queryKey: ['replies'] });
+
+      const commentsSnap = qc.getQueriesData<InfiniteData<CommentsResponse>>({ queryKey: ['comments', vars.postId] });
+      const repliesSnap = qc.getQueriesData<InfiniteData<RepliesResponse>>({ queryKey: ['replies'] });
+
+      if (userId) {
+        const update = (c: Comment) => {
+          const alreadyDisliked = c.dislikedBy.includes(userId);
+          const newDislikedBy = alreadyDisliked ? c.dislikedBy.filter((id) => id !== userId) : [...c.dislikedBy, userId];
+          const newLikedBy = alreadyDisliked ? c.likedBy : c.likedBy.filter((id) => id !== userId);
+          return { ...c, likedBy: newLikedBy, dislikedBy: newDislikedBy, likeCount: newLikedBy.length - newDislikedBy.length };
+        };
+
+        qc.setQueriesData<InfiniteData<CommentsResponse>>(
+          { queryKey: ['comments', vars.postId] },
+          (old) => old ? { ...old, pages: patchCommentInPages(old.pages, vars.commentId, update) } : old,
+        );
+        qc.setQueriesData<InfiniteData<RepliesResponse>>(
+          { queryKey: ['replies'] },
+          (old) => old ? { ...old, pages: patchCommentInPages(old.pages, vars.commentId, update) } : old,
+        );
+      }
+      return { commentsSnap, repliesSnap };
+    },
+    onError: (err, vars, ctx) => {
+      ctx?.commentsSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
+      ctx?.repliesSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
+      const msg = err instanceof AxiosError ? (err.response?.data as { error?: string })?.error : undefined;
+      if (msg) alert(msg);
+    },
+    onSettled: (_d, _e, vars) => {
+      qc.invalidateQueries({ queryKey: ['comments', vars.postId] });
+      qc.invalidateQueries({ queryKey: ['replies'] });
     },
   });
 }

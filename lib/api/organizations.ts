@@ -81,8 +81,8 @@ export function useRequestJoin() {
       const { data } = await axiosInstance.post(`/organizations/${orgId}/join`);
       return data;
     },
-    onSuccess: (_d, orgId) => {
-      qc.invalidateQueries({ queryKey: ['organizations', orgId] });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations'] });
     },
   });
 }
@@ -99,9 +99,8 @@ export function useApproveJoin() {
       );
       return data;
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['organizations', vars.orgId, 'members'] });
-      qc.invalidateQueries({ queryKey: ['organizations', vars.orgId] });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations'] });
     },
   });
 }
@@ -118,9 +117,8 @@ export function useRejectJoin() {
       );
       return data;
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['organizations', vars.orgId, 'members'] });
-      qc.invalidateQueries({ queryKey: ['organizations', vars.orgId] });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations'] });
     },
   });
 }
@@ -135,9 +133,8 @@ export function useLeaveOrg() {
       const { data } = await axiosInstance.post(`/organizations/${orgId}/leave`);
       return data;
     },
-    onSuccess: (_d, orgId) => {
-      qc.invalidateQueries({ queryKey: ['organizations', orgId] });
-      qc.invalidateQueries({ queryKey: ['organizations', orgId, 'members'] });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations'] });
     },
   });
 }
@@ -152,8 +149,24 @@ export function useFollowOrg() {
       const { data } = await axiosInstance.post(`/organizations/${orgId}/follow`);
       return data;
     },
-    onSuccess: (_d, orgId) => {
-      qc.invalidateQueries({ queryKey: ['organizations', orgId] });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations'] });
+    },
+  });
+}
+
+// ─── Unfollow org ───────────────────────────────────────────────
+
+export function useUnfollowOrg() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (orgId: string) => {
+      const { data } = await axiosInstance.post(`/organizations/${orgId}/unfollow`);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations'] });
     },
   });
 }
@@ -170,8 +183,8 @@ export function usePromoteAdmin() {
       );
       return data;
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['organizations', vars.orgId, 'members'] });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations'] });
     },
   });
 }
@@ -186,8 +199,8 @@ export function useDemoteAdmin() {
       );
       return data;
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['organizations', vars.orgId, 'members'] });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations'] });
     },
   });
 }

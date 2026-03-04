@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +11,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   ThumbsUp,
+  ThumbsDown,
   MessageCircle,
   MoreHorizontal,
   EyeOff,
@@ -21,11 +29,15 @@ import {
   FileText,
   Lock,
   Download,
+  ExternalLink,
+  Link2,
+  Eye,
+  Trash2,
 } from 'lucide-react';
-import { useToggleLike, useVotePoll, useReportPost, useClosePoll } from '@/lib/api/posts';
+import { useToggleLike, useTogglePostDislike, useVotePoll, useReportPost, useClosePoll, useDeletePost } from '@/lib/api/posts';
 import { useAppSelector } from '@/store/hooks';
 import type { Post } from '@/lib/types';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { MediaGallery } from './media-gallery';
 
 // ─── Tag color system ──────────────────────────────────────────
@@ -68,22 +80,135 @@ function getFileName(url: string) {
   }
 }
 
-interface PostCardProps {
-  post: Post;
-  onCommentClick?: (postId: string) => void;
+// ─── Authors display (single line, full width, et al. on overflow) ──
+
+function AuthorsDisplay({ authors }: { authors: string[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [visibleCount, setVisibleCount] = useState(authors.length);
+
+  const measure = useCallback(() => {
+    const container = containerRef.current;
+    if (!container || authors.length === 0) return;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const style = getComputedStyle(container);
+    ctx.font = `500 ${style.fontSize} ${style.fontFamily}`;
+
+    const containerWidth = container.clientWidth;
+    const etAlWidth = ctx.measureText(', et al.').width;
+
+    // Check if all authors fit
+    const fullText = authors.join(', ');
+    if (ctx.measureText(fullText).width <= containerWidth) {
+      setVisibleCount(authors.length);
+      return;
+    }
+
+    // Find max authors that fit with " et al."
+    const availableWidth = containerWidth - etAlWidth - 4;
+    let text = '';
+    let count = 0;
+    for (let i = 0; i < authors.length; i++) {
+      const next = i === 0 ? authors[i] : text + ', ' + authors[i];
+      if (ctx.measureText(next).width > availableWidth) break;
+      text = next;
+      count = i + 1;
+    }
+
+    setVisibleCount(Math.max(1, count));
+  }, [authors]);
+
+  useEffect(() => {
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  if (!authors || authors.length === 0) return null;
+
+  const visible = authors.slice(0, visibleCount);
+  const remaining = authors.slice(visibleCount);
+
+  return (
+    <div ref={containerRef} className="w-full overflow-hidden whitespace-nowrap text-[15px] text-gray-700">
+      {visible.map((author, idx) => (
+        <span key={idx}>
+          <span className="font-medium">{author}</span>
+          {idx < visible.length - 1 && <span className="text-gray-400">, </span>}
+        </span>
+      ))}
+      {remaining.length > 0 && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-pointer font-medium text-primary hover:underline">
+                , et al.
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">
+              <div className="flex flex-col gap-0.5 text-sm">
+                {remaining.map((author, idx) => (
+                  <span key={idx}>{author}</span>
+                ))}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+    </div>
+  );
 }
 
-export function PostCard({ post, onCommentClick }: PostCardProps) {
+// ─── Download helper (cross-origin safe) ────────────────────────
+
+async function downloadFile(url: string, filename: string) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  } catch {
+    window.open(url, '_blank');
+  }
+}
+
+interface PostCardProps {
+  post: Post;
+  /** User's access level for this post's org. Defaults to 'member' (full access). */
+  orgAccessRole?: 'member' | 'follower' | 'none';
+}
+
+export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
+  const router = useRouter();
   const user = useAppSelector((s) => s.auth.user);
   const userId = user?._id;
 
   const toggleLike = useToggleLike();
+  const toggleDislike = useTogglePostDislike();
   const votePoll = useVotePoll();
   const reportPost = useReportPost();
   const closePoll = useClosePoll();
+  const deletePost = useDeletePost();
 
   const liked = userId ? post.likedBy.includes(userId) : false;
+  const disliked = userId ? post.dislikedBy.includes(userId) : false;
+
+  // Org access restrictions
+  const canLike = orgAccessRole === 'member' || orgAccessRole === 'follower';
+  const canComment = orgAccessRole === 'member';
+
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const authorName =
     typeof post.authorId === 'object' ? post.authorId.displayName : 'Unknown';
@@ -133,33 +258,300 @@ export function PostCard({ post, onCommentClick }: PostCardProps) {
   const pdfUrls = post.mediaUrls.filter((u) => /\.pdf$/i.test(u));
   const visualUrls = post.mediaUrls.filter((u) => !/\.pdf$/i.test(u));
 
+  const postUrl = `/posts/${post._id}`;
+
+  const navigateToPost = () => router.push(postUrl);
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('a, button, [role="button"], [data-interactive], video, .media-gallery')) return;
+    navigateToPost();
+  };
+
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}${postUrl}`;
+    navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
+  const handleDownload = (url: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    downloadFile(url, getFileName(url));
+  };
+
+  // ─── Research Paper (ResearchGate-style) Card ─────────────────
+  if (post.type === 'paper_share') {
+    const meta = post.paperMetadata;
+    const dateStr = meta?.datePublished
+      ? format(new Date(meta.datePublished), 'MMMM yyyy')
+      : post.publishedAt
+        ? format(new Date(post.publishedAt), 'MMMM yyyy')
+        : null;
+
+    return (
+      <div
+        onClick={handleCardClick}
+        className="cursor-pointer overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.1),0_2px_8px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-md"
+      >
+        {/* Top accent bar */}
+        <div className="h-1.5 bg-gradient-to-r from-teal-500 to-emerald-500" />
+
+        <div className="px-6 pt-5 pb-3">
+          {/* Posted by header */}
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={authorAvatar} alt={authorName} />
+                <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-600 text-[10px] font-bold text-white">
+                  {initials(authorName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex items-center gap-1.5 text-[14px] text-gray-500">
+                <span className="font-medium text-gray-700">{authorName}</span>
+                <span>&middot;</span>
+                <span>{timeAgo}</span>
+                {orgName && (
+                  <>
+                    <span>&middot;</span>
+                    <span className="font-medium text-primary">{orgName}</span>
+                  </>
+                )}
+              </div>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-gray-400 hover:bg-gray-100">
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52 rounded-xl shadow-lg">
+                <DropdownMenuItem className="cursor-pointer gap-2.5 rounded-lg text-[15px]">
+                  <Bookmark className="h-4 w-4" /> Save post
+                </DropdownMenuItem>
+                {isPostAuthor && (
+                  <DropdownMenuItem
+                    className="cursor-pointer gap-2.5 rounded-lg text-[15px] text-destructive focus:text-destructive"
+                    onClick={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete post
+                  </DropdownMenuItem>
+                )}
+                {!isPostAuthor && (
+                  <DropdownMenuItem
+                    className="cursor-pointer gap-2.5 rounded-lg text-[15px] text-destructive focus:text-destructive"
+                    onClick={() => reportPost.mutate(post._id)}
+                  >
+                    <Flag className="h-4 w-4" /> Report post
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Badges row: Paper Type + Date + DOI + ISBN */}
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-teal-50 px-2.5 py-1 text-[13px] font-semibold uppercase tracking-wide text-teal-700">
+              <FileText className="h-3.5 w-3.5" />
+              Research Paper
+            </span>
+            {dateStr && (
+              <span className="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-1 text-[13px] font-medium text-gray-600">
+                {dateStr}
+              </span>
+            )}
+            {meta?.doi && (
+              <a
+                href={`https://doi.org/${meta.doi}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center rounded-md bg-blue-50 px-2.5 py-1 text-[13px] font-medium text-blue-700 hover:underline"
+              >
+                DOI: {meta.doi}
+              </a>
+            )}
+            {meta?.isbn && (
+              <span className="inline-flex items-center rounded-md bg-purple-50 px-2.5 py-1 text-[13px] font-medium text-purple-700">
+                ISBN: {meta.isbn}
+              </span>
+            )}
+          </div>
+
+          {/* Title */}
+          <h3 className="text-[22px] font-bold leading-tight text-gray-900">
+            {post.title}
+          </h3>
+
+          {/* Authors — single line, full width, et al. on overflow */}
+          {meta?.authors && meta.authors.length > 0 && (
+            <div className="mt-2.5">
+              <AuthorsDisplay authors={meta.authors} />
+            </div>
+          )}
+
+          {/* Tags */}
+          {post.tags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {post.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className={`inline-flex items-center rounded-full px-3 py-0.5 text-[13px] font-medium ${getTagColor(tag)}`}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Action buttons row: Download, View, Copy Link */}
+          <div className="mt-4 flex items-center gap-2.5 border-t border-gray-100 pt-3">
+            {pdfUrls.length > 0 && (
+              <button
+                onClick={handleDownload(pdfUrls[0])}
+                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-[15px] font-medium text-white shadow-sm transition-colors hover:bg-teal-700"
+              >
+                <Download className="h-4.5 w-4.5" />
+                Download PDF
+              </button>
+            )}
+            {pdfUrls.length > 0 && (
+              <a
+                href={pdfUrls[0]}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-[15px] font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+              >
+                <Eye className="h-4.5 w-4.5" />
+                View
+              </a>
+            )}
+            <button
+              onClick={handleCopyLink}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-[15px] font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+            >
+              <Link2 className="h-4.5 w-4.5" />
+              {linkCopied ? 'Copied!' : 'Copy Link'}
+            </button>
+          </div>
+
+          {/* Abstract */}
+          {meta?.abstract && (
+            <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50/50 p-4">
+              <h4 className="mb-1.5 text-[13px] font-semibold uppercase tracking-wide text-gray-500">Abstract</h4>
+              <p className="text-[15px] leading-relaxed text-gray-700">{meta.abstract}</p>
+            </div>
+          )}
+
+          {/* Body text (optional additional notes from poster) */}
+          {post.bodyText && !meta?.abstract && (
+            <p className="mt-3 text-[15px] leading-relaxed text-gray-600 line-clamp-4">{post.bodyText}</p>
+          )}
+        </div>
+
+        {/* Engagement stats */}
+        {(post.likeCount !== 0 || post.commentCount > 0) && (
+          <div className="mx-6 mt-2 flex items-center justify-between text-[14px] text-gray-500">
+            {post.likeCount !== 0 ? (
+              <div className="flex items-center gap-1.5">
+                <div className={`flex h-5 w-5 items-center justify-center rounded-full text-white ${post.likeCount > 0 ? 'bg-primary' : 'bg-red-500'}`}>
+                  {post.likeCount > 0 ? (
+                    <ThumbsUp className="h-3 w-3 fill-white" />
+                  ) : (
+                    <ThumbsDown className="h-3 w-3 fill-white" />
+                  )}
+                </div>
+                <span className={post.likeCount < 0 ? 'text-red-500' : ''}>{post.likeCount}</span>
+              </div>
+            ) : (
+              <div />
+            )}
+            {post.commentCount > 0 ? (
+              <span className="hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); navigateToPost(); }}>
+                {post.commentCount} comment{post.commentCount !== 1 ? 's' : ''}
+              </span>
+            ) : (
+              <div />
+            )}
+          </div>
+        )}
+
+        {/* Action bar */}
+        <div className="mx-6 mt-2 border-t border-gray-100 py-1.5 pb-2.5">
+          <div className="flex items-center">
+            <button
+              onClick={(e) => { e.stopPropagation(); userId && canLike && toggleLike.mutate(post._id); }}
+              disabled={!userId || !canLike || toggleLike.isPending}
+              title={!canLike ? 'You must be a member or follower of this organization' : undefined}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-[15px] font-medium transition-colors ${
+                !canLike ? 'cursor-not-allowed opacity-50 text-gray-400' : liked ? 'text-primary' : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              <ThumbsUp className={`h-5 w-5 ${liked ? 'fill-primary' : ''}`} />
+              Like
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); userId && canLike && toggleDislike.mutate(post._id); }}
+              disabled={!userId || !canLike || toggleDislike.isPending}
+              title={!canLike ? 'You must be a member or follower of this organization' : undefined}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-[15px] font-medium transition-colors ${
+                !canLike ? 'cursor-not-allowed opacity-50 text-gray-400' : disliked ? 'text-red-500' : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              <ThumbsDown className={`h-5 w-5 ${disliked ? 'fill-red-500' : ''}`} />
+              Dislike
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); if (canComment) navigateToPost(); }}
+              disabled={!canComment}
+              title={!canComment ? (orgAccessRole === 'follower' ? 'Followers cannot comment — join the organization to comment' : 'You must be a member of this organization to comment') : undefined}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-[15px] font-medium transition-colors ${
+                !canComment ? 'cursor-not-allowed opacity-50 text-gray-400' : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              <MessageCircle className="h-5 w-5" />
+              Comment
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Normal Post Card ────────────────────────────────────────
   return (
-    <div className="overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.1),0_2px_8px_rgba(0,0,0,0.04)]">
+    <div
+      onClick={handleCardClick}
+      className="cursor-pointer overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.1),0_2px_8px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-md"
+    >
       {/* ── Header ── */}
-      <div className="flex items-start justify-between px-4 pt-4">
+      <div className="flex items-start justify-between px-5 pt-5">
         <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
+          <Avatar className="h-11 w-11 ring-2 ring-white shadow-sm">
             <AvatarImage src={authorAvatar} alt={authorName} />
-            <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary text-xs font-bold text-white">
+            <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary text-sm font-bold text-white">
               {initials(authorName)}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <span className="text-[15px] font-semibold text-gray-900">{authorName}</span>
+              <span className="text-[17px] font-semibold text-gray-900">{authorName}</span>
               {orgName && (
                 <>
-                  <span className="text-xs text-gray-400">in</span>
-                  <span className="text-[13px] font-medium text-primary">{orgName}</span>
+                  <span className="text-[14px] text-gray-400">in</span>
+                  <span className="text-[15px] font-medium text-primary">{orgName}</span>
                 </>
               )}
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-500">{timeAgo}</span>
+              <span className="text-[14px] text-gray-500">{timeAgo}</span>
               {post.type !== 'post' && (
                 <>
-                  <span className="text-[10px] text-gray-300">&middot;</span>
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium capitalize text-gray-500">
+                  <span className="text-[12px] text-gray-300">&middot;</span>
+                  <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[12px] font-medium capitalize text-gray-500">
                     {post.type.replace('_', ' ')}
                   </span>
                 </>
@@ -173,41 +565,51 @@ export function PostCard({ post, onCommentClick }: PostCardProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              className="h-9 w-9 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600"
             >
               <MoreHorizontal className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg">
-            <DropdownMenuItem className="cursor-pointer gap-2.5 rounded-lg">
+          <DropdownMenuContent align="end" className="w-52 rounded-xl shadow-lg">
+            <DropdownMenuItem className="cursor-pointer gap-2.5 rounded-lg text-[15px]">
               <Bookmark className="h-4 w-4" /> Save post
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer gap-2.5 rounded-lg">
+            <DropdownMenuItem className="cursor-pointer gap-2.5 rounded-lg text-[15px]">
               <EyeOff className="h-4 w-4" /> Hide post
             </DropdownMenuItem>
-            <DropdownMenuItem
-              className="cursor-pointer gap-2.5 rounded-lg text-destructive focus:text-destructive"
-              onClick={() => reportPost.mutate(post._id)}
-            >
-              <Flag className="h-4 w-4" /> Report post
-            </DropdownMenuItem>
+            {isPostAuthor && (
+              <DropdownMenuItem
+                className="cursor-pointer gap-2.5 rounded-lg text-[15px] text-destructive focus:text-destructive"
+                onClick={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
+              >
+                <Trash2 className="h-4 w-4" /> Delete post
+              </DropdownMenuItem>
+            )}
+            {!isPostAuthor && (
+              <DropdownMenuItem
+                className="cursor-pointer gap-2.5 rounded-lg text-[15px] text-destructive focus:text-destructive"
+                onClick={() => reportPost.mutate(post._id)}
+              >
+                <Flag className="h-4 w-4" /> Report post
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
       {/* ── Content: Title + Tags + Body ── */}
-      <div className="px-4 pb-2 pt-3">
-        <h3 className="text-[15px] font-semibold leading-snug text-gray-900">
+      <div className="px-5 pb-2 pt-3">
+        <h3 className="text-lg font-semibold leading-snug text-gray-900">
           {post.title}
         </h3>
 
-        {/* Tags - directly below title with colors */}
+        {/* Tags */}
         {post.tags.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-2 flex flex-wrap gap-2">
             {post.tags.map((tag) => (
               <span
                 key={tag}
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${getTagColor(tag)}`}
+                className={`inline-flex items-center rounded-full px-3 py-0.5 text-[13px] font-medium ${getTagColor(tag)}`}
               >
                 {tag}
               </span>
@@ -216,81 +618,98 @@ export function PostCard({ post, onCommentClick }: PostCardProps) {
         )}
 
         {post.bodyText && (
-          <p className="mt-2 text-[14px] leading-relaxed text-gray-600 line-clamp-4">
+          <p className="mt-2 text-[16px] leading-relaxed text-gray-600 line-clamp-4">
             {post.bodyText}
           </p>
         )}
       </div>
 
-      {/* ── Media Gallery (edge-to-edge, no border) ── */}
+      {/* ── Media Gallery (edge-to-edge) ── */}
       {visualUrls.length > 0 && (
-        <div className="mt-1">
+        <div className="media-gallery mx-5 mt-1" data-interactive>
           <MediaGallery urls={visualUrls} />
         </div>
       )}
 
       {/* ── Research Paper PDFs (full width, below gallery) ── */}
       {post.type === 'paper_share' && pdfUrls.length > 0 && (
-        <div className="mx-4 mt-3 flex flex-col gap-2">
+        <div className="mx-5 mt-3 flex flex-col gap-2">
           {pdfUrls.map((url) => (
             <a
               key={url}
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-gradient-to-r from-gray-50 to-white p-3.5 transition-all hover:border-primary/30 hover:shadow-sm"
+              onClick={(e) => e.stopPropagation()}
+              className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-gradient-to-r from-gray-50 to-white p-4 transition-all hover:border-primary/30 hover:shadow-sm"
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-500 transition-colors group-hover:bg-red-100">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-500 transition-colors group-hover:bg-red-100">
                 <FileText className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-900">
+                <p className="truncate text-[15px] font-medium text-gray-900">
                   {getFileName(url)}
                 </p>
-                <p className="text-xs text-gray-500">PDF Document</p>
+                <p className="text-[13px] text-gray-500">PDF Document</p>
               </div>
-              <Download className="h-4 w-4 shrink-0 text-gray-400 group-hover:text-primary" />
+              <Download className="h-5 w-5 shrink-0 text-gray-400 group-hover:text-primary" />
             </a>
           ))}
         </div>
       )}
 
-      {/* ── Normal post PDFs ── */}
+      {/* ── Normal post PDFs (prominent) ── */}
       {post.type !== 'paper_share' && pdfUrls.length > 0 && (
-        <div className="mx-4 mt-3 flex flex-col gap-2">
+        <div className="mx-5 mt-3 flex flex-col gap-2">
           {pdfUrls.map((url) => (
-            <a
+            <div
               key={url}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-center gap-2.5 rounded-lg border border-gray-100 bg-gray-50/60 p-2.5 transition-all hover:border-gray-200 hover:bg-gray-50"
+              className="group flex items-center gap-3 rounded-xl border-2 border-red-100 bg-gradient-to-r from-red-50/60 to-white p-4 transition-all hover:border-red-200 hover:shadow-sm"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
-                <FileText className="h-4 w-4" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600">
+                <FileText className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-gray-700">
+                <p className="truncate text-[15px] font-medium text-gray-900">
                   {getFileName(url)}
                 </p>
+                <p className="text-[13px] text-gray-500">PDF Document</p>
               </div>
-              <Download className="h-3.5 w-3.5 shrink-0 text-gray-400 group-hover:text-gray-600" />
-            </a>
+              <div className="flex shrink-0 items-center gap-2">
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-[14px] font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  View
+                </a>
+                <button
+                  onClick={handleDownload(url)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-2 text-[14px] font-medium text-white shadow-sm transition-colors hover:bg-red-700"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}
 
       {/* ── Poll ── */}
       {post.poll && (
-        <div className="mx-4 mt-3 rounded-xl border border-gray-200 bg-gray-50/40 p-4">
+        <div className="mx-5 mt-3 rounded-xl border border-gray-200 bg-gray-50/40 p-5">
           <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <BarChart3 className="h-4 w-4 text-primary" />
+            <div className="flex items-center gap-2 text-[16px] font-semibold text-gray-900">
+              <BarChart3 className="h-5 w-5 text-primary" />
               {post.poll.question}
             </div>
             {isPollClosed && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
-                <Lock className="h-3 w-3" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-[12px] font-medium text-gray-500">
+                <Lock className="h-3.5 w-3.5" />
                 Closed
               </span>
             )}
@@ -311,9 +730,9 @@ export function PostCard({ post, onCommentClick }: PostCardProps) {
                 <button
                   type="button"
                   key={opt.optionId}
-                  onClick={() => toggleOption(opt.optionId)}
+                  onClick={(e) => { e.stopPropagation(); toggleOption(opt.optionId); }}
                   disabled={!!showResults || !!isPollClosed}
-                  className={`relative flex items-center justify-between overflow-hidden rounded-xl border px-3.5 py-2.5 text-sm transition-all ${
+                  className={`relative flex items-center justify-between overflow-hidden rounded-xl border px-4 py-3 text-[15px] transition-all ${
                     isSelected || votedForThis
                       ? 'border-primary/40 bg-primary/5'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
@@ -327,12 +746,12 @@ export function PostCard({ post, onCommentClick }: PostCardProps) {
                   )}
                   <span className="relative z-10 flex items-center gap-2 font-medium text-gray-800">
                     {votedForThis && (
-                      <Check className="h-3.5 w-3.5 text-primary" />
+                      <Check className="h-4 w-4 text-primary" />
                     )}
                     {opt.text}
                   </span>
                   {showResults && (
-                    <span className="relative z-10 flex items-center gap-2 text-xs">
+                    <span className="relative z-10 flex items-center gap-2 text-[14px]">
                       <span className="font-semibold text-gray-900">
                         {pct}%
                       </span>
@@ -347,8 +766,8 @@ export function PostCard({ post, onCommentClick }: PostCardProps) {
           {!showResults && !isPollClosed && selectedOptions.length > 0 && (
             <Button
               size="sm"
-              className="mt-3 rounded-lg text-xs"
-              onClick={handleVote}
+              className="mt-3 rounded-lg text-[14px]"
+              onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleVote(); }}
               disabled={votePoll.isPending}
             >
               Vote
@@ -356,18 +775,18 @@ export function PostCard({ post, onCommentClick }: PostCardProps) {
           )}
 
           <div className="mt-3 flex items-center justify-between">
-            <p className="text-xs text-gray-500">
+            <p className="text-[14px] text-gray-500">
               {post.poll.totalVotes} vote
               {post.poll.totalVotes !== 1 ? 's' : ''}
               {post.poll.isMultiple && ' · Multiple answers'}
             </p>
             {isPostAuthor && !isPollClosed && (
               <button
-                onClick={() => closePoll.mutate(post._id)}
+                onClick={(e) => { e.stopPropagation(); closePoll.mutate(post._id); }}
                 disabled={closePoll.isPending}
-                className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 transition-colors hover:text-destructive"
+                className="inline-flex items-center gap-1 text-[14px] font-medium text-gray-500 transition-colors hover:text-destructive"
               >
-                <Lock className="h-3 w-3" />
+                <Lock className="h-3.5 w-3.5" />
                 Close Poll
               </button>
             )}
@@ -375,27 +794,31 @@ export function PostCard({ post, onCommentClick }: PostCardProps) {
         </div>
       )}
 
-      {/* ── Engagement stats (Facebook style) ── */}
-      {(post.likeCount > 0 || post.commentCount > 0) && (
-        <div className="mx-4 mt-3 flex items-center justify-between text-xs text-gray-500">
-          {post.likeCount > 0 ? (
+      {/* ── Engagement stats ── */}
+      {(post.likeCount !== 0 || post.commentCount > 0) && (
+        <div className="mx-5 mt-3 flex items-center justify-between text-[14px] text-gray-500">
+          {post.likeCount !== 0 ? (
             <div className="flex items-center gap-1.5">
-              <div className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-primary text-white">
-                <ThumbsUp className="h-2.5 w-2.5 fill-white" />
+              <div className={`flex h-5 w-5 items-center justify-center rounded-full text-white ${post.likeCount > 0 ? 'bg-primary' : 'bg-red-500'}`}>
+                {post.likeCount > 0 ? (
+                  <ThumbsUp className="h-3 w-3 fill-white" />
+                ) : (
+                  <ThumbsDown className="h-3 w-3 fill-white" />
+                )}
               </div>
-              <span>{post.likeCount}</span>
+              <span className={post.likeCount < 0 ? 'text-red-500' : ''}>{post.likeCount}</span>
             </div>
           ) : (
             <div />
           )}
           {post.commentCount > 0 ? (
-            <button
-              onClick={() => onCommentClick?.(post._id)}
-              className="hover:underline"
+            <span
+              onClick={(e) => { e.stopPropagation(); navigateToPost(); }}
+              className="cursor-pointer hover:underline"
             >
               {post.commentCount} comment
               {post.commentCount !== 1 ? 's' : ''}
-            </button>
+            </span>
           ) : (
             <div />
           )}
@@ -403,27 +826,47 @@ export function PostCard({ post, onCommentClick }: PostCardProps) {
       )}
 
       {/* ── Action bar ── */}
-      <div className="mx-4 mt-2 border-t border-gray-100 py-1 pb-2">
+      <div className="mx-5 mt-2 border-t border-gray-100 py-1.5 pb-2.5">
         <div className="flex items-center">
           <button
-            onClick={() => userId && toggleLike.mutate(post._id)}
-            disabled={!userId || toggleLike.isPending}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-colors ${
-              liked
+            onClick={(e) => { e.stopPropagation(); userId && canLike && toggleLike.mutate(post._id); }}
+            disabled={!userId || !canLike || toggleLike.isPending}
+            title={!canLike ? 'You must be a member or follower of this organization' : undefined}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-[15px] font-medium transition-colors ${
+              !canLike ? 'cursor-not-allowed opacity-50 text-gray-400' : liked
                 ? 'text-primary'
                 : 'text-gray-500 hover:bg-gray-50'
             }`}
           >
             <ThumbsUp
-              className={`h-[18px] w-[18px] ${liked ? 'fill-primary' : ''}`}
+              className={`h-5 w-5 ${liked ? 'fill-primary' : ''}`}
             />
             Like
           </button>
           <button
-            onClick={() => onCommentClick?.(post._id)}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50"
+            onClick={(e) => { e.stopPropagation(); userId && canLike && toggleDislike.mutate(post._id); }}
+            disabled={!userId || !canLike || toggleDislike.isPending}
+            title={!canLike ? 'You must be a member or follower of this organization' : undefined}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-[15px] font-medium transition-colors ${
+              !canLike ? 'cursor-not-allowed opacity-50 text-gray-400' : disliked
+                ? 'text-red-500'
+                : 'text-gray-500 hover:bg-gray-50'
+            }`}
           >
-            <MessageCircle className="h-[18px] w-[18px]" />
+            <ThumbsDown
+              className={`h-5 w-5 ${disliked ? 'fill-red-500' : ''}`}
+            />
+            Dislike
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); if (canComment) navigateToPost(); }}
+            disabled={!canComment}
+            title={!canComment ? (orgAccessRole === 'follower' ? 'Followers cannot comment — join the organization to comment' : 'You must be a member of this organization to comment') : undefined}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-[15px] font-medium transition-colors ${
+              !canComment ? 'cursor-not-allowed opacity-50 text-gray-400' : 'text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            <MessageCircle className="h-5 w-5" />
             Comment
           </button>
         </div>

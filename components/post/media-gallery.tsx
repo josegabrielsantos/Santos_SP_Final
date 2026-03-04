@@ -61,7 +61,7 @@ function SmartMedia({
   if (isVideo(url)) {
     return (
       <div
-        className={`relative cursor-pointer overflow-hidden bg-black/5 ${className}`}
+        className={`relative cursor-pointer rounded-lg overflow-hidden border border-gray-200 bg-black/5 ${className}`}
         style={{ maxHeight: `${MAX_HEIGHT}px` }}
         onClick={onClick}
       >
@@ -86,7 +86,7 @@ function SmartMedia({
 
   return (
     <div
-      className={`relative cursor-pointer overflow-hidden bg-muted/30 ${className}`}
+      className={`relative cursor-pointer rounded-lg overflow-hidden border border-gray-200 bg-muted/30 ${className}`}
       style={{ maxHeight: `${MAX_HEIGHT}px` }}
       onClick={onClick}
     >
@@ -124,7 +124,7 @@ export function MediaGallery({ urls }: MediaGalleryProps) {
   return (
     <>
       <div
-        className="overflow-hidden"
+        className="overflow-hidden rounded-lg"
         style={{ maxHeight: `${MAX_HEIGHT}px` }}
       >
         {mediaUrls.length === 1 && (
@@ -166,7 +166,7 @@ function SingleMedia({ url, onClick }: { url: string; onClick: () => void }) {
 
 function TwoMedia({ urls, onOpen }: { urls: string[]; onOpen: (i: number) => void }) {
   return (
-    <div className="flex h-full gap-0.5" style={{ maxHeight: `${MAX_HEIGHT}px` }}>
+    <div className="flex h-full gap-1.5" style={{ maxHeight: `${MAX_HEIGHT}px` }}>
       <SmartMedia
         url={urls[0]}
         className="w-1/2"
@@ -187,7 +187,7 @@ function MultiMedia({ urls, onOpen }: { urls: string[]; onOpen: (i: number) => v
   const remaining = urls.length - 3; // how many MORE after the 3rd
 
   return (
-    <div className="flex h-full gap-0.5" style={{ maxHeight: `${MAX_HEIGHT}px` }}>
+    <div className="flex h-full gap-1.5" style={{ maxHeight: `${MAX_HEIGHT}px` }}>
       {/* Main image - ~3/4 width */}
       <SmartMedia
         url={urls[0]}
@@ -196,7 +196,7 @@ function MultiMedia({ urls, onOpen }: { urls: string[]; onOpen: (i: number) => v
       />
 
       {/* Right column - ~1/4 width, stacked */}
-      <div className="flex w-1/4 flex-col gap-0.5" style={{ maxHeight: `${MAX_HEIGHT}px` }}>
+      <div className="flex w-1/4 flex-col gap-1.5" style={{ maxHeight: `${MAX_HEIGHT}px` }}>
         <SmartMedia
           url={urls[1]}
           className="flex-1 min-h-0"
