@@ -283,7 +283,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
   };
 
   // ─── Research Paper (ResearchGate-style) Card ─────────────────
-  if (post.type === 'paper_share') {
+  if (post.type === 'research_paper') {
     const meta = post.paperMetadata;
     const dateStr = meta?.datePublished
       ? format(new Date(meta.datePublished), 'MMMM yyyy')
@@ -632,7 +632,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
       )}
 
       {/* ── Research Paper PDFs (full width, below gallery) ── */}
-      {post.type === 'paper_share' && pdfUrls.length > 0 && (
+      {post.type === 'research_paper' && pdfUrls.length > 0 && (
         <div className="mx-5 mt-3 flex flex-col gap-2">
           {pdfUrls.map((url) => (
             <a
@@ -659,7 +659,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
       )}
 
       {/* ── Normal post PDFs (prominent) ── */}
-      {post.type !== 'paper_share' && pdfUrls.length > 0 && (
+      {post.type !== 'research_paper' && pdfUrls.length > 0 && (
         <div className="mx-5 mt-3 flex flex-col gap-2">
           {pdfUrls.map((url) => (
             <div

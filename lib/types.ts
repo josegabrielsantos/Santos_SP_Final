@@ -37,7 +37,7 @@ export interface Poll {
 
 // ─── Post ────────────────────────────────────────────────────────
 
-export type PostType = 'post' | 'announcement' | 'poll' | 'paper_share' | 'update';
+export type PostType = 'post' | 'announcement' | 'poll' | 'research_paper' | 'update';
 export type PostStatus = 'draft' | 'pending' | 'published' | 'hidden';
 
 export interface Post {
@@ -195,14 +195,68 @@ export interface PaperMetadata {
   pageCount?: number | null;
 }
 
-// ─── Paper Metadata (user-provided for paper_share) ─────────────
+// ─── Paper Metadata (user-provided for research_paper) ──────────
 
 export interface PaperMetadataInput {
   datePublished?: string | null;
+  journal?: string | null;
   doi?: string | null;
   isbn?: string | null;
   authors: string[];
   abstract?: string | null;
+}
+
+// ─── Paper (standalone research paper) ──────────────────────────
+
+export interface Paper {
+  _id: string;
+  title: string;
+  authors: string[];
+  abstract: string | null;
+  keywords: string[];
+  doi: string | null;
+  isbn?: string | null;
+  publicationDate?: string | null;
+  year: number | null;
+  journal: string | null;
+  fileUrl: string | null;
+  fileSize: number | null;
+  uploadedBy: UserSummary;
+  organizationId?: OrgSummary | null;
+  sourcePostId?: string | null;
+  isPublished: boolean;
+  downloadCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PapersResponse {
+  papers: Paper[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
+export interface PaperSearchHit {
+  _id: string;
+  score: number;
+  title: string;
+  abstract?: string;
+  keywords?: string[];
+  authors?: string[];
+  journal?: string;
+  year?: number;
+  doi?: string;
+  downloadCount?: number;
+  createdAt?: string;
+  highlight: Record<string, string[]>;
+}
+
+export interface PaperSearchResponse {
+  papers: {
+    total: number;
+    hits: PaperSearchHit[];
+  };
 }
 
 // ─── Notification ────────────────────────────────────────────────

@@ -72,8 +72,9 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
   const [uploading, setUploading] = useState(false);
   const [tags, setTags] = useState<string[]>(['']);
 
-  // Paper metadata fields (user-provided for paper_share)
+  // Paper metadata fields (user-provided for research_paper)
   const [paperAuthors, setPaperAuthors] = useState<string[]>(['']);
+  const [paperJournal, setPaperJournal] = useState('');
   const [paperDoi, setPaperDoi] = useState('');
   const [paperIsbn, setPaperIsbn] = useState('');
   const [paperAbstract, setPaperAbstract] = useState('');
@@ -132,8 +133,8 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
       const files = e.target.files;
       if (!files?.length) return;
 
-      // For non-paper_share posts, enforce document file limit (max 5)
-      if (selectedType !== 'paper_share') {
+      // For non-research_paper posts, enforce document file limit (max 5)
+      if (selectedType !== 'research_paper') {
         const currentDocCount = mediaUrls.filter(
           (u) => !/\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|mov|avi|mkv)$/i.test(u)
         ).length;
@@ -203,14 +204,23 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
           }
         : null;
 
-    // Build paper metadata for paper_share
+    // Build paper metadata for research_paper
+    const researchAuthors = paperAuthors.map((a) => a.trim()).filter(Boolean);
+    if (selectedType === 'research_paper') {
+      if (!paperDatePublished || !paperJournal.trim() || !paperAbstract.trim() || researchAuthors.length === 0) {
+        alert('Research paper posts require publication date, journal, abstract, and at least one author.');
+        return;
+      }
+    }
+
     const paperMetadata: PaperMetadataInput | null =
-      selectedType === 'paper_share'
+      selectedType === 'research_paper'
         ? {
             datePublished: paperDatePublished || null,
+            journal: paperJournal.trim() || null,
             doi: paperDoi.trim() || null,
             isbn: paperIsbn.trim() || null,
-            authors: paperAuthors.map((a) => a.trim()).filter(Boolean),
+            authors: researchAuthors,
             abstract: paperAbstract.trim() || null,
           }
         : null;
@@ -234,6 +244,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
     setMediaUrls([]);
     setTags(['']);
     setPaperAuthors(['']);
+    setPaperJournal('');
     setPaperDoi('');
     setPaperIsbn('');
     setPaperAbstract('');
@@ -252,7 +263,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
         )}
       </DialogTrigger>
 
-      <DialogContent className={`max-h-[90vh] overflow-y-auto ${selectedType === 'paper_share' ? 'max-w-4xl' : 'max-w-2xl'}`}>
+      <DialogContent className={`max-h-[90vh] overflow-y-auto ${selectedType === 'research_paper' ? 'sm:max-w-4xl' : 'sm:max-w-3xl'}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             Create Post
@@ -275,7 +286,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
                     <SelectContent>
                       <SelectItem value="post">Post</SelectItem>
                       <SelectItem value="poll">Poll</SelectItem>
-                      <SelectItem value="paper_share">Paper Share</SelectItem>
+                      <SelectItem value="research_paper">Research Paper</SelectItem>
                       <SelectItem value="update">Update</SelectItem>
                     </SelectContent>
                   </Select>
@@ -376,57 +387,84 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
           </div>
 
           {/* Paper Share – User-provided metadata */}
-          {selectedType === 'paper_share' && (
-            <div className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50/30 p-4">
+          {selectedType === 'research_paper' && (
+            <div className="flex flex-col gap-4 rounded-lg border border-blue-200 bg-blue-50/30 p-4">
               <div className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-blue-600" />
                 <Label className="font-semibold text-blue-900">Research Paper Details</Label>
               </div>
               <p className="text-xs text-blue-700/80">
-                Please provide the metadata for your research paper.
+                Provide the metadata for your research paper. Fields marked with * are required.
               </p>
 
-              {/* Date Published */}
+              {/* ── Row 1: Abstract (full width) ── */}
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">Date Published</Label>
-                <Input
-                  type="date"
-                  value={paperDatePublished}
-                  onChange={(e) => setPaperDatePublished(e.target.value)}
-                  className="text-sm"
+                <Label className="text-xs font-medium text-muted-foreground">Abstract *</Label>
+                <textarea
+                  value={paperAbstract}
+                  onChange={(e) => setPaperAbstract(e.target.value)}
+                  placeholder="Paste or type the abstract of the paper…"
+                  rows={3}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 />
               </div>
 
-              {/* DOI */}
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">DOI (optional)</Label>
-                <Input
-                  placeholder="e.g. 10.1000/xyz123"
-                  value={paperDoi}
-                  onChange={(e) => setPaperDoi(e.target.value)}
-                  className="text-sm"
-                />
+              {/* ── Row 2: Publication details (2-col grid) ── */}
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+                  Publication Details
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-xs font-medium text-muted-foreground">Journal *</Label>
+                    <Input
+                      placeholder="e.g. Philippine Journal of Nutrition"
+                      value={paperJournal}
+                      onChange={(e) => setPaperJournal(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-xs font-medium text-muted-foreground">Date Published *</Label>
+                    <Input
+                      type="date"
+                      value={paperDatePublished}
+                      onChange={(e) => setPaperDatePublished(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-xs font-medium text-muted-foreground">DOI</Label>
+                    <Input
+                      placeholder="e.g. 10.1000/xyz123"
+                      value={paperDoi}
+                      onChange={(e) => setPaperDoi(e.target.value)}
+                      className="text-sm"
+                    />
+                    <span className="text-[10px] text-muted-foreground/60">Optional — Digital Object Identifier</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-xs font-medium text-muted-foreground">ISBN</Label>
+                    <Input
+                      placeholder="e.g. 978-3-16-148410-0"
+                      value={paperIsbn}
+                      onChange={(e) => setPaperIsbn(e.target.value)}
+                      className="text-sm"
+                    />
+                    <span className="text-[10px] text-muted-foreground/60">Optional — for book chapters or proceedings</span>
+                  </div>
+                </div>
               </div>
 
-              {/* ISBN */}
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">ISBN (optional)</Label>
-                <Input
-                  placeholder="e.g. 978-3-16-148410-0"
-                  value={paperIsbn}
-                  onChange={(e) => setPaperIsbn(e.target.value)}
-                  className="text-sm"
-                />
-              </div>
-
-              {/* Authors */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium text-muted-foreground">
-                    Authors {paperAuthors.filter((a) => a.trim()).length > 0 && (
-                      <span className="text-muted-foreground/60">({paperAuthors.filter((a) => a.trim()).length})</span>
-                    )}
-                  </Label>
+              {/* ── Row 3: Authors ── */}
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+                      Authors *
+                    </p>
+                    <span className="text-[10px] text-muted-foreground/60">Add each author&apos;s full name. The first entry is the primary author.</span>
+                  </div>
                   <Button
                     type="button"
                     variant="ghost"
@@ -438,7 +476,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
                     Add Author
                   </Button>
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {paperAuthors.map((author, idx) => (
                     <div key={idx} className="flex items-center gap-1.5">
                       <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-blue-200 bg-white text-[10px] text-blue-600 font-medium">
@@ -466,18 +504,6 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
                     </div>
                   ))}
                 </div>
-              </div>
-
-              {/* Abstract */}
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">Abstract</Label>
-                <textarea
-                  value={paperAbstract}
-                  onChange={(e) => setPaperAbstract(e.target.value)}
-                  placeholder="Paste or type the abstract of the paper…"
-                  rows={4}
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-                />
               </div>
             </div>
           )}
@@ -545,6 +571,9 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
             </div>
           )}
 
+          {/* Attachments & Tags row */}
+          <div className={`grid gap-4 ${selectedType === 'poll' || selectedType === 'research_paper' ? '' : 'sm:grid-cols-2'}`}>
+
           {/* Media uploads */}
           <div className="flex flex-col gap-2">
             <Label className="text-xs font-medium text-muted-foreground">Attachments</Label>
@@ -565,7 +594,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
                 {uploading ? 'Uploading…' : 'Click to upload files (images, videos, PDFs, etc.)'}
               </div>
             </label>
-            {selectedType !== 'paper_share' && (
+            {selectedType !== 'research_paper' && (
               <p className="text-[11px] text-muted-foreground/70">
                 Images &amp; videos: unlimited · Documents/PDFs: max 5 per post
               </p>
@@ -646,6 +675,8 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
               ))}
             </div>
           </div>
+
+          </div>{/* end Attachments & Tags grid */}
 
           <Separator />
 

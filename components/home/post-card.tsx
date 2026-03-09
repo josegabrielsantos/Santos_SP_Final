@@ -36,7 +36,7 @@ export interface PostData {
   likeCount: number;
   commentCount: number;
   publishedAt: string;
-  type: 'post' | 'announcement' | 'poll' | 'paper_share' | 'update';
+  type: 'post' | 'announcement' | 'poll' | 'research_paper' | 'update';
 }
 
 export function PostCard({ post }: { post: PostData }) {
