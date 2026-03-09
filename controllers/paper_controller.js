@@ -48,6 +48,8 @@ const createPaper = async (req, res) => {
 
 /**
  * GET /api/papers
+ * Paginated list with filtering & sorting.
+ * Query params: page, limit, keyword, author, yearFrom, yearTo, sort (newest|oldest|downloads)
  */
 const getPapers = async (req, res) => {
   try {
@@ -59,9 +61,21 @@ const getPapers = async (req, res) => {
     if (req.query.keyword) {
       filter.keywords = req.query.keyword;
     }
+    if (req.query.author) {
+      filter.authors = { $regex: req.query.author, $options: 'i' };
+    }
+    if (req.query.yearFrom || req.query.yearTo) {
+      filter.year = {};
+      if (req.query.yearFrom) filter.year.$gte = parseInt(req.query.yearFrom);
+      if (req.query.yearTo) filter.year.$lte = parseInt(req.query.yearTo);
+    }
+
+    let sortOption = { createdAt: -1 };
+    if (req.query.sort === 'oldest') sortOption = { createdAt: 1 };
+    else if (req.query.sort === 'downloads') sortOption = { downloadCount: -1 };
 
     const papers = await Paper.find(filter)
-      .sort({ createdAt: -1 })
+      .sort(sortOption)
       .skip(skip)
       .limit(limit)
       .populate('uploadedBy', 'displayName avatar')
@@ -100,6 +114,9 @@ const updatePaper = async (req, res) => {
   try {
     const paper = await Paper.findById(req.params.id);
     if (!paper) return res.status(404).json({ error: 'Paper not found.' });
+    if (!paper.fileUrl) {
+      return res.status(400).json({ error: 'No downloadable file is attached to this paper.' });
+    }
 
     const isOwner = paper.uploadedBy.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'website_admin';
@@ -152,17 +169,33 @@ const deletePaper = async (req, res) => {
 
 /**
  * POST /api/papers/:id/download
- * Increment download count and return the fileUrl
+ * Increment download count and stream the file as an attachment
  */
 const downloadPaper = async (req, res) => {
   try {
-    const paper = await Paper.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { downloadCount: 1 } },
-      { new: true }
-    );
+    const paper = await Paper.findById(req.params.id);
     if (!paper) return res.status(404).json({ error: 'Paper not found.' });
-    res.status(200).json({ fileUrl: paper.fileUrl, downloadCount: paper.downloadCount });
+
+    paper.downloadCount += 1;
+    await paper.save();
+
+    const upstream = await fetch(paper.fileUrl);
+    if (!upstream.ok) {
+      return res.status(502).json({ error: 'Failed to fetch paper file from storage.' });
+    }
+
+    const arrayBuffer = await upstream.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const safeBaseName = (paper.title || 'paper')
+      .replace(/[^a-zA-Z0-9 _-]/g, '')
+      .trim()
+      .slice(0, 80) || 'paper';
+    const filename = `${safeBaseName}.pdf`;
+
+    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    return res.status(200).send(buffer);
   } catch (error) {
     console.log('Error in downloadPaper:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });

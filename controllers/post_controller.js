@@ -1,4 +1,5 @@
 import Post from '../models/post_model.js';
+import Paper from '../models/paper_model.js';
 import Comment from '../models/comment_model.js';
 import Notification from '../models/notification_model.js';
 import FeaturedPost from '../models/featured_post_model.js';
@@ -41,8 +42,22 @@ async function checkOrgAccess(post, userId) {
 const createPost = async (req, res) => {
   try {
     const { title, body, bodyText, tags, organizationId, type, status, mediaUrls, paperIds, poll, paperMetadata } = req.body;
+    const normalizedType = type === 'paper_share' ? 'research_paper' : (type || 'post');
 
     if (!title) return res.status(400).json({ error: 'Title is required.' });
+
+    if (normalizedType === 'research_paper') {
+      const authors = (paperMetadata?.authors || []).map((a) => a?.trim()).filter(Boolean);
+      const abstract = paperMetadata?.abstract?.trim();
+      const datePublished = paperMetadata?.datePublished;
+      const journal = paperMetadata?.journal?.trim();
+
+      if (!abstract || !authors.length || !datePublished || !journal) {
+        return res.status(400).json({
+          error: 'Research paper posts require abstract, at least one author, publication date, and journal.',
+        });
+      }
+    }
 
     // If posting to an org, verify membership
     if (organizationId) {
@@ -62,16 +77,50 @@ const createPost = async (req, res) => {
       tags: tags || [],
       authorId: req.user._id,
       organizationId: organizationId || null,
-      type: type || 'post',
+      type: normalizedType,
       status: status || 'draft',
       mediaUrls: mediaUrls || [],
       paperIds: paperIds || [],
       poll: poll || undefined,
-      paperMetadata: (type === 'paper_share' && paperMetadata) ? paperMetadata : null,
+      paperMetadata: (normalizedType === 'research_paper' && paperMetadata)
+        ? {
+            datePublished: paperMetadata.datePublished || null,
+            journal: paperMetadata.journal || null,
+            doi: paperMetadata.doi || null,
+            isbn: paperMetadata.isbn || null,
+            authors: (paperMetadata.authors || []).map((a) => a.trim()).filter(Boolean),
+            abstract: paperMetadata.abstract || null,
+          }
+        : null,
       publishedAt: (status === 'published') ? new Date() : null,
     });
 
     await post.save();
+
+    if (normalizedType === 'research_paper' && post.paperMetadata) {
+      const firstPdfUrl = (mediaUrls || []).find((url) => /\.pdf$/i.test(url)) || null;
+      const publicationDate = new Date(post.paperMetadata.datePublished);
+      const paper = new Paper({
+        title: post.title,
+        authors: post.paperMetadata.authors,
+        abstract: post.paperMetadata.abstract,
+        keywords: tags || [],
+        doi: post.paperMetadata.doi || null,
+        isbn: post.paperMetadata.isbn || null,
+        publicationDate: Number.isNaN(publicationDate.getTime()) ? null : publicationDate,
+        year: Number.isNaN(publicationDate.getTime()) ? null : publicationDate.getFullYear(),
+        journal: post.paperMetadata.journal,
+        fileUrl: firstPdfUrl,
+        fileSize: null,
+        uploadedBy: req.user._id,
+        organizationId: organizationId || null,
+        sourcePostId: post._id,
+      });
+
+      await paper.save();
+      post.paperIds = [paper._id];
+      await post.save();
+    }
 
     // Increment org postCount
     if (organizationId && post.status === 'published') {

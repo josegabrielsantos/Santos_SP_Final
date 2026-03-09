@@ -29,6 +29,7 @@ const pollSchema = new mongoose.Schema(
 const paperMetadataSchema = new mongoose.Schema(
   {
     datePublished: { type: Date, default: null },
+    journal:       { type: String, default: null },
     doi:           { type: String, default: null },
     isbn:          { type: String, default: null },
     authors:       { type: [String], default: [] },
@@ -130,7 +131,7 @@ const postSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['post', 'announcement', 'poll', 'paper_share', 'update'],
+      enum: ['post', 'announcement', 'poll', 'research_paper', 'paper_share', 'update'],
       required: true,
       default: 'post',
       index: true,
@@ -166,6 +167,11 @@ function computeHotScore(likeCount, commentCount, publishedAt) {
 // -- Pre-save hooks --
 
 postSchema.pre('save', function (next) {
+  // Normalize legacy type naming.
+  if (this.type === 'paper_share') {
+    this.type = 'research_paper';
+  }
+
   // Set publishedAt exactly once when status first becomes 'published'
   if (
     this.isModified('status') &&
@@ -180,6 +186,20 @@ postSchema.pre('save', function (next) {
 
   // Recalculate hot score whenever likes or comments change
   this.hotScore = computeHotScore(this.likeCount, this.commentCount, this.publishedAt);
+
+  next();
+});
+
+postSchema.pre('findOneAndUpdate', function (next) {
+  const update = this.getUpdate();
+  if (!update) return next();
+
+  if (update.type === 'paper_share') {
+    update.type = 'research_paper';
+  }
+  if (update.$set?.type === 'paper_share') {
+    update.$set.type = 'research_paper';
+  }
 
   next();
 });

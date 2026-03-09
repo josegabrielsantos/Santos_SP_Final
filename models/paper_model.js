@@ -23,6 +23,15 @@ const paperSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    isbn: {
+      type: String,
+      default: null,
+    },
+    publicationDate: {
+      type: Date,
+      default: null,
+      index: true,
+    },
     year: {
       type: Number,
       default: null,
@@ -34,7 +43,7 @@ const paperSchema = new mongoose.Schema(
     },
     fileUrl: {
       type: String,
-      required: true,
+      default: null,
     },
     fileSize: {
       type: Number,
@@ -49,6 +58,12 @@ const paperSchema = new mongoose.Schema(
     organizationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Organization',
+      default: null,
+      index: true,
+    },
+    sourcePostId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Post',
       default: null,
       index: true,
     },

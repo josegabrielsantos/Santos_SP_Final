@@ -54,6 +54,12 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    savedPapers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Paper',
+      },
+    ],
   },
   { timestamps: true }
 );

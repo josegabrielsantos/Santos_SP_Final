@@ -8,6 +8,8 @@ import {
   getAllUsers,
   updateUserRole,
   toggleUserActive,
+  toggleSavePaper,
+  getSavedPapers,
 } from '../controllers/user_controller.js';
 import { protectRoute, requireWebsiteAdmin } from '../middleware/protectRoute.js';
 
@@ -15,6 +17,10 @@ const router = express.Router();
 
 // Authenticated user profile
 router.put('/profile', protectRoute, updateProfile);
+
+// Saved papers
+router.get('/saved-papers', protectRoute, getSavedPapers);
+router.post('/saved-papers/:paperId', protectRoute, toggleSavePaper);
 
 // Admin routes
 router.get('/', protectRoute, requireWebsiteAdmin, getAllUsers);

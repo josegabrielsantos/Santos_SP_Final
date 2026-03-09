@@ -9,10 +9,35 @@ const KMS_PAPERS_INDEX = 'kms_papers';
  */
 const search = async (req, res) => {
   try {
-    const { q, type = 'all', page = 1, limit = 20 } = req.query;
+    const {
+      q = '',
+      type = 'all',
+      page = 1,
+      limit = 20,
+      title,
+      author,
+      tags,
+      tagMode = 'any',
+      yearFrom,
+      yearTo,
+      sort = 'relevance',
+    } = req.query;
 
-    if (!q || !q.trim()) {
-      return res.status(400).json({ error: 'Query parameter "q" is required.' });
+    const hasGeneralQuery = q.trim().length > 0;
+    const hasPaperCriteria =
+      hasGeneralQuery ||
+      !!title?.trim() ||
+      !!author?.trim() ||
+      !!tags?.trim() ||
+      yearFrom !== undefined ||
+      yearTo !== undefined;
+
+    if ((type === 'posts' || type === 'all') && !hasGeneralQuery) {
+      return res.status(400).json({ error: 'Query parameter "q" is required for posts search.' });
+    }
+
+    if (type === 'papers' && !hasPaperCriteria) {
+      return res.status(400).json({ error: 'At least one papers search criterion is required.' });
     }
 
     const from = (parseInt(page) - 1) * parseInt(limit);
@@ -54,18 +79,94 @@ const search = async (req, res) => {
     }
 
     if (type === 'papers' || type === 'all') {
+      const must = [];
+      const filter = [];
+
+      if (hasGeneralQuery) {
+        must.push({
+          multi_match: {
+            query: q,
+            fields: ['title^3', 'abstract^2', 'authors^2', 'keywords', 'journal', 'doi'],
+            fuzziness: 'AUTO',
+          },
+        });
+      }
+
+      if (title?.trim()) {
+        must.push({
+          match: {
+            title: {
+              query: title,
+              operator: 'and',
+            },
+          },
+        });
+      }
+
+      if (author?.trim()) {
+        must.push({
+          match: {
+            authors: {
+              query: author,
+              operator: 'and',
+            },
+          },
+        });
+      }
+
+      if (tags?.trim()) {
+        const tagList = tags
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean);
+
+        if (tagList.length > 0) {
+          if (tagMode === 'all') {
+            tagList.forEach((tag) => filter.push({ term: { keywords: tag } }));
+          } else {
+            filter.push({ terms: { keywords: tagList } });
+          }
+        }
+      }
+
+      if (yearFrom !== undefined || yearTo !== undefined) {
+        const yearRange = {};
+        if (yearFrom !== undefined) {
+          const parsedFrom = parseInt(yearFrom);
+          if (!Number.isNaN(parsedFrom)) yearRange.gte = parsedFrom;
+        }
+        if (yearTo !== undefined) {
+          const parsedTo = parseInt(yearTo);
+          if (!Number.isNaN(parsedTo)) yearRange.lte = parsedTo;
+        }
+        if (Object.keys(yearRange).length > 0) {
+          filter.push({ range: { year: yearRange } });
+        }
+      }
+
+      const paperQuery = {
+        bool: {
+          must: must.length > 0 ? must : [{ match_all: {} }],
+          ...(filter.length > 0 ? { filter } : {}),
+        },
+      };
+
+      const paperSort =
+        sort === 'newest'
+          ? [{ createdAt: 'desc' }]
+          : sort === 'oldest'
+            ? [{ createdAt: 'asc' }]
+            : sort === 'downloads'
+              ? [{ downloadCount: 'desc' }]
+              : undefined;
+
       const paperResults = await esClient.search({
         index: KMS_PAPERS_INDEX,
         body: {
           from,
           size,
-          query: {
-            multi_match: {
-              query: q,
-              fields: ['title^3', 'abstract^2', 'authors^2', 'keywords', 'journal', 'doi'],
-              fuzziness: 'AUTO',
-            },
-          },
+          query: paperQuery,
+          ...(paperSort ? { sort: paperSort } : {}),
           highlight: {
             fields: {
               title: {},

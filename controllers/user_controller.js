@@ -1,6 +1,7 @@
 import User from '../models/user_model.js';
 import Organization from '../models/organization_model.js';
 import Post from '../models/post_model.js';
+import Paper from '../models/paper_model.js';
 
 /**
  * GET /api/users/:id
@@ -235,6 +236,57 @@ const getUserFollowedOrganizations = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/users/saved-papers/:paperId
+ * Toggle save/unsave a paper for the authenticated user.
+ */
+const toggleSavePaper = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { paperId } = req.params;
+
+    const paper = await Paper.findById(paperId);
+    if (!paper) return res.status(404).json({ error: 'Paper not found.' });
+
+    const user = await User.findById(userId);
+    const isSaved = user.savedPapers.map(String).includes(paperId);
+
+    if (isSaved) {
+      user.savedPapers = user.savedPapers.filter((id) => id.toString() !== paperId);
+    } else {
+      user.savedPapers.push(paperId);
+    }
+
+    await user.save();
+    res.status(200).json({ saved: !isSaved, savedPapers: user.savedPapers });
+  } catch (error) {
+    console.log('Error in toggleSavePaper:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * GET /api/users/saved-papers
+ * Get the authenticated user's saved papers.
+ */
+const getSavedPapers = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId).populate({
+      path: 'savedPapers',
+      populate: [
+        { path: 'uploadedBy', select: 'displayName avatar' },
+        { path: 'organizationId', select: 'name slug avatar' },
+      ],
+    });
+
+    res.status(200).json(user.savedPapers || []);
+  } catch (error) {
+    console.log('Error in getSavedPapers:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
 export {
   getUserById,
   updateProfile,
@@ -245,4 +297,6 @@ export {
   updateUserRole,
   toggleUserActive,
   getAdminStats,
+  toggleSavePaper,
+  getSavedPapers,
 };
