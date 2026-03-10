@@ -16,6 +16,7 @@ export function usePapers(params?: {
   yearFrom?: number;
   yearTo?: number;
   sort?: 'newest' | 'oldest' | 'downloads';
+  myOrgs?: boolean;
   enabled?: boolean;
 }) {
   const page = params?.page ?? 1;
@@ -33,6 +34,7 @@ export function usePapers(params?: {
           yearFrom: params?.yearFrom || undefined,
           yearTo: params?.yearTo || undefined,
           sort: params?.sort || undefined,
+          myOrgs: params?.myOrgs ? 'true' : undefined,
         },
       });
       return data;
@@ -111,6 +113,7 @@ export function useDownloadPaper() {
     mutationFn: async (paperId: string) => {
       const response = await axiosInstance.post<Blob>(`/papers/${paperId}/download`, null, {
         responseType: 'blob',
+        timeout: 120000,
       });
 
       const contentDisposition = response.headers['content-disposition'] as string | undefined;

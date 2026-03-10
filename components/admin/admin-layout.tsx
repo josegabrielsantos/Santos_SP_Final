@@ -32,11 +32,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-muted/20">
       {/* Sidebar */}
-      <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-border/50 bg-white">
+      <aside className="sticky top-0 flex h-screen w-[250px] shrink-0 flex-col border-r border-border/50 bg-white">
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-border/50 px-4 py-4">
-          <ShieldCheck className="h-5 w-5 text-primary" />
-          <span className="text-sm font-bold tracking-tight text-foreground">Admin Panel</span>
+          <ShieldCheck className="h-[22px] w-[22px] text-primary" />
+          <span className="text-[16px] font-bold tracking-tight text-foreground">Admin Panel</span>
         </div>
 
         {/* Nav */}
@@ -49,13 +49,13 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[16px] font-medium transition-colors',
                   isActive
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-[18px] w-[18px] shrink-0" />
                 {item.label}
               </Link>
             );
@@ -66,9 +66,9 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         <div className="border-t border-border/50 p-3">
           <Link
             href="/home"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-[16px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-[18px] w-[18px]" />
             Back to App
           </Link>
         </div>

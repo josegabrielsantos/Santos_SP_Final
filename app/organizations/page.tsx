@@ -25,22 +25,22 @@ export default function OrganizationsPage() {
         <Sidebar />
 
         <main className="flex flex-1 justify-center">
-          <div className="w-full max-w-4xl px-4 py-6 lg:px-6">
+          <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
             {/* Header */}
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                <h1 className="text-[28px] font-bold tracking-tight text-foreground">
                   Organizations
                 </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1.5 text-[16px] text-muted-foreground">
                   Browse research organizations and groups on UPLB KAIN
                 </p>
               </div>
               <div className="relative w-full max-w-xs">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search organizations…"
-                  className="h-9 rounded-full pl-9 text-sm"
+                  className="h-10 rounded-full pl-10 text-[16px]"
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
@@ -51,19 +51,19 @@ export default function OrganizationsPage() {
             </div>
 
             {isLoading && (
-              <div className="flex justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <div className="flex justify-center py-14">
+                <Loader2 className="h-7 w-7 animate-spin text-primary" />
               </div>
             )}
 
             {isError && (
-              <p className="py-6 text-center text-sm text-destructive">
+              <p className="py-7 text-center text-[16px] text-destructive">
                 Failed to load organizations.
               </p>
             )}
 
             {/* Org grid */}
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-5 sm:grid-cols-2">
               {data?.organizations.map((org) => {
                 const orgInitials = org.name
                   .split(/[\s()]+/)
@@ -79,35 +79,35 @@ export default function OrganizationsPage() {
                     className="border-border/60 bg-white shadow-sm transition-shadow hover:shadow-md cursor-pointer"
                     onClick={() => router.push(`/organizations/${org.slug}`)}
                   >
-                    <CardContent className="p-5">
-                      <div className="flex items-start gap-3">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-3.5">
                         <Avatar size="lg" className="shrink-0">
                           <AvatarImage src={org.avatar ?? undefined} alt={org.name} />
-                          <AvatarFallback className="bg-primary/10 text-sm font-bold text-primary">
+                          <AvatarFallback className="bg-primary/10 text-[16px] font-bold text-primary">
                             {orgInitials}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex flex-col gap-1 min-w-0">
-                          <h3 className="text-sm font-semibold leading-snug text-foreground line-clamp-2">
+                        <div className="flex flex-col gap-1.5 min-w-0">
+                          <h3 className="text-[16px] font-semibold leading-snug text-foreground line-clamp-2">
                             {org.name}
                           </h3>
-                          <p className="text-xs leading-relaxed text-muted-foreground line-clamp-2">
+                          <p className="text-[14px] leading-relaxed text-muted-foreground line-clamp-2">
                             {org.description}
                           </p>
-                          <div className="mt-2 flex items-center gap-3">
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Users className="h-3 w-3" />
+                          <div className="mt-2.5 flex items-center gap-3.5">
+                            <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
+                              <Users className="h-3.5 w-3.5" />
                               {org.memberCount} members
                             </span>
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <FileText className="h-3 w-3" />
+                            <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
+                              <FileText className="h-3.5 w-3.5" />
                               {org.postCount} posts
                             </span>
                           </div>
                         </div>
                       </div>
-                      <div className="mt-4">
-                        <Button variant="outline" size="sm" className="w-full text-xs">
+                      <div className="mt-5">
+                        <Button variant="outline" size="default" className="w-full text-[14px]">
                           View Organization
                         </Button>
                       </div>
@@ -118,28 +118,28 @@ export default function OrganizationsPage() {
             </div>
 
             {data && data.organizations.length === 0 && !isLoading && (
-              <p className="py-12 text-center text-sm text-muted-foreground">
+              <p className="py-14 text-center text-[16px] text-muted-foreground">
                 No organizations found.
               </p>
             )}
 
             {/* Pagination */}
             {data && data.pages > 1 && (
-              <div className="flex items-center justify-center gap-2 py-6">
+              <div className="flex items-center justify-center gap-2.5 py-7">
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="default"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
                 >
                   Previous
                 </Button>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-[14px] text-muted-foreground">
                   Page {page} of {data.pages}
                 </span>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="default"
                   onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
                   disabled={page >= data.pages}
                 >

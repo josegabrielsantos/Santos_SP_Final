@@ -71,7 +71,7 @@ function CreateOrgDialog({ onClose }: { onClose: () => void }) {
       <Card className="w-full max-w-lg bg-white shadow-lg">
         <CardContent className="p-6">
           <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-foreground">Create Organization</h2>
+            <h2 className="text-[21px] font-bold text-foreground">Create Organization</h2>
             <Button variant="ghost" size="icon-xs" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
@@ -80,33 +80,33 @@ function CreateOrgDialog({ onClose }: { onClose: () => void }) {
           <div className="space-y-4">
             {/* Name */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">
+              <label className="mb-1.5 block text-[14px] font-medium text-foreground">
                 Organization Name *
               </label>
               <Input
                 placeholder="Enter name…"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="h-9 text-sm"
+                className="h-10 text-[16px]"
               />
             </div>
 
             {/* Description */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">
+              <label className="mb-1.5 block text-[14px] font-medium text-foreground">
                 Description
               </label>
               <Input
                 placeholder="Short description (optional)…"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="h-9 text-sm"
+                className="h-10 text-[16px]"
               />
             </div>
 
             {/* Owner selector */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">
+              <label className="mb-1.5 block text-[14px] font-medium text-foreground">
                 Assign Owner *
               </label>
 
@@ -114,31 +114,31 @@ function CreateOrgDialog({ onClose }: { onClose: () => void }) {
                 <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
                   <Avatar size="sm">
                     <AvatarImage src={selectedOwner.avatar ?? undefined} />
-                    <AvatarFallback className="text-[10px]">
+                    <AvatarFallback className="text-[11px]">
                       {initials(selectedOwner.displayName)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-medium">{selectedOwner.displayName}</p>
-                    <p className="truncate text-xs text-muted-foreground">{selectedOwner.email}</p>
+                    <p className="truncate text-[16px] font-medium">{selectedOwner.displayName}</p>
+                    <p className="truncate text-[14px] text-muted-foreground">{selectedOwner.email}</p>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon-xs"
                     onClick={() => setSelectedOwner(null)}
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="h-4 w-4" />
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-2">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder="Search users…"
                       value={ownerSearch}
                       onChange={(e) => setOwnerSearch(e.target.value)}
-                      className="h-9 pl-9 text-sm"
+                      className="h-10 pl-10 text-[16px]"
                     />
                   </div>
                   <div className="max-h-40 overflow-y-auto rounded-md border border-border/60">
@@ -147,13 +147,13 @@ function CreateOrgDialog({ onClose }: { onClose: () => void }) {
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       </div>
                     ) : usersData?.users.length === 0 ? (
-                      <p className="px-3 py-3 text-xs text-muted-foreground">No users found</p>
+                      <p className="px-3 py-3 text-[14px] text-muted-foreground">No users found</p>
                     ) : (
                       usersData?.users.map((u) => (
                         <button
                           key={u._id}
                           type="button"
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/40 transition-colors"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-[16px] hover:bg-muted/40 transition-colors"
                           onClick={() => {
                             setSelectedOwner({
                               _id: u._id,
@@ -166,13 +166,13 @@ function CreateOrgDialog({ onClose }: { onClose: () => void }) {
                         >
                           <Avatar size="sm">
                             <AvatarImage src={u.avatar ?? undefined} />
-                            <AvatarFallback className="text-[10px]">
+                            <AvatarFallback className="text-[11px]">
                               {initials(u.displayName)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <p className="truncate text-sm font-medium">{u.displayName}</p>
-                            <p className="truncate text-xs text-muted-foreground">{u.email}</p>
+                            <p className="truncate text-[16px] font-medium">{u.displayName}</p>
+                            <p className="truncate text-[14px] text-muted-foreground">{u.email}</p>
                           </div>
                         </button>
                       ))
@@ -184,16 +184,16 @@ function CreateOrgDialog({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="mt-6 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={onClose}>
+            <Button variant="outline" size="default" onClick={onClose}>
               Cancel
             </Button>
             <Button
-              size="sm"
+              size="default"
               disabled={!name.trim() || !selectedOwner || createOrg.isPending}
               onClick={handleSubmit}
             >
               {createOrg.isPending ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               ) : null}
               Create Organization
             </Button>
@@ -218,17 +218,17 @@ export default function AdminOrganizationsPage() {
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Organizations</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-[28px] font-bold tracking-tight text-foreground">Organizations</h1>
+          <p className="mt-1 text-[16px] text-muted-foreground">
             Create and manage organizations across the platform
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search organizations…"
-              className="h-9 rounded-full pl-9 text-sm"
+              className="h-10 rounded-full pl-10 text-[16px]"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -236,8 +236,8 @@ export default function AdminOrganizationsPage() {
               }}
             />
           </div>
-          <Button size="sm" className="gap-1.5" onClick={() => setShowCreate(true)}>
-            <Plus className="h-3.5 w-3.5" />
+          <Button size="default" className="gap-2" onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4" />
             New Org
           </Button>
         </div>
@@ -252,7 +252,7 @@ export default function AdminOrganizationsPage() {
       <Card className="border-border/60 bg-white shadow-sm">
         <CardContent className="p-0">
           {/* Table header */}
-          <div className="grid grid-cols-[1fr_120px_120px_100px_60px] gap-4 border-b border-border/50 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="grid grid-cols-[1fr_120px_120px_100px_60px] gap-4 border-b border-border/50 px-5 py-3.5 text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
             <span>Organization</span>
             <span>Members</span>
             <span>Posts</span>
@@ -270,28 +270,28 @@ export default function AdminOrganizationsPage() {
               <div className="flex items-center gap-3 min-w-0">
                 <Avatar size="sm">
                   <AvatarImage src={org.avatar ?? undefined} alt={org.name} />
-                  <AvatarFallback className="text-[10px]">{initials(org.name)}</AvatarFallback>
+                  <AvatarFallback className="text-[11px]">{initials(org.name)}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{org.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{org.slug}</p>
+                  <p className="truncate text-[16px] font-medium text-foreground">{org.name}</p>
+                  <p className="truncate text-[14px] text-muted-foreground">{org.slug}</p>
                 </div>
               </div>
 
               {/* Members */}
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Users className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-2 text-[14px] text-muted-foreground">
+                <Users className="h-4 w-4" />
                 {org.memberCount}
               </div>
 
               {/* Posts */}
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <FileText className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-2 text-[14px] text-muted-foreground">
+                <FileText className="h-4 w-4" />
                 {org.postCount}
               </div>
 
               {/* Status */}
-              <Badge variant="secondary" className="w-fit text-[10px]">Active</Badge>
+              <Badge variant="secondary" className="w-fit text-[12px]">Active</Badge>
 
               {/* Actions */}
               <DropdownMenu>
@@ -318,7 +318,7 @@ export default function AdminOrganizationsPage() {
           ))}
 
           {data && data.organizations.length === 0 && (
-            <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+            <p className="px-5 py-8 text-center text-[16px] text-muted-foreground">
               No organizations found.
             </p>
           )}
@@ -330,18 +330,18 @@ export default function AdminOrganizationsPage() {
         <div className="flex items-center justify-center gap-2 py-6">
           <Button
             variant="outline"
-            size="sm"
+            size="default"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
           >
             Previous
           </Button>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-[14px] text-muted-foreground">
             Page {page} of {data.pages}
           </span>
           <Button
             variant="outline"
-            size="sm"
+            size="default"
             onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
             disabled={page >= data.pages}
           >

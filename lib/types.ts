@@ -198,6 +198,7 @@ export interface PaperMetadata {
 // ─── Paper Metadata (user-provided for research_paper) ──────────
 
 export interface PaperMetadataInput {
+  researchTitle?: string | null;
   datePublished?: string | null;
   journal?: string | null;
   doi?: string | null;
@@ -247,6 +248,7 @@ export interface PaperSearchHit {
   journal?: string;
   year?: number;
   doi?: string;
+  fileUrl?: string;
   downloadCount?: number;
   createdAt?: string;
   highlight: Record<string, string[]>;

@@ -67,13 +67,13 @@ export function CommentsSection({ postId, orgAccessRole = 'member' }: { postId: 
     <div className="flex flex-col gap-4 px-6 pb-5">
       <Separator />
       <div className="flex items-center justify-between">
-        <h4 className="text-base font-semibold text-foreground">Comments</h4>
+        <h4 className="text-[18px] font-semibold text-foreground">Comments</h4>
         <div className="flex items-center gap-1.5">
-          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as CommentSort)}
-            className="rounded-md border border-border/60 bg-transparent px-2 py-1 text-[13px] text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
+            className="rounded-md border border-border/60 bg-transparent px-2 py-1 text-[14px] text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="top">Top</option>
             <option value="new">Newest</option>
@@ -90,7 +90,7 @@ export function CommentsSection({ postId, orgAccessRole = 'member' }: { postId: 
           isPending={createComment.isPending}
         />
       ) : (
-        <p className="text-sm text-muted-foreground italic">
+        <p className="text-[16px] text-muted-foreground italic">
           {orgAccessRole === 'follower'
             ? 'Followers cannot comment on organization posts. Join the organization to comment.'
             : 'You must be a member of this organization to comment.'}
@@ -98,7 +98,7 @@ export function CommentsSection({ postId, orgAccessRole = 'member' }: { postId: 
       )}
 
       {/* Comment list */}
-      {isLoading && <p className="text-sm text-muted-foreground">Loading comments…</p>}
+      {isLoading && <p className="text-[16px] text-muted-foreground">Loading comments…</p>}
 
       <div className="flex flex-col gap-4">
         {allComments.map((c) => (
@@ -109,8 +109,8 @@ export function CommentsSection({ postId, orgAccessRole = 'member' }: { postId: 
       {hasNextPage && (
         <Button
           variant="ghost"
-          size="sm"
-          className="mx-auto gap-1.5 text-sm"
+          size="default"
+          className="mx-auto gap-1.5 text-[16px]"
           onClick={() => fetchNextPage()}
           disabled={isFetchingNextPage}
         >
@@ -200,7 +200,7 @@ function CommentItem({
       {!showReplies && (
         <button
           onClick={() => setShowReplies(true)}
-          className="mt-1 w-fit text-[13px] font-medium text-primary hover:underline"
+          className="mt-1 w-fit text-[14px] font-medium text-primary hover:underline"
         >
           View replies
         </button>
@@ -214,19 +214,19 @@ function CommentItem({
   return (
     <div className="flex flex-col">
       <div className="flex gap-2.5">
-        <Avatar className="mt-0.5 h-8 w-8 shrink-0">
+        <Avatar className="mt-0.5 h-9 w-9 shrink-0">
           <AvatarImage src={authorAvatar} alt={authorName} />
-          <AvatarFallback className="text-[11px]">{initials(authorName)}</AvatarFallback>
+          <AvatarFallback className="text-[12px]">{initials(authorName)}</AvatarFallback>
         </Avatar>
 
         <div className="min-w-0 flex-1 flex flex-col gap-1">
           <div className="rounded-lg bg-muted/40 px-3.5 py-2.5 overflow-hidden">
             <div className="flex items-center gap-2">
-              <span className="text-[13px] font-semibold text-foreground">{authorName}</span>
+              <span className="text-[15px] font-semibold text-foreground">{authorName}</span>
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="text-[11px] text-muted-foreground cursor-default">
+                    <span className="text-[13px] text-muted-foreground cursor-default">
                       {timeAgo}
                     </span>
                   </TooltipTrigger>
@@ -236,9 +236,9 @@ function CommentItem({
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="mt-0.5 text-[15px] leading-relaxed text-foreground/90 break-all [overflow-wrap:anywhere]">
+            <div className="mt-0.5 text-[16px] leading-relaxed text-foreground/90 break-all [overflow-wrap:anywhere]">
               {comment.replyToUser && (
-                <span className="mr-1 inline-block rounded bg-primary/10 px-1.5 py-0.5 text-[13px] font-semibold text-primary">
+                <span className="mr-1 inline-block rounded bg-primary/10 px-1.5 py-0.5 text-[14px] font-semibold text-primary">
                   @{comment.replyToUser}
                 </span>
               )}
@@ -264,7 +264,7 @@ function CommentItem({
               {isLong && (
                 <button
                   onClick={() => setExpanded(!expanded)}
-                  className="mt-0.5 text-[13px] font-medium text-primary hover:underline"
+                  className="mt-0.5 text-[14px] font-medium text-primary hover:underline"
                 >
                   {expanded ? 'Show less' : 'Read more'}
                 </button>
@@ -279,15 +279,15 @@ function CommentItem({
               onClick={() => canLike && toggleLike.mutate({ postId, commentId: comment._id })}
               disabled={!userId || !canLike || toggleLike.isPending}
               title={!canLike ? 'You must be a member or follower of this organization' : undefined}
-              className={`flex items-center gap-1 text-[13px] font-medium transition-colors ${
+              className={`flex items-center gap-1 text-[14px] font-medium transition-colors ${
                 !canLike ? 'cursor-not-allowed opacity-50 text-gray-400' : liked ? 'text-green-600' : 'text-muted-foreground hover:text-green-600'
               }`}
             >
-              <ThumbsUp className={`h-3.5 w-3.5 ${liked ? 'fill-green-600' : ''}`} />
+              <ThumbsUp className={`h-4 w-4 ${liked ? 'fill-green-600' : ''}`} />
             </button>
 
             {/* Like count */}
-            <span className={`min-w-[18px] text-center text-[13px] font-semibold ${likeCountColor}`}>
+            <span className={`min-w-[18px] text-center text-[14px] font-semibold ${likeCountColor}`}>
               {comment.likeCount}
             </span>
 
@@ -296,17 +296,17 @@ function CommentItem({
               onClick={() => canLike && toggleDislike.mutate({ postId, commentId: comment._id })}
               disabled={!userId || !canLike || toggleDislike.isPending}
               title={!canLike ? 'You must be a member or follower of this organization' : undefined}
-              className={`flex items-center gap-1 text-[13px] font-medium transition-colors ${
+              className={`flex items-center gap-1 text-[14px] font-medium transition-colors ${
                 !canLike ? 'cursor-not-allowed opacity-50 text-gray-400' : disliked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
               }`}
             >
-              <ThumbsDown className={`h-3.5 w-3.5 ${disliked ? 'fill-red-500' : ''}`} />
+              <ThumbsDown className={`h-4 w-4 ${disliked ? 'fill-red-500' : ''}`} />
             </button>
 
             {canComment && (
               <button
                 onClick={() => setShowReplyForm(!showReplyForm)}
-                className="text-[13px] font-medium text-muted-foreground hover:text-foreground"
+                className="text-[14px] font-medium text-muted-foreground hover:text-foreground"
               >
                 Reply
               </button>
@@ -314,7 +314,7 @@ function CommentItem({
             {isAuthor && (
               <button
                 onClick={() => deleteComment.mutate({ postId, commentId: comment._id })}
-                className="text-[13px] font-medium text-destructive/70 hover:text-destructive"
+                className="text-[14px] font-medium text-destructive/70 hover:text-destructive"
               >
                 Delete
               </button>
@@ -367,8 +367,8 @@ function RepliesList({
 
   const allReplies = data?.pages.flatMap((p) => p.replies) ?? [];
 
-  if (isLoading) return <p className="ml-2 text-[13px] text-muted-foreground">Loading…</p>;
-  if (!allReplies.length) return <p className="ml-2 text-[13px] text-muted-foreground">No replies yet.</p>;
+  if (isLoading) return <p className="ml-2 text-[14px] text-muted-foreground">Loading…</p>;
+  if (!allReplies.length) return <p className="ml-2 text-[14px] text-muted-foreground">No replies yet.</p>;
 
   // If we haven't reached max depth, indent; otherwise, flat (same width as parent)
   const nextDepth = Math.min(depth + 1, MAX_DEPTH);
@@ -389,7 +389,7 @@ function RepliesList({
         <button
           onClick={() => fetchNextPage()}
           disabled={isFetchingNextPage}
-          className="w-fit text-[13px] font-medium text-primary hover:underline"
+          className="w-fit text-[14px] font-medium text-primary hover:underline"
         >
           {isFetchingNextPage ? 'Loading…' : 'Load more replies'}
         </button>

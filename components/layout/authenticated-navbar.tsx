@@ -37,24 +37,24 @@ export function AuthenticatedNavbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/95 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 lg:px-6">
+      <div className="mx-auto flex h-[68px] max-w-[1400px] items-center gap-4 px-4 lg:px-6">
         {/* Left – Logos */}
-        <Link href="/home" className="flex shrink-0 items-center gap-2">
+        <Link href="/home" className="flex shrink-0 items-center gap-2.5">
           <Image
             src="/uplb_logo.png"
             alt="UPLB Logo"
-            width={32}
-            height={32}
+            width={35}
+            height={35}
             className="rounded-full"
           />
           <Image
             src="/FaNS_logo.png"
             alt="FaNS Logo"
-            width={32}
-            height={32}
+            width={35}
+            height={35}
             className="rounded-full"
           />
-          <span className="hidden text-lg font-bold tracking-tight text-foreground lg:block">
+          <span className="hidden text-[20px] font-bold tracking-tight text-foreground lg:block">
             UPLB KAIN
           </span>
         </Link>
@@ -62,11 +62,11 @@ export function AuthenticatedNavbar() {
         {/* Center – Search bar */}
         <div className="flex flex-1 justify-center px-2">
           <div className="relative w-full max-w-lg">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search posts, papers, organizations…"
-              className="h-10 w-full rounded-full border-border/80 bg-muted/40 pl-9 pr-4 text-[15px] placeholder:text-muted-foreground/70 focus-visible:ring-primary/30"
+              className="h-11 w-full rounded-full border-border/80 bg-muted/40 pl-10 pr-4 text-[16px] placeholder:text-muted-foreground/70 focus-visible:ring-primary/30"
             />
           </div>
         </div>
@@ -91,22 +91,22 @@ export function AuthenticatedNavbar() {
           <DropdownMenuContent align="end" className="w-56">
             {/* User info */}
             <div className="px-3 py-2">
-              <p className="text-sm font-medium text-foreground">{user?.displayName}</p>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
+              <p className="text-[16px] font-medium text-foreground">{user?.displayName}</p>
+              <p className="text-[13px] text-muted-foreground">{user?.email}</p>
             </div>
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem onClick={() => router.push(`/profile/${user?._id}`)} className="cursor-pointer gap-2">
-              <User className="h-4 w-4" />
+            <DropdownMenuItem onClick={() => router.push(`/profile/${user?._id}`)} className="cursor-pointer gap-2 text-[15px]">
+              <User className="h-[18px] w-[18px]" />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer gap-2">
-              <Settings className="h-4 w-4" />
+            <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer gap-2 text-[15px]">
+              <Settings className="h-[18px] w-[18px]" />
               Settings
             </DropdownMenuItem>
             {user?.role === 'website_admin' && (
-              <DropdownMenuItem onClick={() => router.push('/admin')} className="cursor-pointer gap-2">
-                <ShieldCheck className="h-4 w-4 text-primary" />
+              <DropdownMenuItem onClick={() => router.push('/admin')} className="cursor-pointer gap-2 text-[15px]">
+                <ShieldCheck className="h-[18px] w-[18px] text-primary" />
                 Admin Panel
               </DropdownMenuItem>
             )}
@@ -114,9 +114,9 @@ export function AuthenticatedNavbar() {
             <DropdownMenuItem
               onClick={handleLogout}
               disabled={logoutMutation.isPending}
-              className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+              className="cursor-pointer gap-2 text-[15px] text-destructive focus:text-destructive"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-[18px] w-[18px]" />
               {logoutMutation.isPending ? 'Logging out…' : 'Logout'}
             </DropdownMenuItem>
           </DropdownMenuContent>

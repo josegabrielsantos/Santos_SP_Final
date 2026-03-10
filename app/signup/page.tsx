@@ -52,12 +52,12 @@ export default function SignupPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Top bar */}
-      <div className="flex h-14 items-center px-4 sm:px-6">
+      <div className="flex h-16 items-center px-5 sm:px-7">
         <Link
           href="/"
-          className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="flex items-center gap-2.5 text-[16px] text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-5 w-5" />
           Back to home
         </Link>
       </div>
@@ -65,65 +65,65 @@ export default function SignupPage() {
       {/* Centered card */}
       <div className="flex flex-1 items-center justify-center px-4 pb-16">
         <Card className="w-full max-w-md border-border/60 shadow-lg">
-          <CardContent className="p-8">
+          <CardContent className="p-9">
             {/* Branding */}
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col items-center gap-5">
+              <div className="flex items-center gap-3.5">
                 <Image
                   src="/uplb_logo.png"
                   alt="UPLB Logo"
-                  width={44}
-                  height={44}
+                  width={50}
+                  height={50}
                   className="rounded-full"
                 />
                 <Image
                   src="/FaNS_logo.png"
                   alt="FaNS Logo"
-                  width={44}
-                  height={44}
+                  width={50}
+                  height={50}
                   className="rounded-full"
                 />
               </div>
               <div className="text-center">
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                <h1 className="text-[28px] font-bold tracking-tight text-foreground">
                   Create your account
                 </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-[16px] text-muted-foreground">
                   Join UPLB KAIN in one click
                 </p>
               </div>
             </div>
 
             {/* Perks */}
-            <div className="mt-6 rounded-lg bg-muted/40 p-4">
-              <ul className="flex flex-col gap-2.5">
+            <div className="mt-7 rounded-lg bg-muted/40 p-5">
+              <ul className="flex flex-col gap-3">
                 {perks.map((perk) => (
                   <li
                     key={perk}
-                    className="flex items-start gap-2 text-sm text-muted-foreground"
+                    className="flex items-start gap-2.5 text-[16px] text-muted-foreground"
                   >
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                     {perk}
                   </li>
                 ))}
               </ul>
             </div>
 
-            <Separator className="my-6" />
+            <Separator className="my-7" />
 
             {/* Google Sign-Up */}
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-5">
               <Button
                 variant="outline"
                 size="lg"
-                className="w-full gap-3 border-border font-medium"
+                className="w-full gap-3.5 border-border text-[16px] font-medium"
                 onClick={() => handleGoogleSignup()}
                 disabled={googleAuthMutation.isPending}
               >
                 {googleAuthMutation.isPending ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader2 className="h-6 w-6 animate-spin" />
                 ) : (
-                  <svg className="h-5 w-5" viewBox="0 0 24 24">
+                  <svg className="h-6 w-6" viewBox="0 0 24 24">
                     <path
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
                       fill="#4285F4"
@@ -148,14 +148,14 @@ export default function SignupPage() {
               </Button>
 
               {error && (
-                <p className="text-center text-sm text-destructive">{error}</p>
+                <p className="text-center text-[16px] text-destructive">{error}</p>
               )}
             </div>
 
-            <Separator className="my-6" />
+            <Separator className="my-7" />
 
             {/* Footer link */}
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-[16px] text-muted-foreground">
               Already have an account?{' '}
               <Link
                 href="/login"
@@ -169,8 +169,8 @@ export default function SignupPage() {
       </div>
 
       {/* Bottom footer */}
-      <footer className="flex justify-center pb-6">
-        <p className="text-xs text-muted-foreground">
+      <footer className="flex justify-center pb-7">
+        <p className="text-[14px] text-muted-foreground">
           &copy; {new Date().getFullYear()} UPLB KAIN — Knowledge Archive on
           Integrated Nutrition
         </p>

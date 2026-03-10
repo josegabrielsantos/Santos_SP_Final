@@ -83,41 +83,41 @@ export default function ProfilePage() {
         <Sidebar />
 
         <main className="flex flex-1 justify-center">
-          <div className="w-full max-w-4xl px-4 py-6 lg:px-6">
+          <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
             {/* Profile header */}
             <Card className="border-border/60 bg-white shadow-sm">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-5">
-                  <Avatar className="h-20 w-20 shrink-0 ring-2 ring-primary/10">
+              <CardContent className="p-7">
+                <div className="flex items-start gap-6">
+                  <Avatar className="h-[92px] w-[92px] shrink-0 ring-2 ring-primary/10">
                     <AvatarImage src={user.avatar ?? undefined} alt={user.displayName} />
-                    <AvatarFallback className="bg-primary/10 text-xl font-bold text-primary">
+                    <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
                       {initials(user.displayName)}
                     </AvatarFallback>
                   </Avatar>
 
-                  <div className="flex flex-1 flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-xl font-bold text-foreground">{user.displayName}</h1>
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    <div className="flex items-center gap-2.5">
+                      <h1 className="text-[23px] font-bold text-foreground">{user.displayName}</h1>
                       {user.role === 'website_admin' && (
-                        <Badge variant="default" className="text-[10px]">
+                        <Badge variant="default" className="text-[12px]">
                           Admin
                         </Badge>
                       )}
                     </div>
 
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <p className="text-[16px] text-muted-foreground">{user.email}</p>
 
                     {user.bio && (
-                      <p className="mt-1 text-sm text-foreground/80">{user.bio}</p>
+                      <p className="mt-1.5 text-[16px] text-foreground/80">{user.bio}</p>
                     )}
 
                     {/* Expertise & certifications */}
-                    <div className="mt-3 flex flex-wrap gap-1.5">
+                    <div className="mt-3.5 flex flex-wrap gap-2">
                       {user.expertise?.map((e) => (
                         <Badge
                           key={e}
                           variant="secondary"
-                          className="text-[10px] font-normal"
+                          className="text-[12px] font-normal"
                         >
                           {e}
                         </Badge>
@@ -126,17 +126,17 @@ export default function ProfilePage() {
                         <Badge
                           key={c}
                           variant="outline"
-                          className="gap-1 text-[10px] font-normal"
+                          className="gap-1.5 text-[12px] font-normal"
                         >
-                          <Award className="h-2.5 w-2.5" />
+                          <Award className="h-3 w-3" />
                           {c}
                         </Badge>
                       ))}
                     </div>
 
                     {user.createdAt && (
-                      <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
+                      <p className="mt-2.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5" />
                         Joined {new Date(user.createdAt).toLocaleDateString('en-US', {
                           month: 'long',
                           year: 'numeric',
@@ -149,24 +149,24 @@ export default function ProfilePage() {
             </Card>
 
             {/* Tabs: Posts, Organizations, Following */}
-            <Tabs defaultValue="posts" className="mt-4">
+            <Tabs defaultValue="posts" className="mt-5">
               <TabsList>
-                <TabsTrigger value="posts" className="gap-1.5">
-                  <FileText className="h-3.5 w-3.5" />
+                <TabsTrigger value="posts" className="gap-2">
+                  <FileText className="h-4 w-4" />
                   Posts
                 </TabsTrigger>
-                <TabsTrigger value="organizations" className="gap-1.5">
-                  <Building2 className="h-3.5 w-3.5" />
+                <TabsTrigger value="organizations" className="gap-2">
+                  <Building2 className="h-4 w-4" />
                   Organizations
                 </TabsTrigger>
-                <TabsTrigger value="following" className="gap-1.5">
-                  <Heart className="h-3.5 w-3.5" />
+                <TabsTrigger value="following" className="gap-2">
+                  <Heart className="h-4 w-4" />
                   Following
                 </TabsTrigger>
               </TabsList>
 
               {/* Posts tab */}
-              <TabsContent value="posts" className="mt-4 flex flex-col gap-4">
+              <TabsContent value="posts" className="mt-5 flex flex-col gap-5">
                 {postsLoading && (
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -178,27 +178,27 @@ export default function ProfilePage() {
                 ))}
 
                 {postsData && postsData.posts.length === 0 && (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
+                  <p className="py-9 text-center text-[16px] text-muted-foreground">
                     No posts yet.
                   </p>
                 )}
 
                 {postsData && postsData.pages > 1 && (
-                  <div className="flex items-center justify-center gap-2 py-4">
+                  <div className="flex items-center justify-center gap-2.5 py-5">
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="default"
                       onClick={() => setPostPage((p) => Math.max(1, p - 1))}
                       disabled={postPage <= 1}
                     >
                       Previous
                     </Button>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[14px] text-muted-foreground">
                       Page {postPage} of {postsData.pages}
                     </span>
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="default"
                       onClick={() => setPostPage((p) => Math.min(postsData.pages, p + 1))}
                       disabled={postPage >= postsData.pages}
                     >
@@ -209,10 +209,10 @@ export default function ProfilePage() {
               </TabsContent>
 
               {/* Organizations tab */}
-              <TabsContent value="organizations" className="mt-4">
+              <TabsContent value="organizations" className="mt-5">
                 <Card className="border-border/60 bg-white shadow-sm">
-                  <CardContent className="p-5">
-                    <h3 className="mb-3 text-xs font-semibold uppercase text-muted-foreground">
+                  <CardContent className="p-6">
+                    <h3 className="mb-3.5 text-[14px] font-semibold uppercase text-muted-foreground">
                       Member of ({orgs?.length ?? 0})
                     </h3>
                     {orgs && orgs.length > 0 ? (
@@ -222,7 +222,7 @@ export default function ProfilePage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-[16px] text-muted-foreground">
                         Not a member of any organization yet.
                       </p>
                     )}
@@ -231,10 +231,10 @@ export default function ProfilePage() {
               </TabsContent>
 
               {/* Following tab */}
-              <TabsContent value="following" className="mt-4">
+              <TabsContent value="following" className="mt-5">
                 <Card className="border-border/60 bg-white shadow-sm">
-                  <CardContent className="p-5">
-                    <h3 className="mb-3 text-xs font-semibold uppercase text-muted-foreground">
+                  <CardContent className="p-6">
+                    <h3 className="mb-3.5 text-[14px] font-semibold uppercase text-muted-foreground">
                       Following ({followed?.length ?? 0})
                     </h3>
                     {followed && followed.length > 0 ? (
@@ -244,7 +244,7 @@ export default function ProfilePage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-[16px] text-muted-foreground">
                         Not following any organizations yet.
                       </p>
                     )}
@@ -267,11 +267,11 @@ function OrgRow({
   return (
     <Link
       href={`/organizations/${org.slug}`}
-      className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted/40"
+      className="flex items-center gap-3.5 rounded-lg p-2.5 transition-colors hover:bg-muted/40"
     >
       <Avatar size="sm">
         <AvatarImage src={org.avatar ?? undefined} alt={org.name} />
-        <AvatarFallback className="text-[10px]">
+        <AvatarFallback className="text-[11px]">
           {org.name
             .split(/[\s()]+/)
             .filter(Boolean)
@@ -282,8 +282,8 @@ function OrgRow({
         </AvatarFallback>
       </Avatar>
       <div className="flex flex-col">
-        <span className="text-sm font-medium text-foreground hover:underline">{org.name}</span>
-        <span className="text-[11px] text-muted-foreground">{org.memberCount} members</span>
+        <span className="text-[16px] font-medium text-foreground hover:underline">{org.name}</span>
+        <span className="text-[13px] text-muted-foreground">{org.memberCount} members</span>
       </div>
     </Link>
   );

@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Select,
   SelectContent,
@@ -30,6 +32,8 @@ import {
   X,
   Loader2,
   Hash,
+  Eye,
+  Link2,
 } from 'lucide-react';
 import { usePapers, useSearchPapers, useDownloadPaper, useToggleSavePaper, useSavedPapers } from '@/lib/api/papers';
 import { useAppSelector } from '@/store/hooks';
@@ -38,6 +42,9 @@ import type { Paper, PaperSearchHit } from '@/lib/types';
 export default function PapersPage() {
   const currentUser = useAppSelector((s) => s.auth.user);
   const isLoggedIn = !!currentUser;
+
+  // Filter tab
+  const [activeTab, setActiveTab] = useState<'all' | 'my-orgs'>('all');
 
   // Pagination & filters
   const [page, setPage] = useState(1);
@@ -68,6 +75,7 @@ export default function PapersPage() {
   }>({});
   const [searchPage, setSearchPage] = useState(1);
   const [downloadError, setDownloadError] = useState('');
+  const [copiedPaperId, setCopiedPaperId] = useState('');
 
   const isSearching = Object.keys(activeSearchCriteria).length > 0;
 
@@ -79,6 +87,7 @@ export default function PapersPage() {
     author: filterAuthor || undefined,
     yearFrom: filterYearFrom ? parseInt(filterYearFrom) : undefined,
     yearTo: filterYearTo ? parseInt(filterYearTo) : undefined,
+    myOrgs: activeTab === 'my-orgs' ? true : undefined,
     enabled: isLoggedIn,
   });
 
@@ -154,6 +163,18 @@ export default function PapersPage() {
     setPage(1);
   }, []);
 
+  const handleTabChange = useCallback((tab: 'all' | 'my-orgs') => {
+    setActiveTab(tab);
+    setPage(1);
+  }, []);
+
+  const handleCopyLink = useCallback((paperId: string) => {
+    const url = `${window.location.origin}/papers?id=${paperId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedPaperId(paperId);
+    setTimeout(() => setCopiedPaperId(''), 2000);
+  }, []);
+
   const handleDownload = useCallback(
     async (paper: Paper | PaperSearchHit) => {
       try {
@@ -212,32 +233,32 @@ export default function PapersPage() {
         <Sidebar />
 
         <main className="flex flex-1 justify-center">
-          <div className="w-full max-w-4xl px-4 py-6 lg:px-6">
+          <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
             {/* Header */}
-            <div className="mb-4">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <div className="mb-5">
+              <h1 className="text-[32px] font-bold tracking-tight text-foreground">
                 Research Papers
               </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1.5 text-[18px] text-muted-foreground">
                 Browse curated research on food and nutrition security
               </p>
             </div>
 
             {/* Search bar */}
             {!isLoggedIn && (
-              <Card className="mb-4 border-amber-300/60 bg-amber-50/60">
-                <CardContent className="p-4 text-sm text-amber-900">
+              <Card className="mb-5 border-amber-300/60 bg-amber-50/60">
+                <CardContent className="p-5 text-[18px] text-amber-900">
                   Please sign in to access the research papers page.
                 </CardContent>
               </Card>
             )}
 
-            <div className="mb-4 flex gap-2">
+            <div className="mb-5 flex gap-2.5">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search papers by title, author, keywords…"
-                  className="h-9 pl-9 pr-9 text-sm"
+                  className="h-10 pl-10 pr-10 text-[18px]"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -252,37 +273,63 @@ export default function PapersPage() {
                   </button>
                 )}
               </div>
-              <Button size="sm" className="h-9" onClick={handleSearch} disabled={!isLoggedIn}>
-                <Search className="mr-1.5 h-3.5 w-3.5" />
+              <Button size="default" className="h-10" onClick={handleSearch} disabled={!isLoggedIn}>
+                <Search className="mr-2 h-4 w-4" />
                 Search
               </Button>
               <Button
                 variant="outline"
-                size="sm"
-                className="h-9"
+                size="default"
+                className="h-10"
                 onClick={() => setShowFilters(!showFilters)}
                 disabled={!isLoggedIn}
               >
-                <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />
+                <SlidersHorizontal className="mr-2 h-4 w-4" />
                 Filters & Advanced Search
               </Button>
             </div>
+
+            {/* Filtering tabs */}
+            {isLoggedIn && (
+              <div className="mb-5 flex gap-1.5 rounded-lg bg-muted/50 p-1.5">
+                <button
+                  onClick={() => handleTabChange('all')}
+                  className={`flex-1 rounded-md px-3.5 py-2 text-[18px] font-medium transition-colors ${
+                    activeTab === 'all'
+                      ? 'bg-white text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  All Research Papers
+                </button>
+                <button
+                  onClick={() => handleTabChange('my-orgs')}
+                  className={`flex-1 rounded-md px-3.5 py-2 text-[18px] font-medium transition-colors ${
+                    activeTab === 'my-orgs'
+                      ? 'bg-white text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  My Organization&apos;s Research Papers
+                </button>
+              </div>
+            )}
 
             {/* Filters panel */}
             {showFilters && (
               <Card className="mb-4">
                 <CardContent className="p-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="mb-2 text-[14px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Browse Filters
                   </p>
                   <div className="flex flex-wrap items-end gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-muted-foreground">
+                      <label className="text-[14px] font-medium text-muted-foreground">
                         Author
                       </label>
                       <Input
                         placeholder="Filter by author…"
-                        className="h-8 w-44 text-xs"
+                        className="h-9 w-48 text-[14px]"
                         value={filterAuthor}
                         onChange={(e) => {
                           setFilterAuthor(e.target.value);
@@ -291,12 +338,12 @@ export default function PapersPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-muted-foreground">
+                      <label className="text-[14px] font-medium text-muted-foreground">
                         Year from
                       </label>
                       <Input
                         placeholder="e.g. 2020"
-                        className="h-8 w-24 text-xs"
+                        className="h-9 w-28 text-[14px]"
                         value={filterYearFrom}
                         onChange={(e) => {
                           setFilterYearFrom(e.target.value);
@@ -305,12 +352,12 @@ export default function PapersPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-muted-foreground">
+                      <label className="text-[14px] font-medium text-muted-foreground">
                         Year to
                       </label>
                       <Input
                         placeholder="e.g. 2025"
-                        className="h-8 w-24 text-xs"
+                        className="h-9 w-28 text-[14px]"
                         value={filterYearTo}
                         onChange={(e) => {
                           setFilterYearTo(e.target.value);
@@ -319,7 +366,7 @@ export default function PapersPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-muted-foreground">
+                      <label className="text-[14px] font-medium text-muted-foreground">
                         Sort by
                       </label>
                       <Select
@@ -329,7 +376,7 @@ export default function PapersPage() {
                           setPage(1);
                         }}
                       >
-                        <SelectTrigger className="h-8 w-36 text-xs">
+                        <SelectTrigger className="h-9 w-40 text-[14px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -341,8 +388,8 @@ export default function PapersPage() {
                     </div>
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs"
+                      size="default"
+                      className="h-9 text-[14px]"
                       onClick={clearFilters}
                     >
                       Clear filters
@@ -351,41 +398,41 @@ export default function PapersPage() {
 
                   <Separator className="my-4" />
 
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="mb-2 text-[14px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Advanced Search (Scopus-style fields)
                   </p>
                   <div className="flex flex-wrap items-end gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-muted-foreground">Title</label>
+                      <label className="text-[14px] font-medium text-muted-foreground">Title</label>
                       <Input
                         placeholder="Exact topic or phrase"
-                        className="h-8 w-52 text-xs"
+                        className="h-9 w-56 text-[14px]"
                         value={searchTitle}
                         onChange={(e) => setSearchTitle(e.target.value)}
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-muted-foreground">Author</label>
+                      <label className="text-[14px] font-medium text-muted-foreground">Author</label>
                       <Input
                         placeholder="Surname, Initials"
-                        className="h-8 w-44 text-xs"
+                        className="h-9 w-48 text-[14px]"
                         value={searchAuthor}
                         onChange={(e) => setSearchAuthor(e.target.value)}
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-muted-foreground">Tags (comma-separated)</label>
+                      <label className="text-[14px] font-medium text-muted-foreground">Tags (comma-separated)</label>
                       <Input
                         placeholder="nutrition, food security"
-                        className="h-8 w-60 text-xs"
+                        className="h-9 w-64 text-[14px]"
                         value={searchTags}
                         onChange={(e) => setSearchTags(e.target.value)}
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-muted-foreground">Tags match</label>
+                      <label className="text-[14px] font-medium text-muted-foreground">Tags match</label>
                       <Select value={searchTagMode} onValueChange={(v) => setSearchTagMode(v as 'any' | 'all')}>
-                        <SelectTrigger className="h-8 w-28 text-xs">
+                        <SelectTrigger className="h-9 w-32 text-[14px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -395,30 +442,30 @@ export default function PapersPage() {
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-muted-foreground">Year from</label>
+                      <label className="text-[14px] font-medium text-muted-foreground">Year from</label>
                       <Input
                         placeholder="e.g. 2020"
-                        className="h-8 w-24 text-xs"
+                        className="h-9 w-28 text-[14px]"
                         value={searchYearFrom}
                         onChange={(e) => setSearchYearFrom(e.target.value)}
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-muted-foreground">Year to</label>
+                      <label className="text-[14px] font-medium text-muted-foreground">Year to</label>
                       <Input
                         placeholder="e.g. 2026"
-                        className="h-8 w-24 text-xs"
+                        className="h-9 w-28 text-[14px]"
                         value={searchYearTo}
                         onChange={(e) => setSearchYearTo(e.target.value)}
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-muted-foreground">Search sort</label>
+                      <label className="text-[14px] font-medium text-muted-foreground">Search sort</label>
                       <Select
                         value={searchSort}
                         onValueChange={(v) => setSearchSort(v as 'relevance' | 'newest' | 'oldest' | 'downloads')}
                       >
-                        <SelectTrigger className="h-8 w-36 text-xs">
+                        <SelectTrigger className="h-9 w-40 text-[14px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -429,10 +476,10 @@ export default function PapersPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button size="sm" className="h-8 text-xs" onClick={handleSearch}>
+                    <Button size="default" className="h-9 text-[14px]" onClick={handleSearch}>
                       Apply search
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={clearSearch}>
+                    <Button variant="ghost" size="default" className="h-9 text-[14px]" onClick={clearSearch}>
                       Clear search criteria
                     </Button>
                   </div>
@@ -442,7 +489,7 @@ export default function PapersPage() {
 
             {/* Active search indicator */}
             {isSearching && (
-              <div className="mb-4 flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm">
+              <div className="mb-4 flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-[16px]">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">
                   Showing results for:{' '}
@@ -458,7 +505,7 @@ export default function PapersPage() {
             )}
 
             {downloadError && (
-              <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[16px] text-destructive">
                 {downloadError}
               </div>
             )}
@@ -467,7 +514,7 @@ export default function PapersPage() {
             {isLoading && (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">Loading papers…</span>
+                <span className="ml-2 text-[16px] text-muted-foreground">Loading papers…</span>
               </div>
             )}
 
@@ -475,7 +522,7 @@ export default function PapersPage() {
             {!isLoading && !isSearching && papers.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <FileText className="h-12 w-12 text-muted-foreground/40" />
-                <p className="mt-3 text-sm text-muted-foreground">
+                <p className="mt-3 text-[16px] text-muted-foreground">
                   No research papers found.
                 </p>
               </div>
@@ -484,7 +531,7 @@ export default function PapersPage() {
             {!isLoading && isSearching && searchHits.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Search className="h-12 w-12 text-muted-foreground/40" />
-                <p className="mt-3 text-sm text-muted-foreground">
+                <p className="mt-3 text-[16px] text-muted-foreground">
                   No papers match your search. Try different keywords.
                 </p>
               </div>
@@ -501,6 +548,8 @@ export default function PapersPage() {
                     isLoggedIn={isLoggedIn}
                     onDownload={() => handleDownload(paper)}
                     onToggleSave={() => handleToggleSave(paper._id)}
+                    onCopyLink={() => handleCopyLink(paper._id)}
+                    linkCopied={copiedPaperId === paper._id}
                   />
                 ))}
               </div>
@@ -517,6 +566,8 @@ export default function PapersPage() {
                     isLoggedIn={isLoggedIn}
                     onDownload={() => handleDownload(hit)}
                     onToggleSave={() => handleToggleSave(hit._id)}
+                    onCopyLink={() => handleCopyLink(hit._id)}
+                    linkCopied={copiedPaperId === hit._id}
                   />
                 ))}
               </div>
@@ -524,10 +575,10 @@ export default function PapersPage() {
 
             {/* Pagination */}
             {!isLoading && totalPages > 1 && (
-              <div className="mt-6 flex items-center justify-center gap-2">
+              <div className="mt-7 flex items-center justify-center gap-2.5">
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="default"
                   disabled={currentPage <= 1}
                   onClick={() =>
                     isSearching
@@ -538,12 +589,12 @@ export default function PapersPage() {
                   <ChevronLeft className="h-4 w-4" />
                   Previous
                 </Button>
-                <span className="px-3 text-sm text-muted-foreground">
+                <span className="px-3.5 text-[18px] text-muted-foreground">
                   Page {currentPage} of {totalPages}
                 </span>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="default"
                   disabled={currentPage >= totalPages}
                   onClick={() =>
                     isSearching
@@ -563,6 +614,17 @@ export default function PapersPage() {
   );
 }
 
+// ─── Helper: get initials from name ─────────────────────────────
+
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 // ─── Paper Card (from MongoDB data) ─────────────────────────────
 
 function PaperCard({
@@ -571,48 +633,54 @@ function PaperCard({
   isLoggedIn,
   onDownload,
   onToggleSave,
+  onCopyLink,
+  linkCopied,
 }: {
   paper: Paper;
   isSaved: boolean;
   isLoggedIn: boolean;
   onDownload: () => void;
   onToggleSave: () => void;
+  onCopyLink: () => void;
+  linkCopied: boolean;
 }) {
+  const router = useRouter();
+
   return (
     <Card className="border-border/60 bg-white shadow-sm transition-shadow hover:shadow-md">
-      <CardContent className="p-5">
+      <CardContent className="p-6">
         <div className="flex-1 min-w-0">
           {/* Title */}
-          <h3 className="text-base font-semibold leading-snug text-foreground">
+          <h3 className="text-[20px] font-semibold leading-snug text-foreground">
             {paper.title}
           </h3>
 
           {/* Author */}
-          <div className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
-            <User className="h-3.5 w-3.5 shrink-0" />
-            <span className="font-medium text-xs text-muted-foreground/70">Authors:</span>
-            <span className="text-xs">{paper.authors.length > 0 ? paper.authors.join(', ') : 'Unknown'}</span>
+          <div className="mt-2.5 flex items-center gap-2 text-[18px] text-muted-foreground">
+            <User className="h-4 w-4 shrink-0" />
+            <span className="font-medium text-[16px] text-muted-foreground/70">Authors:</span>
+            <span className="text-[16px]">{paper.authors.length > 0 ? paper.authors.join(', ') : 'Unknown'}</span>
           </div>
 
           {/* Metadata row */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/80">
+          <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[16px] text-muted-foreground/80">
             {paper.journal && (
-              <span className="flex items-center gap-1.5">
-                <BookOpen className="h-3 w-3 shrink-0" />
+              <span className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">Journal:</span>
                 {paper.journal}
               </span>
             )}
             {paper.year && (
-              <span className="flex items-center gap-1.5">
-                <Calendar className="h-3 w-3 shrink-0" />
+              <span className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">Year:</span>
                 {paper.year}
               </span>
             )}
             {paper.doi && (
-              <span className="flex items-center gap-1.5">
-                <Hash className="h-3 w-3 shrink-0" />
+              <span className="flex items-center gap-2">
+                <Hash className="h-4 w-4 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">DOI:</span>
                 <a
                   href={`https://doi.org/${paper.doi}`}
@@ -624,8 +692,8 @@ function PaperCard({
                 </a>
               </span>
             )}
-            <span className="flex items-center gap-1.5">
-              <Download className="h-3 w-3 shrink-0" />
+            <span className="flex items-center gap-2">
+              <Download className="h-4 w-4 shrink-0" />
               <span className="font-medium text-muted-foreground/70">Downloads:</span>
               {paper.downloadCount}
             </span>
@@ -633,9 +701,9 @@ function PaperCard({
 
           {/* Abstract */}
           {paper.abstract && (
-            <div className="mt-2.5">
-              <span className="text-xs font-medium text-muted-foreground/70">Abstract: </span>
-              <span className="text-sm leading-relaxed text-muted-foreground line-clamp-3">
+            <div className="mt-3">
+              <span className="text-[16px] font-medium text-muted-foreground/70">Abstract: </span>
+              <span className="text-[18px] leading-relaxed text-muted-foreground line-clamp-3">
                 {paper.abstract}
               </span>
             </div>
@@ -643,44 +711,92 @@ function PaperCard({
 
           {/* Tags */}
           {paper.keywords.length > 0 && (
-            <div className="mt-2.5 flex flex-wrap items-baseline gap-1 text-xs text-muted-foreground">
-              <Tag className="h-3 w-3 shrink-0 mt-0.5" />
+            <div className="mt-3 flex flex-wrap items-baseline gap-1.5 text-[16px] text-muted-foreground">
+              <Tag className="h-4 w-4 shrink-0 mt-0.5" />
               <span className="font-medium text-muted-foreground/70">Tags:</span>
               <span>{paper.keywords.join(', ')}</span>
             </div>
           )}
 
-          {/* Uploaded by */}
+          {/* Uploaded by — with profile picture and clickable names */}
           {paper.uploadedBy && (
-            <div className="mt-1.5 text-xs text-muted-foreground/60">
-              Uploaded by {paper.uploadedBy.displayName}
-              {paper.organizationId && ` · ${paper.organizationId.name}`}
+            <div className="mt-3.5 flex items-center gap-2.5 text-[16px] text-muted-foreground/80">
+              <span className="text-muted-foreground/60">Uploaded by</span>
+              <button
+                onClick={() => router.push(`/profile/${paper.uploadedBy._id}`)}
+                className="inline-flex items-center gap-2 text-foreground hover:underline"
+              >
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={paper.uploadedBy.avatar ?? undefined} alt={paper.uploadedBy.displayName} />
+                  <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
+                    {getInitials(paper.uploadedBy.displayName)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="font-medium">{paper.uploadedBy.displayName}</span>
+              </button>
+              {paper.organizationId && (
+                <>
+                  <span className="text-muted-foreground/60">in</span>
+                  <button
+                    onClick={() => router.push(`/organizations/${paper.organizationId!.slug}`)}
+                    className="inline-flex items-center gap-2 text-primary hover:underline"
+                  >
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={paper.organizationId.avatar ?? undefined} alt={paper.organizationId.name} />
+                      <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
+                        {getInitials(paper.organizationId.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{paper.organizationId.name}</span>
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
 
-        <Separator className="my-3" />
+        <Separator className="my-3.5" />
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={onDownload}>
-            <Download className="h-3.5 w-3.5" />
+        <div className="flex items-center gap-2.5">
+          <Button variant="outline" size="default" className="gap-2 text-[16px]" onClick={onDownload}>
+            <Download className="h-4 w-4" />
             Download PDF
+          </Button>
+          {paper.fileUrl && (
+            <Button
+              variant="outline"
+              size="default"
+              className="gap-2 text-[16px]"
+              onClick={() => window.open(paper.fileUrl!, '_blank')}
+            >
+              <Eye className="h-4 w-4" />
+              View
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="default"
+            className="gap-2 text-[16px]"
+            onClick={onCopyLink}
+          >
+            <Link2 className="h-4 w-4" />
+            {linkCopied ? 'Copied!' : 'Copy Link'}
           </Button>
           {isLoggedIn && (
             <Button
               variant={isSaved ? 'default' : 'ghost'}
-              size="sm"
-              className="gap-1.5 text-xs"
+              size="default"
+              className="gap-2 text-[16px]"
               onClick={onToggleSave}
             >
               {isSaved ? (
                 <>
-                  <BookmarkCheck className="h-3.5 w-3.5" />
+                  <BookmarkCheck className="h-4 w-4" />
                   Saved
                 </>
               ) : (
                 <>
-                  <Bookmark className="h-3.5 w-3.5" />
+                  <Bookmark className="h-4 w-4" />
                   Save
                 </>
               )}
@@ -700,19 +816,23 @@ function SearchPaperCard({
   isLoggedIn,
   onDownload,
   onToggleSave,
+  onCopyLink,
+  linkCopied,
 }: {
   hit: PaperSearchHit;
   isSaved: boolean;
   isLoggedIn: boolean;
   onDownload: () => void;
   onToggleSave: () => void;
+  onCopyLink: () => void;
+  linkCopied: boolean;
 }) {
   return (
     <Card className="border-border/60 bg-white shadow-sm transition-shadow hover:shadow-md">
-      <CardContent className="p-5">
+      <CardContent className="p-6">
         <div className="flex-1 min-w-0">
           {/* Title — with highlight if available */}
-          <h3 className="text-base font-semibold leading-snug text-foreground">
+          <h3 className="text-[20px] font-semibold leading-snug text-foreground">
             {hit.highlight?.title ? (
               <span dangerouslySetInnerHTML={{ __html: hit.highlight.title[0] }} />
             ) : (
@@ -722,10 +842,10 @@ function SearchPaperCard({
 
           {/* Authors */}
           {hit.authors && hit.authors.length > 0 && (
-            <div className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
-              <User className="h-3.5 w-3.5 shrink-0" />
-              <span className="font-medium text-xs text-muted-foreground/70">Authors:</span>
-              <span className="text-xs">
+            <div className="mt-2.5 flex items-center gap-2 text-[18px] text-muted-foreground">
+              <User className="h-4 w-4 shrink-0" />
+              <span className="font-medium text-[16px] text-muted-foreground/70">Authors:</span>
+              <span className="text-[16px]">
                 {hit.highlight?.authors
                   ? <span dangerouslySetInnerHTML={{ __html: hit.highlight.authors.join(', ') }} />
                   : hit.authors.join(', ')}
@@ -734,24 +854,24 @@ function SearchPaperCard({
           )}
 
           {/* Metadata row */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/80">
+          <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[16px] text-muted-foreground/80">
             {hit.journal && (
-              <span className="flex items-center gap-1.5">
-                <BookOpen className="h-3 w-3 shrink-0" />
+              <span className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">Journal:</span>
                 {hit.journal}
               </span>
             )}
             {hit.year && (
-              <span className="flex items-center gap-1.5">
-                <Calendar className="h-3 w-3 shrink-0" />
+              <span className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">Year:</span>
                 {hit.year}
               </span>
             )}
             {hit.doi && (
-              <span className="flex items-center gap-1.5">
-                <Hash className="h-3 w-3 shrink-0" />
+              <span className="flex items-center gap-2">
+                <Hash className="h-4 w-4 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">DOI:</span>
                 <a
                   href={`https://doi.org/${hit.doi}`}
@@ -764,8 +884,8 @@ function SearchPaperCard({
               </span>
             )}
             {hit.downloadCount !== undefined && (
-              <span className="flex items-center gap-1.5">
-                <Download className="h-3 w-3 shrink-0" />
+              <span className="flex items-center gap-2">
+                <Download className="h-4 w-4 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">Downloads:</span>
                 {hit.downloadCount}
               </span>
@@ -774,9 +894,9 @@ function SearchPaperCard({
 
           {/* Abstract */}
           {hit.abstract && (
-            <div className="mt-2.5">
-              <span className="text-xs font-medium text-muted-foreground/70">Abstract: </span>
-              <span className="text-sm leading-relaxed text-muted-foreground line-clamp-3">
+            <div className="mt-3">
+              <span className="text-[16px] font-medium text-muted-foreground/70">Abstract: </span>
+              <span className="text-[18px] leading-relaxed text-muted-foreground line-clamp-3">
                 {hit.highlight?.abstract ? (
                   <span dangerouslySetInnerHTML={{ __html: hit.highlight.abstract.join(' … ') }} />
                 ) : (
@@ -788,36 +908,56 @@ function SearchPaperCard({
 
           {/* Tags */}
           {hit.keywords && hit.keywords.length > 0 && (
-            <div className="mt-2.5 flex flex-wrap items-baseline gap-1 text-xs text-muted-foreground">
-              <Tag className="h-3 w-3 shrink-0 mt-0.5" />
+            <div className="mt-3 flex flex-wrap items-baseline gap-1.5 text-[16px] text-muted-foreground">
+              <Tag className="h-4 w-4 shrink-0 mt-0.5" />
               <span className="font-medium text-muted-foreground/70">Tags:</span>
               <span>{hit.keywords.join(', ')}</span>
             </div>
           )}
         </div>
 
-        <Separator className="my-3" />
+        <Separator className="my-3.5" />
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={onDownload}>
-            <Download className="h-3.5 w-3.5" />
+        <div className="flex items-center gap-2.5">
+          <Button variant="outline" size="default" className="gap-2 text-[16px]" onClick={onDownload}>
+            <Download className="h-4 w-4" />
             Download PDF
+          </Button>
+          {hit.fileUrl && (
+            <Button
+              variant="outline"
+              size="default"
+              className="gap-2 text-[16px]"
+              onClick={() => window.open(hit.fileUrl!, '_blank')}
+            >
+              <Eye className="h-4 w-4" />
+              View
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="default"
+            className="gap-2 text-[16px]"
+            onClick={onCopyLink}
+          >
+            <Link2 className="h-4 w-4" />
+            {linkCopied ? 'Copied!' : 'Copy Link'}
           </Button>
           {isLoggedIn && (
             <Button
               variant={isSaved ? 'default' : 'ghost'}
-              size="sm"
-              className="gap-1.5 text-xs"
+              size="default"
+              className="gap-2 text-[16px]"
               onClick={onToggleSave}
             >
               {isSaved ? (
                 <>
-                  <BookmarkCheck className="h-3.5 w-3.5" />
+                  <BookmarkCheck className="h-4 w-4" />
                   Saved
                 </>
               ) : (
                 <>
-                  <Bookmark className="h-3.5 w-3.5" />
+                  <Bookmark className="h-4 w-4" />
                   Save
                 </>
               )}

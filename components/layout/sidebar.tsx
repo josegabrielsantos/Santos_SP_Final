@@ -33,8 +33,8 @@ export function Sidebar() {
   const { data: userOrgs, isLoading: orgsLoading } = useUserOrganizations(user?._id);
 
   return (
-    <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-60 shrink-0 border-r border-border/50 bg-white lg:flex lg:flex-col">
-      <nav className="flex flex-col gap-1 p-3.5 pt-5">
+    <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[270px] shrink-0 border-r border-border/50 bg-white lg:flex lg:flex-col">
+      <nav className="flex flex-col gap-1.5 p-4 pt-5">
         {sidebarItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -43,13 +43,13 @@ export function Sidebar() {
               key={item.label}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3.5 py-3 text-[15px] font-medium transition-colors',
+                'flex items-center gap-3.5 rounded-lg px-4 py-3.5 text-[16px] font-medium transition-colors',
                 isActive
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >
-              <Icon className="h-5 w-5 shrink-0" />
+              <Icon className="h-[22px] w-[22px] shrink-0" />
               {item.label}
             </Link>
           );
@@ -58,8 +58,8 @@ export function Sidebar() {
 
       {/* User's organizations quick nav */}
       {user && (
-        <div className="mt-auto border-t border-border/50 p-3.5">
-          <h4 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="mt-auto border-t border-border/50 p-4">
+          <h4 className="mb-2.5 px-1 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
             My Organizations
           </h4>
           {orgsLoading && (
@@ -68,7 +68,7 @@ export function Sidebar() {
             </div>
           )}
           {userOrgs && userOrgs.length === 0 && (
-            <p className="px-1 text-[12px] text-muted-foreground">
+            <p className="px-1 text-[13px] text-muted-foreground">
               Not in any organization yet.
             </p>
           )}
@@ -80,19 +80,19 @@ export function Sidebar() {
                   key={org._id}
                   href={`/organizations/${org.slug}`}
                   className={cn(
-                    'flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors',
+                    'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors',
                     isActive
                       ? 'bg-primary/10 text-primary'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
-                  <Avatar className="h-6 w-6">
+                  <Avatar className="h-7 w-7">
                     <AvatarImage src={org.avatar ?? undefined} alt={org.name} />
-                    <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
+                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                       {initials(org.name)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="truncate text-[13px] font-medium">{org.name}</span>
+                  <span className="truncate text-[14px] font-medium">{org.name}</span>
                 </Link>
               );
             })}

@@ -23,21 +23,21 @@ function initials(name: string) {
 function notifIcon(type: Notification['type']) {
   switch (type) {
     case 'comment':
-      return <MessageCircle className="h-3.5 w-3.5" />;
+      return <MessageCircle className="h-4 w-4" />;
     case 'reply':
-      return <Reply className="h-3.5 w-3.5" />;
+      return <Reply className="h-4 w-4" />;
     case 'mention':
-      return <AtSign className="h-3.5 w-3.5" />;
+      return <AtSign className="h-4 w-4" />;
     case 'like':
-      return <ThumbsUp className="h-3.5 w-3.5" />;
+      return <ThumbsUp className="h-4 w-4" />;
     case 'join_request':
-      return <UserPlus className="h-3.5 w-3.5" />;
+      return <UserPlus className="h-4 w-4" />;
     case 'join_approved':
-      return <Check className="h-3.5 w-3.5" />;
+      return <Check className="h-4 w-4" />;
     case 'join_rejected':
-      return <X className="h-3.5 w-3.5" />;
+      return <X className="h-4 w-4" />;
     default:
-      return <Bell className="h-3.5 w-3.5" />;
+      return <Bell className="h-4 w-4" />;
   }
 }
 
@@ -122,9 +122,9 @@ export function NotificationDropdown() {
         onClick={handleOpen}
         className="relative rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
       >
-        <Bell className="h-5 w-5" />
+        <Bell className="h-[22px] w-[22px]" />
         {unreadCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -134,12 +134,12 @@ export function NotificationDropdown() {
       {open && (
         <div className="absolute right-0 top-full mt-2 w-96 overflow-hidden rounded-xl border border-border/60 bg-white shadow-xl z-50">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
-            <h3 className="text-[15px] font-semibold text-foreground">Notifications</h3>
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-border/40">
+            <h3 className="text-[16px] font-semibold text-foreground">Notifications</h3>
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="text-[13px] font-medium text-primary hover:underline"
+                className="text-[14px] font-medium text-primary hover:underline"
               >
                 Mark all as read
               </button>
@@ -156,8 +156,8 @@ export function NotificationDropdown() {
 
             {!isLoading && notifications.length === 0 && (
               <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                <Bell className="mb-2 h-8 w-8 opacity-40" />
-                <p className="text-sm">No notifications yet</p>
+                <Bell className="mb-2 h-9 w-9 opacity-40" />
+                <p className="text-[16px]">No notifications yet</p>
               </div>
             )}
 
@@ -171,18 +171,18 @@ export function NotificationDropdown() {
               >
                 {/* Sender avatar */}
                 <div className="relative shrink-0">
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-11 w-11">
                     <AvatarImage
                       src={notif.senderId?.avatar ?? undefined}
                       alt={notif.senderId?.displayName ?? 'User'}
                     />
-                    <AvatarFallback className="text-[10px]">
+                    <AvatarFallback className="text-[11px]">
                       {initials(notif.senderId?.displayName ?? 'U')}
                     </AvatarFallback>
                   </Avatar>
                   {/* Type icon badge */}
                   <div
-                    className={`absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full ${notifIconBg(notif.type)}`}
+                    className={`absolute -bottom-1 -right-1 flex h-[22px] w-[22px] items-center justify-center rounded-full ${notifIconBg(notif.type)}`}
                   >
                     {notifIcon(notif.type)}
                   </div>
@@ -190,20 +190,20 @@ export function NotificationDropdown() {
 
                 {/* Content */}
                 <div className="min-w-0 flex-1">
-                  <p className="text-[14px] leading-snug text-foreground">
+                  <p className="text-[15px] leading-snug text-foreground">
                     {notif.message}
                   </p>
                   {notif.postId && (
-                    <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                    <p className="mt-0.5 truncate text-[14px] text-muted-foreground">
                       {notif.postId.title}
                     </p>
                   )}
                   {notif.organizationId && !notif.postId && (
-                    <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                    <p className="mt-0.5 truncate text-[14px] text-muted-foreground">
                       {notif.organizationId.name}
                     </p>
                   )}
-                  <p className="mt-1 text-[12px] text-muted-foreground/70">
+                  <p className="mt-1 text-[13px] text-muted-foreground/70">
                     {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
                   </p>
                 </div>
@@ -221,11 +221,11 @@ export function NotificationDropdown() {
                 <button
                   onClick={() => fetchNextPage()}
                   disabled={isFetchingNextPage}
-                  className="flex items-center gap-1.5 text-[13px] font-medium text-primary hover:underline disabled:opacity-50"
+                  className="flex items-center gap-1.5 text-[14px] font-medium text-primary hover:underline disabled:opacity-50"
                 >
                   {isFetchingNextPage ? (
                     <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       Loading…
                     </>
                   ) : (

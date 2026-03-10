@@ -54,27 +54,27 @@ export default function PostDiscussionPage() {
         <Sidebar />
 
         <main className="flex flex-1 justify-center">
-          <div className="flex w-full max-w-4xl flex-col gap-5 px-4 py-6 lg:px-6">
+          <div className="flex w-full max-w-5xl flex-col gap-6 px-5 py-7 lg:px-7">
             {/* Back button */}
             <Button
               variant="ghost"
-              size="sm"
+              size="default"
               onClick={() => router.back()}
-              className="w-fit gap-2 text-[15px] text-muted-foreground hover:text-foreground"
+              className="w-fit gap-2.5 text-[17px] text-muted-foreground hover:text-foreground"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-5 w-5" />
               Back
             </Button>
 
             {/* Loading / Error states */}
             {isLoading && (
-              <div className="flex justify-center py-16">
-                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              <div className="flex justify-center py-18">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             )}
 
             {isError && (
-              <p className="py-10 text-center text-[15px] text-destructive">
+              <p className="py-12 text-center text-[17px] text-destructive">
                 Failed to load post.
               </p>
             )}

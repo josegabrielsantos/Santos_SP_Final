@@ -45,8 +45,8 @@ export default function LandingPage() {
           <div className="flex flex-col items-center gap-12 lg:flex-row lg:items-center lg:gap-16">
             {/* Left column – copy */}
             <div className="flex max-w-2xl flex-col items-center text-center lg:items-start lg:text-left">
-              <Badge variant="secondary" className="mb-6 gap-1.5 px-3 py-1 text-xs font-medium">
-                <Globe className="h-3 w-3" />
+              <Badge variant="secondary" className="mb-6 gap-1.5 px-3 py-1 text-[14px] font-medium">
+                <Globe className="h-3.5 w-3.5" />
                 UPLB Research Platform
               </Badge>
 
@@ -55,11 +55,11 @@ export default function LandingPage() {
                 <span className="text-primary">KAIN</span>
               </h1>
 
-              <p className="mt-2 text-lg font-medium text-muted-foreground sm:text-xl">
+              <p className="mt-2 text-[21px] font-medium text-muted-foreground sm:text-[23px]">
                 Knowledge Archive on Integrated Nutrition
               </p>
 
-              <p className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground">
+              <p className="mt-6 max-w-lg text-[18px] leading-relaxed text-muted-foreground">
                 A community-driven platform for curated research on food and nutrition
                 security. Discover, discuss, and visualize research insights — all in
                 one place.
@@ -111,7 +111,7 @@ export default function LandingPage() {
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Why UPLB KAIN?
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-2xl text-[18px] text-muted-foreground">
             Built to advance food and nutrition security research through accessible
             technology, powerful search, and community engagement.
           </p>
@@ -119,32 +119,32 @@ export default function LandingPage() {
 
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <FeatureCard
-            icon={<BookOpen className="h-6 w-6" />}
+            icon={<BookOpen className="h-7 w-7" />}
             title="Curated Research Repository"
             description="Access approved, peer-reviewed papers on food security, nutrition science, and integrated agricultural research."
           />
           <FeatureCard
-            icon={<Search className="h-6 w-6" />}
+            icon={<Search className="h-7 w-7" />}
             title="Advanced Elasticsearch"
             description="Full-text search across research papers, posts, and discussions powered by Elasticsearch for instant, relevant results."
           />
           <FeatureCard
-            icon={<BarChart3 className="h-6 w-6" />}
+            icon={<BarChart3 className="h-7 w-7" />}
             title="Data Visualization & Analytics"
             description="Identify trends, emerging challenges, and research gaps through interactive charts and analytics dashboards."
           />
           <FeatureCard
-            icon={<Users className="h-6 w-6" />}
+            icon={<Users className="h-7 w-7" />}
             title="Community Discussions"
             description="Engage with researchers through posts, comments, polls, and organization-based discussions — Reddit-style."
           />
           <FeatureCard
-            icon={<FileText className="h-6 w-6" />}
+            icon={<FileText className="h-7 w-7" />}
             title="Research Paper Management"
             description="Upload, organize, and share research papers with metadata like DOI, journal, keywords, and authors."
           />
           <FeatureCard
-            icon={<TrendingUp className="h-6 w-6" />}
+            icon={<TrendingUp className="h-7 w-7" />}
             title="Featured & Trending Posts"
             description="Stay updated with highlighted research posts and trending discussions within the community."
           />
@@ -160,7 +160,7 @@ export default function LandingPage() {
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               Project Objectives
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground">
+            <p className="mx-auto mt-4 max-w-2xl text-[18px] text-muted-foreground">
               UPLB KAIN is designed with clear goals to serve the research community
               and the public.
             </p>
@@ -192,11 +192,11 @@ export default function LandingPage() {
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
           <CardContent className="flex flex-col items-center gap-6 py-14 text-center">
-            <Shield className="h-12 w-12 text-primary" />
+            <Shield className="h-14 w-14 text-primary" />
             <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Ready to explore nutrition research?
             </h2>
-            <p className="max-w-md text-muted-foreground">
+            <p className="max-w-md text-[16px] text-muted-foreground">
               Sign in with your Google account to start browsing curated research,
               join discussions, and contribute to the UPLB KAIN community.
             </p>
@@ -220,9 +220,9 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
           <div className="flex items-center gap-2">
             <Image src="/uplb_logo.png" alt="UPLB" width={24} height={24} className="rounded-full" />
-            <span className="text-sm font-medium text-foreground">UPLB KAIN</span>
+            <span className="text-[16px] font-medium text-foreground">UPLB KAIN</span>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[14px] text-muted-foreground">
             &copy; {new Date().getFullYear()} University of the Philippines Los Baños.
             Knowledge Archive on Integrated Nutrition.
           </p>
@@ -246,11 +246,11 @@ function FeatureCard({
   return (
     <Card className="group border-border/60 bg-white transition-shadow hover:shadow-md">
       <CardContent className="flex flex-col gap-3 p-6">
-        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <div className="flex h-[50px] w-[50px] items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
           {icon}
         </div>
-        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-        <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+        <h3 className="text-[21px] font-semibold text-foreground">{title}</h3>
+        <p className="text-[16px] leading-relaxed text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
   );
@@ -268,8 +268,8 @@ function ObjectiveCard({
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-white p-8 shadow-sm">
       <span className="text-4xl font-extrabold text-primary/20">{number}</span>
-      <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-      <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+      <h3 className="text-[21px] font-semibold text-foreground">{title}</h3>
+      <p className="text-[16px] leading-relaxed text-muted-foreground">{description}</p>
     </div>
   );
 }

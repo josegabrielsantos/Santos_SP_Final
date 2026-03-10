@@ -122,11 +122,11 @@ export default function OrgDetailPage() {
         <Sidebar />
 
         <main className="flex flex-1 justify-center">
-          <div className="w-full max-w-4xl px-4 py-6 lg:px-6">
+          <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
             {/* Org header with banner */}
             <Card className="overflow-hidden border-border/60 bg-white shadow-sm">
               {/* Banner image */}
-              <div className="relative h-48 w-full bg-gradient-to-r from-primary/20 to-primary/5">
+              <div className="relative h-52 w-full bg-gradient-to-r from-primary/20 to-primary/5">
                 {org.bannerImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -141,32 +141,32 @@ export default function OrgDetailPage() {
                 )}
               </div>
 
-              <CardContent className="relative p-6">
+              <CardContent className="relative p-7">
                 {/* Avatar overlapping banner */}
-                <div className="absolute -top-10 left-6">
-                  <Avatar className="h-20 w-20 ring-4 ring-white shadow-md">
+                <div className="absolute -top-12 left-7">
+                  <Avatar className="h-[92px] w-[92px] ring-4 ring-white shadow-md">
                     <AvatarImage src={org.avatar ?? undefined} alt={org.name} />
-                    <AvatarFallback className="bg-primary/10 text-xl font-bold text-primary">
+                    <AvatarFallback className="bg-primary/10 text-[23px] font-bold text-primary">
                       {initials(org.name)}
                     </AvatarFallback>
                   </Avatar>
                 </div>
 
-                <div className="mt-8 flex items-start justify-between">
+                <div className="mt-10 flex items-start justify-between">
                   <div className="flex flex-1 flex-col gap-1">
-                    <h1 className="text-xl font-bold text-foreground">{org.name}</h1>
+                    <h1 className="text-[23px] font-bold text-foreground">{org.name}</h1>
                     {org.description && (
-                      <p className="text-sm text-muted-foreground">{org.description}</p>
+                      <p className="text-[16px] text-muted-foreground">{org.description}</p>
                     )}
-                    <div className="mt-2 flex items-center gap-4">
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Users className="h-3 w-3" /> {org.memberCount} members
+                    <div className="mt-2.5 flex items-center gap-5">
+                      <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
+                        <Users className="h-3.5 w-3.5" /> {org.memberCount} members
                       </span>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <FileText className="h-3 w-3" /> {org.postCount} posts
+                      <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
+                        <FileText className="h-3.5 w-3.5" /> {org.postCount} posts
                       </span>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Heart className="h-3 w-3" /> {members?.followerCount ?? org.followerIds?.length ?? 0} followers
+                      <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
+                        <Heart className="h-3.5 w-3.5" /> {members?.followerCount ?? org.followerIds?.length ?? 0} followers
                       </span>
                     </div>
                   </div>
@@ -178,23 +178,23 @@ export default function OrgDetailPage() {
                       isFollower ? (
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="gap-1.5 text-xs"
+                          size="default"
+                          className="gap-2 text-[14px]"
                           onClick={() => orgId && unfollowOrg.mutate(orgId)}
                           disabled={unfollowOrg.isPending}
                         >
-                          <HeartOff className="h-3.5 w-3.5" />
+                          <HeartOff className="h-4 w-4" />
                           Unfollow
                         </Button>
                       ) : (
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="gap-1.5 text-xs"
+                          size="default"
+                          className="gap-2 text-[14px]"
                           onClick={() => orgId && followOrg.mutate(orgId)}
                           disabled={followOrg.isPending}
                         >
-                          <Heart className="h-3.5 w-3.5" />
+                          <Heart className="h-4 w-4" />
                           Follow
                         </Button>
                       )
@@ -204,37 +204,37 @@ export default function OrgDetailPage() {
                     {!userId ? null : isOwner || isAdmin || isMember ? (
                       <Button
                         variant="outline"
-                        size="sm"
-                        className="gap-1.5 text-xs"
+                        size="default"
+                        className="gap-2 text-[14px]"
                         onClick={() => orgId && leaveOrg.mutate(orgId)}
                         disabled={leaveOrg.isPending || !!isOwner}
                       >
-                        <LogOut className="h-3.5 w-3.5" />
+                        <LogOut className="h-4 w-4" />
                         {isOwner ? 'Owner' : 'Leave'}
                       </Button>
                     ) : isPending ? (
                       <Button
                         variant="outline"
-                        size="sm"
-                        className="gap-1.5 text-xs"
+                        size="default"
+                        className="gap-2 text-[14px]"
                         onClick={() => orgId && leaveOrg.mutate(orgId)}
                         disabled={leaveOrg.isPending}
                       >
                         {leaveOrg.isPending ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <X className="h-3.5 w-3.5" />
+                          <X className="h-4 w-4" />
                         )}
                         Cancel Request
                       </Button>
                     ) : (
                       <Button
-                        size="sm"
-                        className="gap-1.5 text-xs"
+                        size="default"
+                        className="gap-2 text-[14px]"
                         onClick={() => orgId && requestJoin.mutate(orgId)}
                         disabled={requestJoin.isPending}
                       >
-                        <UserPlus className="h-3.5 w-3.5" />
+                        <UserPlus className="h-4 w-4" />
                         Request to Join
                       </Button>
                     )}
@@ -257,11 +257,11 @@ export default function OrgDetailPage() {
                 {canPost && (
                   <CreatePostDialog defaultOrgId={orgId}>
                     <Card className="cursor-pointer border-border/60 bg-white shadow-sm transition-shadow hover:shadow-md">
-                      <CardContent className="flex items-center gap-3 p-4">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                          <Plus className="h-4 w-4 text-primary" />
+                      <CardContent className="flex items-center gap-3.5 p-5">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                          <Plus className="h-5 w-5 text-primary" />
                         </div>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-[16px] text-muted-foreground">
                           Post in {org.name}…
                         </span>
                       </CardContent>
@@ -282,27 +282,27 @@ export default function OrgDetailPage() {
                 ))}
 
                 {postsData && postsData.posts.length === 0 && (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
+                  <p className="py-8 text-center text-[16px] text-muted-foreground">
                     No posts yet.
                   </p>
                 )}
 
                 {postsData && postsData.pages > 1 && (
-                  <div className="flex items-center justify-center gap-2 py-4">
+                  <div className="flex items-center justify-center gap-2.5 py-5">
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="default"
                       onClick={() => setPostPage((p) => Math.max(1, p - 1))}
                       disabled={postPage <= 1}
                     >
                       Previous
                     </Button>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[14px] text-muted-foreground">
                       Page {postPage} of {postsData.pages}
                     </span>
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="default"
                       onClick={() => setPostPage((p) => Math.min(postsData.pages, p + 1))}
                       disabled={postPage >= postsData.pages}
                     >
@@ -315,12 +315,12 @@ export default function OrgDetailPage() {
               {/* Members tab */}
               <TabsContent value="members" className="mt-4">
                 <Card className="border-border/60 bg-white shadow-sm">
-                  <CardContent className="p-5">
+                  <CardContent className="p-6">
                     {members && (
                       <div className="flex flex-col gap-4">
                         {/* Owner */}
                         <div>
-                          <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+                          <h3 className="mb-2 text-[14px] font-semibold uppercase text-muted-foreground">
                             Owner
                           </h3>
                           <MemberRow user={members.owner} badge="Owner" />
@@ -331,7 +331,7 @@ export default function OrgDetailPage() {
                         {/* Admins */}
                         {members.admins.length > 0 && (
                           <div>
-                            <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+                            <h3 className="mb-2 text-[14px] font-semibold uppercase text-muted-foreground">
                               Admins ({members.admins.length})
                             </h3>
                             <div className="flex flex-col gap-2">
@@ -341,13 +341,13 @@ export default function OrgDetailPage() {
                                   {isOwner && a._id !== userId && (
                                     <Button
                                       variant="ghost"
-                                      size="sm"
-                                      className="gap-1 text-xs text-destructive"
+                                      size="default"
+                                      className="gap-1.5 text-[14px] text-destructive"
                                       onClick={() =>
                                         orgId && demoteAdmin.mutate({ orgId, userId: a._id })
                                       }
                                     >
-                                      <ShieldMinus className="h-3.5 w-3.5" />
+                                      <ShieldMinus className="h-4 w-4" />
                                       Remove Admin
                                     </Button>
                                   )}
@@ -361,7 +361,7 @@ export default function OrgDetailPage() {
 
                         {/* Members */}
                         <div>
-                          <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+                          <h3 className="mb-2 text-[14px] font-semibold uppercase text-muted-foreground">
                             Members ({members.members.length})
                           </h3>
                           <div className="flex flex-col gap-2">
@@ -371,20 +371,20 @@ export default function OrgDetailPage() {
                                 {canManage && (
                                   <Button
                                     variant="ghost"
-                                    size="sm"
-                                    className="gap-1 text-xs"
+                                    size="default"
+                                    className="gap-1.5 text-[14px]"
                                     onClick={() =>
                                       orgId && promoteAdmin.mutate({ orgId, userId: m._id })
                                     }
                                   >
-                                    <ShieldCheck className="h-3.5 w-3.5" />
+                                    <ShieldCheck className="h-4 w-4" />
                                     Make Admin
                                   </Button>
                                 )}
                               </div>
                             ))}
                             {members.members.length === 0 && (
-                              <p className="text-xs text-muted-foreground">No members yet.</p>
+                              <p className="text-[14px] text-muted-foreground">No members yet.</p>
                             )}
                           </div>
                         </div>
@@ -397,8 +397,8 @@ export default function OrgDetailPage() {
               {/* Followers tab */}
               <TabsContent value="followers" className="mt-4">
                 <Card className="border-border/60 bg-white shadow-sm">
-                  <CardContent className="p-5">
-                    <h3 className="mb-3 text-xs font-semibold uppercase text-muted-foreground">
+                  <CardContent className="p-6">
+                    <h3 className="mb-3 text-[14px] font-semibold uppercase text-muted-foreground">
                       Followers ({members?.followerCount ?? 0})
                     </h3>
                     {members?.followers && members.followers.length > 0 ? (
@@ -408,7 +408,7 @@ export default function OrgDetailPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No followers yet.</p>
+                      <p className="text-[16px] text-muted-foreground">No followers yet.</p>
                     )}
                   </CardContent>
                 </Card>
@@ -418,36 +418,36 @@ export default function OrgDetailPage() {
               {canManage && (
                 <TabsContent value="requests" className="mt-4">
                   <Card className="border-border/60 bg-white shadow-sm">
-                    <CardContent className="p-5">
+                    <CardContent className="p-6">
                       {members?.pendingMembers && members.pendingMembers.length > 0 ? (
                         <div className="flex flex-col gap-3">
                           {members.pendingMembers.map((p) => (
                             <div key={p._id} className="flex items-center justify-between">
                               <MemberRow user={p} />
                               <div className="flex gap-1">
-                                <Button
-                                  size="sm"
-                                  className="gap-1 text-xs"
+                                  <Button
+                                  size="default"
+                                  className="gap-1.5 text-[14px]"
                                   onClick={() =>
                                     orgId &&
                                     approveJoin.mutate({ orgId, userId: p._id })
                                   }
                                   disabled={approveJoin.isPending}
                                 >
-                                  <Check className="h-3.5 w-3.5" />
+                                  <Check className="h-4 w-4" />
                                   Approve
                                 </Button>
                                 <Button
                                   variant="outline"
-                                  size="sm"
-                                  className="gap-1 text-xs"
+                                  size="default"
+                                  className="gap-1.5 text-[14px]"
                                   onClick={() =>
                                     orgId &&
                                     rejectJoin.mutate({ orgId, userId: p._id })
                                   }
                                   disabled={rejectJoin.isPending}
                                 >
-                                  <X className="h-3.5 w-3.5" />
+                                  <X className="h-4 w-4" />
                                   Reject
                                 </Button>
                               </div>
@@ -455,7 +455,7 @@ export default function OrgDetailPage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No pending join requests.</p>
+                        <p className="text-[16px] text-muted-foreground">No pending join requests.</p>
                       )}
                     </CardContent>
                   </Card>
@@ -477,11 +477,11 @@ function MemberRow({ user, badge }: { user: UserSummary; badge?: string }) {
     >
       <Avatar size="sm">
         <AvatarImage src={user.avatar ?? undefined} alt={user.displayName} />
-        <AvatarFallback className="text-[10px]">{initials(user.displayName)}</AvatarFallback>
+        <AvatarFallback className="text-[12px]">{initials(user.displayName)}</AvatarFallback>
       </Avatar>
-      <span className="text-sm font-medium text-foreground hover:underline">{user.displayName}</span>
+      <span className="text-[16px] font-medium text-foreground hover:underline">{user.displayName}</span>
       {badge && (
-        <Badge variant="secondary" className="text-[10px]">
+        <Badge variant="secondary" className="text-[12px]">
           {badge}
         </Badge>
       )}

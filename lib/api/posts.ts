@@ -7,6 +7,7 @@ import type {
   PostsResponse,
   CreatePostPayload,
   PaperMetadata,
+  UserSummary,
 } from '@/lib/types';
 
 // ─── Helper: optimistically patch a Post inside every matching query cache ──
@@ -85,15 +86,69 @@ export function useFeaturedPosts() {
 
 export function useCreatePost() {
   const qc = useQueryClient();
+  const user = useAppSelector((s) => s.auth.user);
 
   return useMutation({
     mutationFn: async (payload: CreatePostPayload) => {
       const { data } = await axiosInstance.post<Post>('/posts', payload);
       return data;
     },
+    onMutate: async (payload) => {
+      await qc.cancelQueries({ queryKey: ['posts'] });
+
+      // Snapshot all posts queries for rollback
+      const previousQueries = qc.getQueriesData<PostsResponse>({ queryKey: ['posts'], exact: false });
+
+      // Build a temporary optimistic post
+      if (user) {
+        const tempId = `optimistic-${Date.now()}`;
+        const optimisticPost: Post = {
+          _id: tempId,
+          title: payload.title || '',
+          body: payload.body ?? null,
+          bodyText: payload.bodyText || '',
+          tags: payload.tags || [],
+          authorId: { _id: user._id, displayName: user.displayName, avatar: user.avatar } as UserSummary,
+          organizationId: null,
+          status: 'published',
+          likeCount: 0,
+          commentCount: 0,
+          likedBy: [],
+          dislikedBy: [],
+          mediaUrls: payload.mediaUrls || [],
+          paperIds: [],
+          poll: null,
+          paperMetadata: payload.paperMetadata || null,
+          type: payload.type || 'post',
+          publishedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Insert at the top of every PostsResponse list
+        qc.setQueriesData<PostsResponse>(
+          { queryKey: ['posts'], exact: false },
+          (old) => {
+            if (!old?.posts) return old;
+            return { ...old, posts: [optimisticPost, ...old.posts], total: old.total + 1 };
+          },
+        );
+      }
+
+      return { previousQueries };
+    },
+    onError: (_err, _vars, ctx) => {
+      // Rollback to previous state
+      if (ctx?.previousQueries) {
+        for (const [queryKey, data] of ctx.previousQueries) {
+          qc.setQueryData(queryKey, data);
+        }
+      }
+      const msg = _err instanceof AxiosError ? (_err.response?.data as { error?: string })?.error : 'Failed to create post. Please try again.';
+      alert(msg || 'Failed to create post. Please try again.');
+    },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['posts'] });
-      // Also refresh org-specific post list if posted to an org
       if (vars.organizationId) {
         qc.invalidateQueries({ queryKey: ['organizations'] });
       }
@@ -277,7 +332,7 @@ export function useClosePoll() {
 export function useParsePdf() {
   return useMutation({
     mutationFn: async (fileUrl: string) => {
-      const { data } = await axiosInstance.post<PaperMetadata>('/papers/parse-pdf', { fileUrl });
+      const { data } = await axiosInstance.post<PaperMetadata>('/papers/parse-pdf', { fileUrl }, { timeout: 120000 });
       return data;
     },
   });

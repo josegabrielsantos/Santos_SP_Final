@@ -16,3 +16,14 @@ export function useUploadFile() {
     },
   });
 }
+
+export function useDeleteUploadedFile() {
+  return useMutation({
+    mutationFn: async ({ url }: { url: string }) => {
+      const { data } = await axiosInstance.delete('/upload', {
+        data: { url },
+      });
+      return data;
+    },
+  });
+}
