@@ -28,6 +28,7 @@ const pollSchema = new mongoose.Schema(
 
 const paperMetadataSchema = new mongoose.Schema(
   {
+    researchTitle: { type: String, default: null },
     datePublished: { type: Date, default: null },
     journal:       { type: String, default: null },
     doi:           { type: String, default: null },

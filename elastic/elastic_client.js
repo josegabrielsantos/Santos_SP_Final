@@ -84,6 +84,7 @@ const kmsPapersMapping = {
       publicationDate:  { type: 'date' },
       year:             { type: 'integer' },
       doi:              { type: 'keyword' },
+      fileUrl:          { type: 'keyword' },
       uploadedBy:       { type: 'keyword' },
       organizationId:   { type: 'keyword' },
       organizationName: { type: 'keyword' },
@@ -100,6 +101,17 @@ async function createIndex(name, body) {
   try {
     const exists = await esClient.indices.exists({ index: name });
     if (exists) {
+      // Keep existing indexes forward-compatible when new fields are added.
+      if (name === 'kms_papers') {
+        await esClient.indices.putMapping({
+          index: name,
+          body: {
+            properties: {
+              fileUrl: { type: 'keyword' },
+            },
+          },
+        });
+      }
       console.log(`[ES] Index "${name}" already exists - skipping.`);
       return;
     }
@@ -181,6 +193,7 @@ export async function syncExistingData() {
           publicationDate:  paper.publicationDate,
           year:             paper.year,
           doi:              paper.doi,
+          fileUrl:          paper.fileUrl,
           uploadedBy:       paper.uploadedBy?._id?.toString() ?? paper.uploadedBy?.toString(),
           organizationId:   paper.organizationId?._id?.toString() ?? paper.organizationId?.toString() ?? null,
           organizationName: paper.organizationId?.name ?? null,

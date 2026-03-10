@@ -93,6 +93,7 @@ export async function indexPaper(paper) {
       publicationDate:  populatedPaper.publicationDate,
       year:             populatedPaper.year,
       doi:              populatedPaper.doi,
+      fileUrl:          populatedPaper.fileUrl,
       uploadedBy:       populatedPaper.uploadedBy?._id?.toString() ?? populatedPaper.uploadedBy?.toString(),
       organizationId:   populatedPaper.organizationId?._id?.toString() ?? populatedPaper.organizationId?.toString() ?? null,
       organizationName: populatedPaper.organizationId?.name ?? null,

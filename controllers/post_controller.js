@@ -47,14 +47,19 @@ const createPost = async (req, res) => {
     if (!title) return res.status(400).json({ error: 'Title is required.' });
 
     if (normalizedType === 'research_paper') {
+      if (!organizationId) {
+        return res.status(400).json({ error: 'Research paper posts must belong to an organization.' });
+      }
+
+      const researchTitle = paperMetadata?.researchTitle?.trim();
       const authors = (paperMetadata?.authors || []).map((a) => a?.trim()).filter(Boolean);
       const abstract = paperMetadata?.abstract?.trim();
       const datePublished = paperMetadata?.datePublished;
       const journal = paperMetadata?.journal?.trim();
 
-      if (!abstract || !authors.length || !datePublished || !journal) {
+      if (!researchTitle || !abstract || !authors.length || !datePublished || !journal) {
         return res.status(400).json({
-          error: 'Research paper posts require abstract, at least one author, publication date, and journal.',
+          error: 'Research paper posts require research title, abstract, at least one author, publication date, and journal.',
         });
       }
     }
@@ -84,6 +89,7 @@ const createPost = async (req, res) => {
       poll: poll || undefined,
       paperMetadata: (normalizedType === 'research_paper' && paperMetadata)
         ? {
+            researchTitle: paperMetadata.researchTitle || null,
             datePublished: paperMetadata.datePublished || null,
             journal: paperMetadata.journal || null,
             doi: paperMetadata.doi || null,
@@ -98,10 +104,10 @@ const createPost = async (req, res) => {
     await post.save();
 
     if (normalizedType === 'research_paper' && post.paperMetadata) {
-      const firstPdfUrl = (mediaUrls || []).find((url) => /\.pdf$/i.test(url)) || null;
+      const firstPdfUrl = (mediaUrls || []).find((url) => /\.pdf/i.test(url)) || null;
       const publicationDate = new Date(post.paperMetadata.datePublished);
       const paper = new Paper({
-        title: post.title,
+        title: post.paperMetadata.researchTitle || post.title,
         authors: post.paperMetadata.authors,
         abstract: post.paperMetadata.abstract,
         keywords: tags || [],

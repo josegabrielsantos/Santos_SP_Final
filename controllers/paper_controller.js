@@ -1,6 +1,8 @@
 import Paper from '../models/paper_model.js';
 import Organization from '../models/organization_model.js';
 import { uploadToSpaces } from '../lib/spaces.js';
+import { extractPdfMetadataWithGemini } from '../lib/util/gemini_pdf_metadata.js';
+import { randomUUID } from 'crypto';
 
 /**
  * POST /api/papers
@@ -68,6 +70,19 @@ const getPapers = async (req, res) => {
       filter.year = {};
       if (req.query.yearFrom) filter.year.$gte = parseInt(req.query.yearFrom);
       if (req.query.yearTo) filter.year.$lte = parseInt(req.query.yearTo);
+    }
+    // Filter by user's organizations
+    if (req.query.myOrgs === 'true' && req.user) {
+      const uid = req.user._id.toString();
+      const userOrgs = await Organization.find({
+        $or: [
+          { ownerId: req.user._id },
+          { adminIds: req.user._id },
+          { memberIds: req.user._id },
+        ],
+      }).select('_id');
+      const orgIds = userOrgs.map((o) => o._id);
+      filter.organizationId = { $in: orgIds };
     }
 
     let sortOption = { createdAt: -1 };
@@ -175,6 +190,9 @@ const downloadPaper = async (req, res) => {
   try {
     const paper = await Paper.findById(req.params.id);
     if (!paper) return res.status(404).json({ error: 'Paper not found.' });
+    if (!paper.fileUrl) {
+      return res.status(400).json({ error: 'No downloadable file is attached to this paper.' });
+    }
 
     paper.downloadCount += 1;
     await paper.save();
@@ -233,67 +251,120 @@ const uploadPaperFile = async (req, res) => {
  * Body: { fileUrl: string }
  */
 const parsePdf = async (req, res) => {
+  const requestId = randomUUID();
+  const debugMode = process.env.NODE_ENV !== 'production';
+
   try {
+    console.log(`[parsePdf][${requestId}] START`);
     const { fileUrl } = req.body;
-    if (!fileUrl) return res.status(400).json({ error: 'fileUrl is required.' });
+    if (!fileUrl) {
+      console.log(`[parsePdf][${requestId}] Missing fileUrl in request body`);
+      return res.status(400).json({ error: 'fileUrl is required.', requestId });
+    }
+
+    console.log(`[parsePdf][${requestId}] Downloading PDF from URL: ${fileUrl}`);
 
     // Download the PDF from storage
     const response = await fetch(fileUrl);
-    if (!response.ok) return res.status(400).json({ error: 'Could not download PDF file.' });
+    if (!response.ok) {
+      console.log(`[parsePdf][${requestId}] Download failed: status=${response.status} statusText=${response.statusText}`);
+      return res.status(400).json({
+        error: 'Could not download PDF file.',
+        requestId,
+        ...(debugMode
+          ? {
+              debug: {
+                stage: 'download',
+                status: response.status,
+                statusText: response.statusText,
+                url: fileUrl,
+              },
+            }
+          : {}),
+      });
+    }
 
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    console.log(
+      `[parsePdf][${requestId}] Downloaded bytes=${buffer.length} contentType=${response.headers.get('content-type') || 'unknown'}`
+    );
 
-    // Dynamic import handles CJS/ESM interop for pdf-parse
-    const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
-    const data = await pdfParse(buffer);
+    // Gemini-only extraction pipeline from the uploaded PDF bytes.
+    const geminiResult = await extractPdfMetadataWithGemini(buffer);
+    const ai = geminiResult.metadata;
+    console.log(
+      `[parsePdf][${requestId}] Gemini result modelUsed=${geminiResult.modelUsed || 'none'} hasMetadata=${Boolean(ai)}`
+    );
 
-    const info = data.info || {};
-
-    // Extract title
-    const title = info.Title || '';
-
-    // Extract authors (often comma or semicolon separated)
-    const authors = info.Author
-      ? info.Author.split(/[,;&]/).map((a) => a.trim()).filter(Boolean)
-      : [];
-
-    // Extract keywords
-    const keywords = info.Keywords
-      ? info.Keywords.split(/[,;]/).map((k) => k.trim()).filter(Boolean)
-      : [];
-
-    // Try to extract year from CreationDate (format: D:YYYYMMDDHHmmss)
-    let year = null;
-    if (info.CreationDate) {
-      const match = info.CreationDate.match(/D:(\d{4})/);
-      if (match) year = parseInt(match[1]);
+    if (!ai) {
+      console.log(`[parsePdf][${requestId}] AI extraction failed: ${geminiResult.error || 'unknown error'}`);
+      return res.status(422).json({
+        error: geminiResult.error || 'AI could not extract metadata from this PDF.',
+        requestId,
+        ai: {
+          enabled: Boolean(process.env.GEMINI_API_KEY),
+          modelUsed: geminiResult.modelUsed,
+        },
+        ...(debugMode
+          ? {
+              debug: {
+                stage: 'gemini_extraction',
+                fileUrl,
+                responseStatus: response.status,
+                contentType: response.headers.get('content-type') || null,
+                bufferBytes: buffer.length,
+                gemini: geminiResult.debug || null,
+              },
+            }
+          : {}),
+      });
     }
 
-    // Try to extract abstract from text content
-    let abstract = null;
-    if (data.text) {
-      const abstractMatch = data.text.match(
-        /abstract[:\s]*\n?([\s\S]{10,1500}?)(?:\n\s*\n|\bintroduction\b|\bkeywords?\b|\b1[\.]\s)/i
-      );
-      if (abstractMatch) {
-        abstract = abstractMatch[1].trim().replace(/\s+/g, ' ').slice(0, 1000);
-      }
-    }
-
-    res.status(200).json({
-      title,
-      authors,
-      abstract,
-      keywords,
-      year,
-      journal: null,
-      doi: null,
-      pageCount: data.numpages || null,
+    console.log(
+      `[parsePdf][${requestId}] SUCCESS title=${ai.title || 'null'} authors=${ai.authors?.length || 0} keywords=${ai.keywords?.length || 0}`
+    );
+    return res.status(200).json({
+      title: ai.title,
+      authors: ai.authors,
+      abstract: ai.abstract,
+      keywords: ai.keywords,
+      year: ai.year,
+      journal: ai.journal,
+      doi: ai.doi,
+      ai: {
+        enabled: Boolean(process.env.GEMINI_API_KEY),
+        modelUsed: geminiResult.modelUsed,
+      },
+      requestId,
+      ...(debugMode
+        ? {
+            debug: {
+              stage: 'completed',
+              gemini: geminiResult.debug || null,
+            },
+          }
+        : {}),
     });
   } catch (error) {
-    console.log('Error in parsePdf:', error.message);
-    res.status(500).json({ error: 'Failed to parse PDF.' });
+    console.log(`[parsePdf][${requestId}] UNHANDLED ERROR:`, error.message);
+    if (error.stack) {
+      console.log(`[parsePdf][${requestId}] STACK:`, error.stack);
+    }
+    res.status(500).json({
+      error: 'Failed to parse PDF.',
+      requestId,
+      ...(debugMode
+        ? {
+            debug: {
+              stage: 'catch',
+              name: error.name || 'Error',
+              message: error.message || String(error),
+              stack: error.stack || null,
+            },
+          }
+        : {}),
+    });
   }
 };
 

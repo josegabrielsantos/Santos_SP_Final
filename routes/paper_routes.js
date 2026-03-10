@@ -10,7 +10,7 @@ import {
   uploadPaperFile,
   parsePdf,
 } from '../controllers/paper_controller.js';
-import { protectRoute } from '../middleware/protectRoute.js';
+import { protectRoute, optionalAuth } from '../middleware/protectRoute.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -18,7 +18,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 router.post('/upload', protectRoute, upload.single('file'), uploadPaperFile);
 router.post('/parse-pdf', protectRoute, parsePdf);
 router.post('/', protectRoute, createPaper);
-router.get('/', getPapers);
+router.get('/', optionalAuth, getPapers);
 router.get('/:id', getPaper);
 router.put('/:id', protectRoute, updatePaper);
 router.delete('/:id', protectRoute, deletePaper);

@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { protectRoute } from '../middleware/protectRoute.js';
-import { uploadFile } from '../controllers/upload_controller.js';
+import { uploadFile, deleteUploadedFile } from '../controllers/upload_controller.js';
 
 const router = express.Router();
 
@@ -14,5 +14,6 @@ const upload = multer({
 
 // POST /api/upload  — requires authentication
 router.post('/', protectRoute, upload.single('file'), uploadFile);
+router.delete('/', protectRoute, deleteUploadedFile);
 
 export default router;
