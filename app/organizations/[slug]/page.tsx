@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
 import { Sidebar } from '@/components/layout/sidebar';
 import { PostCard } from '@/components/post/post-card';
 import { CreatePostDialog } from '@/components/post/create-post-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   useOrganization,
   useOrgPosts,
@@ -88,6 +90,75 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+/* ── Loading skeleton for the full page ── */
+function OrgPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-page-bg">
+      <AuthenticatedNavbar />
+      <div className="flex">
+        <Sidebar />
+        <main className="flex flex-1 justify-center">
+          <div className="w-full max-w-5xl px-5 py-7 lg:px-7 flex flex-col gap-5">
+            {/* Header card skeleton */}
+            <div className="card-shadow rounded-xl overflow-hidden bg-white">
+              <Skeleton className="h-52 w-full rounded-none" />
+              <div className="p-7 pt-16 flex flex-col gap-3">
+                <Skeleton className="h-6 w-56 rounded" />
+                <Skeleton className="h-4 w-full rounded" />
+                <Skeleton className="h-4 w-3/4 rounded" />
+                <div className="flex gap-5 mt-1">
+                  <Skeleton className="h-4 w-24 rounded" />
+                  <Skeleton className="h-4 w-20 rounded" />
+                  <Skeleton className="h-4 w-22 rounded" />
+                </div>
+              </div>
+            </div>
+            {/* Tab bar skeleton */}
+            <Skeleton className="h-11 w-full rounded-lg" />
+            {/* Post skeletons */}
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="card-shadow rounded-xl bg-white p-5 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                  <div className="flex flex-col gap-1.5 flex-1">
+                    <Skeleton className="h-3.5 w-32 rounded" />
+                    <Skeleton className="h-3 w-24 rounded" />
+                  </div>
+                </div>
+                <Skeleton className="h-5 w-3/4 rounded" />
+                <Skeleton className="h-4 w-full rounded" />
+                <Skeleton className="h-4 w-5/6 rounded" />
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+/* ── Skeleton for posts loading inside the tab ── */
+function PostsSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="card-shadow rounded-xl bg-white p-5 flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+            <div className="flex flex-col gap-1.5 flex-1">
+              <Skeleton className="h-3.5 w-32 rounded" />
+              <Skeleton className="h-3 w-24 rounded" />
+            </div>
+          </div>
+          <Skeleton className="h-5 w-3/4 rounded" />
+          <Skeleton className="h-4 w-full rounded" />
+          <Skeleton className="h-4 w-5/6 rounded" />
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function OrgDetailPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
@@ -128,14 +199,7 @@ export default function OrgDetailPage() {
   const [rejectReason, setRejectReason] = useState('');
 
   if (orgLoading) {
-    return (
-      <div className="min-h-screen bg-page-bg">
-        <AuthenticatedNavbar />
-        <div className="flex justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </div>
-    );
+    return <OrgPageSkeleton />;
   }
 
   if (!org) {
@@ -172,167 +236,182 @@ export default function OrgDetailPage() {
         <main className="flex flex-1 justify-center">
           <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
             {/* Org header with banner */}
-            <Card className="overflow-hidden border-border/60 bg-white shadow-sm">
-              {/* Banner image */}
-              <div className="relative h-52 w-full bg-gradient-to-r from-primary/20 to-primary/5">
-                {org.bannerImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={org.bannerImage}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <ImageIcon className="h-12 w-12 text-primary/20" />
-                  </div>
-                )}
-              </div>
-
-              <CardContent className="relative p-7">
-                {/* Avatar overlapping banner */}
-                <div className="absolute -top-12 left-7">
-                  <Avatar className="h-[92px] w-[92px] ring-4 ring-white shadow-md">
-                    <AvatarImage src={org.avatar ?? undefined} alt={org.name} />
-                    <AvatarFallback className="bg-primary/10 text-[23px] font-bold text-primary">
-                      {initials(org.name)}
-                    </AvatarFallback>
-                  </Avatar>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <Card className="overflow-hidden rounded-xl border-border/60 bg-white card-shadow">
+                {/* Banner image — richer maroon gradient fallback */}
+                <div className="relative h-52 w-full bg-gradient-to-br from-primary via-primary/80 to-primary/30">
+                  {org.bannerImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={org.bannerImage}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    /* Decorative overlay pattern on gradient */
+                    <div className="flex h-full w-full items-end justify-end p-6 select-none pointer-events-none">
+                      <ImageIcon className="h-14 w-14 text-white/10" />
+                    </div>
+                  )}
+                  {/* Subtle dark scrim at the bottom for text legibility */}
+                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/20 to-transparent" />
                 </div>
 
-                <div className="mt-10 flex items-start justify-between">
-                  <div className="flex flex-1 flex-col gap-1">
-                    <h1 className="text-[23px] font-bold text-foreground">{org.name}</h1>
-                    {org.description && (() => {
-                      const isLong = org.description!.length > 160;
-                      return (
-                        <div>
-                          <p className="text-[16px] text-muted-foreground">
-                            {isLong && !descExpanded ? org.description!.slice(0, 160) + '…' : org.description}
-                          </p>
-                          {isLong && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setDescExpanded(!descExpanded); }}
-                              className="mt-0.5 text-[14px] font-medium text-primary hover:underline"
-                            >
-                              {descExpanded ? 'Show less' : 'Read more'}
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })()}
-                    <div className="mt-2.5 flex items-center gap-5">
-                      <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
-                        <Users className="h-3.5 w-3.5" /> {org.memberCount} members
-                      </span>
-                      <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
-                        <FileText className="h-3.5 w-3.5" /> {org.postCount} posts
-                      </span>
-                      <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
-                        <Heart className="h-3.5 w-3.5" /> {members?.followerCount ?? org.followerIds?.length ?? 0} followers
-                      </span>
-                    </div>
-                    {org.welcomeMessage && (
-                      <div className="mt-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-3 text-[15px] text-foreground/80 italic">
-                        {org.welcomeMessage}
-                      </div>
-                    )}
+                <CardContent className="relative p-7">
+                  {/* Avatar overlapping banner */}
+                  <div className="absolute -top-12 left-7">
+                    <Avatar className="h-[92px] w-[92px] ring-4 ring-white shadow-md">
+                      <AvatarImage src={org.avatar ?? undefined} alt={org.name} />
+                      <AvatarFallback className="bg-primary/10 text-[23px] font-bold text-primary">
+                        {initials(org.name)}
+                      </AvatarFallback>
+                    </Avatar>
                   </div>
 
-                  {/* Action buttons */}
-                  <div className="flex shrink-0 items-center gap-2">
-                    {/* Settings button (owner/admin only) */}
-                    {canManage && (
-                      <Link href={`/organizations/${slug}/settings`}>
-                        <Button variant="outline" size="sm" className="gap-2 text-[14px]">
-                          <Settings className="h-4 w-4" />
-                          Settings
+                  <div className="mt-10 flex items-start justify-between">
+                    <div className="flex flex-1 flex-col gap-1">
+                      <h1 className="font-heading text-[23px] font-bold text-foreground">{org.name}</h1>
+                      {/* Category badge */}
+                      {org.category && (
+                        <span className="inline-flex w-fit items-center rounded-full bg-kain-green-light px-2.5 py-0.5 text-[12px] font-medium text-kain-green mb-0.5">
+                          {org.category}
+                        </span>
+                      )}
+                      {org.description && (() => {
+                        const isLong = org.description!.length > 160;
+                        return (
+                          <div>
+                            <p className="text-[16px] text-muted-foreground">
+                              {isLong && !descExpanded ? org.description!.slice(0, 160) + '…' : org.description}
+                            </p>
+                            {isLong && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setDescExpanded(!descExpanded); }}
+                                className="mt-0.5 text-[14px] font-medium text-primary hover:underline"
+                              >
+                                {descExpanded ? 'Show less' : 'Read more'}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      <div className="mt-2.5 flex items-center gap-5">
+                        <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
+                          <Users className="h-3.5 w-3.5" /> {org.memberCount} members
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
+                          <FileText className="h-3.5 w-3.5" /> {org.postCount} posts
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
+                          <Heart className="h-3.5 w-3.5" /> {members?.followerCount ?? org.followerIds?.length ?? 0} followers
+                        </span>
+                      </div>
+                      {org.welcomeMessage && (
+                        <div className="mt-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-3 text-[15px] text-foreground/80 italic">
+                          {org.welcomeMessage}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex shrink-0 items-center gap-2">
+                      {/* Settings button (owner/admin only) */}
+                      {canManage && (
+                        <Link href={`/organizations/${slug}/settings`}>
+                          <Button variant="outline" size="sm" className="gap-2 text-[14px]">
+                            <Settings className="h-4 w-4" />
+                            Settings
+                          </Button>
+                        </Link>
+                      )}
+
+                      {/* Import CSV button (owner/admin only) */}
+                      {canManage && orgId && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 text-[14px]"
+                          onClick={() => setShowBulkImport(true)}
+                        >
+                          <UploadCloud className="h-4 w-4" />
+                          Import CSV
                         </Button>
-                      </Link>
-                    )}
+                      )}
 
-                    {/* Import CSV button (owner/admin only) */}
-                    {canManage && orgId && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 text-[14px]"
-                        onClick={() => setShowBulkImport(true)}
-                      >
-                        <UploadCloud className="h-4 w-4" />
-                        Import CSV
-                      </Button>
-                    )}
+                      {/* Follow/Unfollow button (non-members can follow) */}
+                      {userId && !isOwner && !isAdmin && !isMember && (
+                        isFollower ? (
+                          <Button
+                            variant="outline"
+                            size="default"
+                            className="gap-2 text-[14px]"
+                            onClick={() => orgId && unfollowOrg.mutate(orgId)}
+                            disabled={unfollowOrg.isPending}
+                          >
+                            <HeartOff className="h-4 w-4" />
+                            Unfollow
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="default"
+                            className="gap-2 text-[14px]"
+                            onClick={() => orgId && followOrg.mutate(orgId)}
+                            disabled={followOrg.isPending}
+                          >
+                            <Heart className="h-4 w-4" />
+                            Follow
+                          </Button>
+                        )
+                      )}
 
-                    {/* Follow/Unfollow button (non-members can follow) */}
-                    {userId && !isOwner && !isAdmin && !isMember && (
-                      isFollower ? (
+                      {/* Join/Leave/Pending */}
+                      {!userId ? null : isOwner || isAdmin || isMember ? (
                         <Button
                           variant="outline"
                           size="default"
                           className="gap-2 text-[14px]"
-                          onClick={() => orgId && unfollowOrg.mutate(orgId)}
-                          disabled={unfollowOrg.isPending}
+                          onClick={() => orgId && leaveOrg.mutate(orgId)}
+                          disabled={leaveOrg.isPending || !!isOwner}
                         >
-                          <HeartOff className="h-4 w-4" />
-                          Unfollow
+                          <LogOut className="h-4 w-4" />
+                          {isOwner ? 'Owner' : 'Leave'}
+                        </Button>
+                      ) : isPending ? (
+                        <Button
+                          variant="outline"
+                          size="default"
+                          className="gap-2 text-[14px]"
+                          onClick={() => orgId && leaveOrg.mutate(orgId)}
+                          disabled={leaveOrg.isPending}
+                        >
+                          {leaveOrg.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <X className="h-4 w-4" />
+                          )}
+                          Cancel Request
                         </Button>
                       ) : (
                         <Button
-                          variant="outline"
                           size="default"
                           className="gap-2 text-[14px]"
-                          onClick={() => orgId && followOrg.mutate(orgId)}
-                          disabled={followOrg.isPending}
+                          onClick={() => orgId && requestJoin.mutate(orgId)}
+                          disabled={requestJoin.isPending}
                         >
-                          <Heart className="h-4 w-4" />
-                          Follow
+                          <UserPlus className="h-4 w-4" />
+                          Request to Join
                         </Button>
-                      )
-                    )}
-
-                    {/* Join/Leave/Pending */}
-                    {!userId ? null : isOwner || isAdmin || isMember ? (
-                      <Button
-                        variant="outline"
-                        size="default"
-                        className="gap-2 text-[14px]"
-                        onClick={() => orgId && leaveOrg.mutate(orgId)}
-                        disabled={leaveOrg.isPending || !!isOwner}
-                      >
-                        <LogOut className="h-4 w-4" />
-                        {isOwner ? 'Owner' : 'Leave'}
-                      </Button>
-                    ) : isPending ? (
-                      <Button
-                        variant="outline"
-                        size="default"
-                        className="gap-2 text-[14px]"
-                        onClick={() => orgId && leaveOrg.mutate(orgId)}
-                        disabled={leaveOrg.isPending}
-                      >
-                        {leaveOrg.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <X className="h-4 w-4" />
-                        )}
-                        Cancel Request
-                      </Button>
-                    ) : (
-                      <Button
-                        size="default"
-                        className="gap-2 text-[14px]"
-                        onClick={() => orgId && requestJoin.mutate(orgId)}
-                        disabled={requestJoin.isPending}
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        Request to Join
-                      </Button>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {/* Kick member confirmation dialog */}
             <Dialog open={!!kickTarget} onOpenChange={(open) => { if (!open) setKickTarget(null); }}>
@@ -413,7 +492,7 @@ export default function OrgDetailPage() {
 
             {/* Tabs */}
             <Tabs defaultValue="posts" className="mt-4">
-              <TabsList className="w-full justify-start rounded-lg border border-border/60 bg-white p-0 shadow-sm h-auto">
+              <TabsList className="w-full justify-start rounded-lg border border-border/60 bg-white p-0 card-shadow h-auto">
                 <TabsTrigger
                   value="posts"
                   className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
@@ -452,7 +531,7 @@ export default function OrgDetailPage() {
                     <Inbox className="h-4 w-4" />
                     Pending Posts
                     {pendingCount > 0 && (
-                      <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[11px] font-bold text-white">
+                      <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-kain-amber text-[11px] font-bold text-white">
                         {pendingCount}
                       </span>
                     )}
@@ -471,7 +550,7 @@ export default function OrgDetailPage() {
               <TabsContent value="posts" className="mt-4 flex flex-col gap-4">
                 {canPost && (
                   <CreatePostDialog defaultOrgId={orgId}>
-                    <Card className="cursor-pointer border-border/60 bg-white shadow-sm transition-shadow hover:shadow-md">
+                    <Card className="cursor-pointer rounded-xl border-border/60 bg-white card-shadow transition-shadow hover:card-shadow-hover">
                       <CardContent className="flex items-center gap-3.5 p-5">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                           <Plus className="h-5 w-5 text-primary" />
@@ -491,8 +570,14 @@ export default function OrgDetailPage() {
                       <Pin className="h-3.5 w-3.5" /> Pinned
                     </h3>
                     <div className="flex flex-col gap-3">
-                      {pinnedPostsData.posts.map((pinnedPost) => (
-                        <div key={pinnedPost._id} className="relative">
+                      {pinnedPostsData.posts.map((pinnedPost, index) => (
+                        <motion.div
+                          key={pinnedPost._id}
+                          className="relative"
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.04, duration: 0.22 }}
+                        >
                           <PostCard post={pinnedPost} orgAccessRole={orgAccessRole} />
                           {canManage && (
                             <button
@@ -503,32 +588,37 @@ export default function OrgDetailPage() {
                               <PinOff className="h-3.5 w-3.5" />
                             </button>
                           )}
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {postsLoading && (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  </div>
-                )}
+                {/* Posts loading skeleton */}
+                {postsLoading && <PostsSkeleton />}
 
-                {postsData?.posts.map((post) => (
-                  <div key={post._id} className="relative">
-                    <PostCard post={post} orgAccessRole={orgAccessRole} />
-                    {canManage && (
-                      <button
-                        className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                        onClick={() => orgId && pinPost.mutate({ orgId, postId: post._id })}
-                        title="Pin post"
-                      >
-                        <Pin className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                <AnimatePresence>
+                  {!postsLoading && postsData?.posts.map((post, index) => (
+                    <motion.div
+                      key={post._id}
+                      className="relative"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.04, duration: 0.22 }}
+                    >
+                      <PostCard post={post} orgAccessRole={orgAccessRole} />
+                      {canManage && (
+                        <button
+                          className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          onClick={() => orgId && pinPost.mutate({ orgId, postId: post._id })}
+                          title="Pin post"
+                        >
+                          <Pin className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
 
                 {postsData && postsData.posts.length === 0 && (
                   <p className="py-8 text-center text-[16px] text-muted-foreground">
@@ -563,13 +653,13 @@ export default function OrgDetailPage() {
 
               {/* Members tab */}
               <TabsContent value="members" className="mt-4">
-                <Card className="border-border/60 bg-white shadow-sm">
+                <Card className="rounded-xl border-border/60 bg-white card-shadow">
                   <CardContent className="p-6">
                     {members && (
                       <div className="flex flex-col gap-4">
                         {/* Owner */}
                         <div>
-                          <h3 className="mb-2 text-[14px] font-semibold uppercase text-muted-foreground">
+                          <h3 className="mb-2 font-heading text-[14px] font-semibold uppercase text-muted-foreground">
                             Owner
                           </h3>
                           <MemberRow user={members.owner} badge="Owner" />
@@ -580,12 +670,18 @@ export default function OrgDetailPage() {
                         {/* Admins */}
                         {members.admins.length > 0 && (
                           <div>
-                            <h3 className="mb-2 text-[14px] font-semibold uppercase text-muted-foreground">
+                            <h3 className="mb-2 font-heading text-[14px] font-semibold uppercase text-muted-foreground">
                               Admins ({members.admins.length})
                             </h3>
                             <div className="flex flex-col gap-2">
-                              {members.admins.map((a) => (
-                                <div key={a._id} className="flex items-center justify-between">
+                              {members.admins.map((a, index) => (
+                                <motion.div
+                                  key={a._id}
+                                  className="flex items-center justify-between"
+                                  initial={{ opacity: 0, y: 8 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: index * 0.04, duration: 0.22 }}
+                                >
                                   <MemberRow user={a} badge="Admin" />
                                   {isOwner && a._id !== userId && (
                                     <Button
@@ -600,7 +696,7 @@ export default function OrgDetailPage() {
                                       Remove Admin
                                     </Button>
                                   )}
-                                </div>
+                                </motion.div>
                               ))}
                             </div>
                           </div>
@@ -610,12 +706,18 @@ export default function OrgDetailPage() {
 
                         {/* Members */}
                         <div>
-                          <h3 className="mb-2 text-[14px] font-semibold uppercase text-muted-foreground">
+                          <h3 className="mb-2 font-heading text-[14px] font-semibold uppercase text-muted-foreground">
                             Members ({members.members.length})
                           </h3>
                           <div className="flex flex-col gap-2">
-                            {members.members.map((m) => (
-                              <div key={m._id} className="flex items-center justify-between">
+                            {members.members.map((m, index) => (
+                              <motion.div
+                                key={m._id}
+                                className="flex items-center justify-between"
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.04, duration: 0.22 }}
+                              >
                                 <MemberRow user={m} />
                                 {canManage && (
                                   <div className="flex items-center gap-1">
@@ -641,7 +743,7 @@ export default function OrgDetailPage() {
                                     </Button>
                                   </div>
                                 )}
-                              </div>
+                              </motion.div>
                             ))}
                             {members.members.length === 0 && (
                               <p className="text-[14px] text-muted-foreground">No members yet.</p>
@@ -656,15 +758,22 @@ export default function OrgDetailPage() {
 
               {/* Followers tab */}
               <TabsContent value="followers" className="mt-4">
-                <Card className="border-border/60 bg-white shadow-sm">
+                <Card className="rounded-xl border-border/60 bg-white card-shadow">
                   <CardContent className="p-6">
-                    <h3 className="mb-3 text-[14px] font-semibold uppercase text-muted-foreground">
+                    <h3 className="mb-3 font-heading text-[14px] font-semibold uppercase text-muted-foreground">
                       Followers ({members?.followerCount ?? 0})
                     </h3>
                     {members?.followers && members.followers.length > 0 ? (
                       <div className="flex flex-col gap-2">
-                        {members.followers.map((f) => (
-                          <MemberRow key={f._id} user={f} />
+                        {members.followers.map((f, index) => (
+                          <motion.div
+                            key={f._id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.04, duration: 0.22 }}
+                          >
+                            <MemberRow user={f} />
+                          </motion.div>
                         ))}
                       </div>
                     ) : (
@@ -677,15 +786,21 @@ export default function OrgDetailPage() {
               {/* Join requests tab */}
               {canManage && (
                 <TabsContent value="requests" className="mt-4">
-                  <Card className="border-border/60 bg-white shadow-sm">
+                  <Card className="rounded-xl border-border/60 bg-white card-shadow">
                     <CardContent className="p-6">
                       {members?.pendingMembers && members.pendingMembers.length > 0 ? (
                         <div className="flex flex-col gap-3">
-                          {members.pendingMembers.map((p) => (
-                            <div key={p._id} className="flex items-center justify-between">
+                          {members.pendingMembers.map((p, index) => (
+                            <motion.div
+                              key={p._id}
+                              className="flex items-center justify-between"
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.04, duration: 0.22 }}
+                            >
                               <MemberRow user={p} />
                               <div className="flex gap-1">
-                                  <Button
+                                <Button
                                   size="default"
                                   className="gap-1.5 text-[14px]"
                                   onClick={() =>
@@ -711,7 +826,7 @@ export default function OrgDetailPage() {
                                   Reject
                                 </Button>
                               </div>
-                            </div>
+                            </motion.div>
                           ))}
                         </div>
                       ) : (
@@ -724,19 +839,26 @@ export default function OrgDetailPage() {
                   </Card>
                 </TabsContent>
               )}
+
               {/* Pending posts tab */}
               {canManage && (
                 <TabsContent value="pending" className="mt-4">
-                  <Card className="border-border/60 bg-white shadow-sm">
+                  <Card className="rounded-xl border-border/60 bg-white card-shadow">
                     <CardContent className="p-6">
                       {pendingPostsData?.posts && pendingPostsData.posts.length > 0 ? (
                         <div className="flex flex-col gap-4">
-                          {pendingPostsData.posts.map((post) => {
+                          {pendingPostsData.posts.map((post, index) => {
                             const authorName = typeof post.authorId === 'object' ? post.authorId.displayName : 'Unknown';
                             const authorAvatar = typeof post.authorId === 'object' ? post.authorId.avatar ?? undefined : undefined;
                             const authorProfileId = typeof post.authorId === 'object' ? post.authorId._id : '';
                             return (
-                              <div key={post._id} className="rounded-lg border border-border/50 bg-muted/20 p-4">
+                              <motion.div
+                                key={post._id}
+                                className="rounded-xl border border-border/50 bg-muted/20 p-4"
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.04, duration: 0.22 }}
+                              >
                                 <div className="flex items-start justify-between gap-4">
                                   <div className="flex items-start gap-3 min-w-0">
                                     <Avatar className="mt-0.5 h-9 w-9 shrink-0">
@@ -774,7 +896,7 @@ export default function OrgDetailPage() {
                                     </Button>
                                   </div>
                                 </div>
-                              </div>
+                              </motion.div>
                             );
                           })}
                         </div>
@@ -792,59 +914,69 @@ export default function OrgDetailPage() {
               {/* Analytics tab */}
               <TabsContent value="analytics" className="mt-4">
                 {!orgAnalytics ? (
-                  <div className="flex justify-center py-12">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="card-shadow rounded-xl bg-white p-6 flex flex-col gap-3">
+                        <Skeleton className="h-4 w-48 rounded" />
+                        <Skeleton className="h-[200px] w-full rounded-lg" />
+                      </div>
+                    ))}
                   </div>
                 ) : (
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <Card className="border-border/60 bg-white shadow-sm">
+                  <motion.div
+                    className="grid gap-4 lg:grid-cols-2"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <Card className="rounded-xl border-border/60 bg-white card-shadow">
                       <CardContent className="p-6">
-                        <h3 className="mb-4 text-[15px] font-semibold text-foreground">Posts Over Time (6 months)</h3>
+                        <h3 className="mb-4 font-heading text-[15px] font-semibold text-foreground">Posts Over Time (6 months)</h3>
                         <ResponsiveContainer width="100%" height={200}>
                           <BarChart data={orgAnalytics.postsOverTime}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                             <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                             <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                             <Tooltip />
-                            <Bar dataKey="count" fill="#6366f1" radius={[3, 3, 0, 0]} name="Posts" />
+                            <Bar dataKey="count" fill="oklch(0.32 0.13 19)" radius={[3, 3, 0, 0]} name="Posts" />
                           </BarChart>
                         </ResponsiveContainer>
                       </CardContent>
                     </Card>
 
-                    <Card className="border-border/60 bg-white shadow-sm">
+                    <Card className="rounded-xl border-border/60 bg-white card-shadow">
                       <CardContent className="p-6">
-                        <h3 className="mb-4 text-[15px] font-semibold text-foreground">Post Type Breakdown</h3>
+                        <h3 className="mb-4 font-heading text-[15px] font-semibold text-foreground">Post Type Breakdown</h3>
                         <ResponsiveContainer width="100%" height={200}>
                           <BarChart data={orgAnalytics.typeBreakdown} layout="vertical">
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                             <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
                             <YAxis type="category" dataKey="type" width={100} tick={{ fontSize: 12 }} />
                             <Tooltip />
-                            <Bar dataKey="count" fill="#22c55e" radius={[0, 3, 3, 0]} name="Posts" />
+                            <Bar dataKey="count" fill="oklch(0.24 0.09 150)" radius={[0, 3, 3, 0]} name="Posts" />
                           </BarChart>
                         </ResponsiveContainer>
                       </CardContent>
                     </Card>
 
-                    <Card className="border-border/60 bg-white shadow-sm">
+                    <Card className="rounded-xl border-border/60 bg-white card-shadow">
                       <CardContent className="p-6">
-                        <h3 className="mb-4 text-[15px] font-semibold text-foreground">Top Tags</h3>
+                        <h3 className="mb-4 font-heading text-[15px] font-semibold text-foreground">Top Tags</h3>
                         <ResponsiveContainer width="100%" height={200}>
                           <BarChart data={orgAnalytics.topTags} layout="vertical">
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                             <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
                             <YAxis type="category" dataKey="tag" width={110} tick={{ fontSize: 12 }} />
                             <Tooltip />
-                            <Bar dataKey="count" fill="#f59e0b" radius={[0, 3, 3, 0]} name="Posts" />
+                            <Bar dataKey="count" fill="oklch(0.74 0.17 75)" radius={[0, 3, 3, 0]} name="Posts" />
                           </BarChart>
                         </ResponsiveContainer>
                       </CardContent>
                     </Card>
 
-                    <Card className="border-border/60 bg-white shadow-sm">
+                    <Card className="rounded-xl border-border/60 bg-white card-shadow">
                       <CardContent className="p-6">
-                        <h3 className="mb-4 text-[15px] font-semibold text-foreground">Top Posts by Engagement</h3>
+                        <h3 className="mb-4 font-heading text-[15px] font-semibold text-foreground">Top Posts by Engagement</h3>
                         <div className="flex flex-col gap-3">
                           {orgAnalytics.topPosts.length === 0 ? (
                             <p className="text-[14px] text-muted-foreground">No posts yet.</p>
@@ -853,7 +985,7 @@ export default function OrgDetailPage() {
                               <Link
                                 key={post._id}
                                 href={`/posts/${post._id}`}
-                                className="flex items-center justify-between gap-3 rounded-md border border-border/50 px-4 py-3 text-[14px] transition-colors hover:bg-muted/40"
+                                className="flex items-center justify-between gap-3 rounded-lg border border-border/50 px-4 py-3 text-[14px] transition-colors hover:bg-muted/40"
                               >
                                 <span className="line-clamp-1 font-medium text-foreground">{post.title}</span>
                                 <span className="shrink-0 text-[13px] text-muted-foreground">
@@ -865,7 +997,7 @@ export default function OrgDetailPage() {
                         </div>
                       </CardContent>
                     </Card>
-                  </div>
+                  </motion.div>
                 )}
               </TabsContent>
             </Tabs>

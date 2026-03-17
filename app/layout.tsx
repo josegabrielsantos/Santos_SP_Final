@@ -1,22 +1,42 @@
-// src/app/layout.tsx
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Raleway, DM_Sans } from 'next/font/google';
+import { Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
-const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
+// Optima web fallback — renders natively on Mac/iOS, Raleway elsewhere
+const raleway = Raleway({
+  variable: '--font-raleway',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  display: 'swap',
+});
+
+// Avenir web fallback — renders natively on Mac/iOS, DM Sans elsewhere
+const dmSans = DM_Sans({
+  variable: '--font-dm-sans',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+});
+
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'UPLB KAIN — Knowledge Archive on Integrated Nutrition',
-  description:
-    'A platform for curated research on food and nutrition security powered by UPLB.',
+  description: 'A platform for curated research on food and nutrition security powered by UPLB.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-foreground`}>
+      <body
+        className={`${raleway.variable} ${dmSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+      >
         <Providers>{children}</Providers>
       </body>
     </html>

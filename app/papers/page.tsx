@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -32,7 +34,6 @@ import {
   ChevronRight,
   SlidersHorizontal,
   X,
-  Loader2,
   Hash,
   Eye,
   Link2,
@@ -251,7 +252,10 @@ export default function PapersPage() {
           <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
             {/* Header */}
             <div className="mb-5">
-              <h1 className="text-[32px] font-bold tracking-tight text-foreground">
+              <h1
+                className="text-[32px] font-bold tracking-tight text-foreground"
+                style={{ fontFamily: 'var(--font-heading)' }}
+              >
                 Research Papers
               </h1>
               <p className="mt-1.5 text-[18px] text-muted-foreground">
@@ -259,15 +263,16 @@ export default function PapersPage() {
               </p>
             </div>
 
-            {/* Search bar */}
+            {/* Not-logged-in notice */}
             {!isLoggedIn && (
-              <Card className="mb-5 border-amber-300/60 bg-amber-50/60">
-                <CardContent className="p-5 text-[18px] text-amber-900">
+              <Card className="mb-5 border-kain-amber/40 bg-kain-amber-light/50">
+                <CardContent className="p-5 text-[18px] text-foreground/80">
                   Please sign in to access the research papers page.
                 </CardContent>
               </Card>
             )}
 
+            {/* Search bar */}
             <div className="mb-5 flex gap-2.5">
               <div className="relative flex-1">
                 <Search className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -288,7 +293,12 @@ export default function PapersPage() {
                   </button>
                 )}
               </div>
-              <Button size="default" className="h-10" onClick={handleSearch} disabled={!isLoggedIn}>
+              <Button
+                size="default"
+                className="h-10 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={handleSearch}
+                disabled={!isLoggedIn}
+              >
                 <Search className="mr-2 h-4 w-4" />
                 Search
               </Button>
@@ -304,7 +314,7 @@ export default function PapersPage() {
               </Button>
             </div>
 
-            {/* Filtering tabs — shadcn Tabs */}
+            {/* Filtering tabs */}
             {isLoggedIn && (
               <div className="mb-5">
                 <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -328,7 +338,7 @@ export default function PapersPage() {
 
             {/* Filters panel */}
             {showFilters && (
-              <Card className="mb-4">
+              <Card className="mb-4 rounded-xl card-shadow">
                 <CardContent className="p-4">
                   <p className="mb-2 text-[14px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Browse Filters
@@ -487,7 +497,11 @@ export default function PapersPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button size="default" className="h-9 text-[14px]" onClick={handleSearch}>
+                    <Button
+                      size="default"
+                      className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 text-[14px]"
+                      onClick={handleSearch}
+                    >
                       Apply search
                     </Button>
                     <Button variant="ghost" size="default" className="h-9 text-[14px]" onClick={clearSearch}>
@@ -500,7 +514,7 @@ export default function PapersPage() {
 
             {/* Active search indicator */}
             {isSearching && (
-              <div className="mb-4 flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-[16px]">
+              <div className="mb-4 flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-[16px]">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">
                   Showing results for:{' '}
@@ -516,16 +530,17 @@ export default function PapersPage() {
             )}
 
             {downloadError && (
-              <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[16px] text-destructive">
+              <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[16px] text-destructive">
                 {downloadError}
               </div>
             )}
 
-            {/* Loading state */}
+            {/* Loading state — skeleton cards */}
             {isLoading && (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-[16px] text-muted-foreground">Loading papers…</span>
+              <div className="flex flex-col gap-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <PaperCardSkeleton key={i} />
+                ))}
               </div>
             )}
 
@@ -549,40 +564,56 @@ export default function PapersPage() {
             )}
 
             {/* Paper list — regular browse */}
-            {!isLoading && !isSearching && (
-              <div className="flex flex-col gap-4">
-                {papers.map((paper) => (
-                  <PaperCard
-                    key={paper._id}
-                    paper={paper}
-                    isSaved={savedPaperIds.has(paper._id)}
-                    isLoggedIn={isLoggedIn}
-                    onDownload={() => handleDownload(paper)}
-                    onToggleSave={() => handleToggleSave(paper._id)}
-                    onCopyLink={() => handleCopyLink(paper._id)}
-                    linkCopied={copiedPaperId === paper._id}
-                  />
-                ))}
-              </div>
-            )}
+            <AnimatePresence mode="wait">
+              {!isLoading && !isSearching && papers.length > 0 && (
+                <div className="flex flex-col gap-4">
+                  {papers.map((paper, index) => (
+                    <motion.div
+                      key={paper._id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.04, duration: 0.2 }}
+                    >
+                      <PaperCard
+                        paper={paper}
+                        isSaved={savedPaperIds.has(paper._id)}
+                        isLoggedIn={isLoggedIn}
+                        onDownload={() => handleDownload(paper)}
+                        onToggleSave={() => handleToggleSave(paper._id)}
+                        onCopyLink={() => handleCopyLink(paper._id)}
+                        linkCopied={copiedPaperId === paper._id}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </AnimatePresence>
 
             {/* Paper list — search results */}
-            {!isLoading && isSearching && (
-              <div className="flex flex-col gap-4">
-                {searchHits.map((hit) => (
-                  <SearchPaperCard
-                    key={hit._id}
-                    hit={hit}
-                    isSaved={savedPaperIds.has(hit._id)}
-                    isLoggedIn={isLoggedIn}
-                    onDownload={() => handleDownload(hit)}
-                    onToggleSave={() => handleToggleSave(hit._id)}
-                    onCopyLink={() => handleCopyLink(hit._id)}
-                    linkCopied={copiedPaperId === hit._id}
-                  />
-                ))}
-              </div>
-            )}
+            <AnimatePresence mode="wait">
+              {!isLoading && isSearching && searchHits.length > 0 && (
+                <div className="flex flex-col gap-4">
+                  {searchHits.map((hit, index) => (
+                    <motion.div
+                      key={hit._id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.04, duration: 0.2 }}
+                    >
+                      <SearchPaperCard
+                        hit={hit}
+                        isSaved={savedPaperIds.has(hit._id)}
+                        isLoggedIn={isLoggedIn}
+                        onDownload={() => handleDownload(hit)}
+                        onToggleSave={() => handleToggleSave(hit._id)}
+                        onCopyLink={() => handleCopyLink(hit._id)}
+                        linkCopied={copiedPaperId === hit._id}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </AnimatePresence>
 
             {/* Pagination */}
             {!isLoading && totalPages > 1 && (
@@ -625,6 +656,48 @@ export default function PapersPage() {
   );
 }
 
+// ─── Skeleton loader for a paper card ───────────────────────────
+
+export function PaperCardSkeleton() {
+  return (
+    <div className="rounded-xl bg-card card-shadow p-6">
+      {/* Title */}
+      <Skeleton className="h-6 w-3/4 rounded-md" />
+      {/* Authors */}
+      <div className="mt-3 flex items-center gap-2">
+        <Skeleton className="h-4 w-4 rounded-full" />
+        <Skeleton className="h-4 w-1/3 rounded-md" />
+      </div>
+      {/* Metadata row */}
+      <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5">
+        <Skeleton className="h-4 w-32 rounded-md" />
+        <Skeleton className="h-4 w-16 rounded-md" />
+        <Skeleton className="h-4 w-24 rounded-md" />
+      </div>
+      {/* Abstract */}
+      <div className="mt-3 space-y-2">
+        <Skeleton className="h-4 w-full rounded-md" />
+        <Skeleton className="h-4 w-5/6 rounded-md" />
+        <Skeleton className="h-4 w-4/6 rounded-md" />
+      </div>
+      {/* Tags */}
+      <div className="mt-3 flex gap-1.5">
+        <Skeleton className="h-5 w-16 rounded-full" />
+        <Skeleton className="h-5 w-20 rounded-full" />
+        <Skeleton className="h-5 w-14 rounded-full" />
+      </div>
+      {/* Separator */}
+      <div className="my-3.5 h-px bg-border" />
+      {/* Action buttons */}
+      <div className="flex gap-2.5">
+        <Skeleton className="h-9 w-32 rounded-md" />
+        <Skeleton className="h-9 w-20 rounded-md" />
+        <Skeleton className="h-9 w-24 rounded-md" />
+      </div>
+    </div>
+  );
+}
+
 // ─── Helper: get initials from name ─────────────────────────────
 
 function getInitials(name: string) {
@@ -643,11 +716,11 @@ function AbstractText({ text, highlight }: { text: string; highlight?: string[] 
   const isLong = text.length > 200;
 
   if (highlight && highlight.length > 0) {
-    // When we have highlighted content, always show it (it's already truncated by ES)
     return (
       <div className="mt-3">
         <span className="text-[16px] font-medium text-muted-foreground/70">Abstract: </span>
-        <span className="text-[18px] leading-relaxed text-muted-foreground search-highlight"
+        <span
+          className="text-[18px] leading-relaxed text-muted-foreground search-highlight"
           dangerouslySetInnerHTML={{ __html: highlight.join(' … ') }}
         />
       </div>
@@ -694,19 +767,22 @@ function PaperCard({
   const router = useRouter();
 
   return (
-    <Card className="border-border/60 bg-card shadow-sm transition-shadow hover:shadow-md">
+    <Card className="rounded-xl border-border/60 bg-card card-shadow transition-shadow hover:shadow-md">
       <CardContent className="p-6">
         <div className="flex-1 min-w-0">
           {/* Title */}
-          <h3 className="text-[20px] font-semibold leading-snug text-foreground">
+          <h3
+            className="text-[20px] font-semibold leading-snug text-foreground"
+            style={{ fontFamily: 'var(--font-heading)' }}
+          >
             {paper.title}
           </h3>
 
-          {/* Author */}
-          <div className="mt-2.5 flex items-center gap-2 text-[18px] text-muted-foreground">
+          {/* Authors */}
+          <div className="mt-2.5 flex items-center gap-2 text-[16px] text-muted-foreground">
             <User className="h-4 w-4 shrink-0" />
-            <span className="font-medium text-[16px] text-muted-foreground/70">Authors:</span>
-            <span className="text-[16px]">{paper.authors.length > 0 ? paper.authors.join(', ') : 'Unknown'}</span>
+            <span className="font-medium text-muted-foreground/70">Authors:</span>
+            <span>{paper.authors.length > 0 ? paper.authors.join(', ') : 'Unknown'}</span>
           </div>
 
           {/* Metadata row */}
@@ -746,22 +822,25 @@ function PaperCard({
             </span>
           </div>
 
-          {/* Abstract with Read more toggle */}
+          {/* Abstract */}
           {paper.abstract && <AbstractText text={paper.abstract} />}
 
-          {/* Tags — as Badge components */}
+          {/* Tags */}
           {paper.keywords.length > 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <Tag className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+              <Tag className="h-4 w-4 shrink-0 text-kain-green/60" />
               {paper.keywords.map((kw) => (
-                <Badge key={kw} variant="secondary" className="text-[13px] font-normal">
+                <Badge
+                  key={kw}
+                  className="bg-kain-green-light text-kain-green border-0 text-[13px] font-normal hover:bg-kain-green-light/80"
+                >
                   {kw}
                 </Badge>
               ))}
             </div>
           )}
 
-          {/* Uploaded by — with profile picture and clickable names */}
+          {/* Uploaded by */}
           {paper.uploadedBy && (
             <div className="mt-3.5 flex items-center gap-2.5 text-[16px] text-muted-foreground/80">
               <span className="text-muted-foreground/60">Uploaded by</span>
@@ -800,7 +879,7 @@ function PaperCard({
 
         <Separator className="my-3.5" />
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Button variant="outline" size="default" className="gap-2 text-[16px]" onClick={onDownload}>
             <Download className="h-4 w-4" />
             Download PDF
@@ -830,7 +909,7 @@ function PaperCard({
             <Button
               variant={isSaved ? 'default' : 'ghost'}
               size="default"
-              className="gap-2 text-[16px]"
+              className={`gap-2 text-[16px] ${isSaved ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
               onClick={onToggleSave}
             >
               {isSaved ? (
@@ -872,11 +951,14 @@ function SearchPaperCard({
   linkCopied: boolean;
 }) {
   return (
-    <Card className="border-border/60 bg-card shadow-sm transition-shadow hover:shadow-md">
+    <Card className="rounded-xl border-border/60 bg-card card-shadow transition-shadow hover:shadow-md">
       <CardContent className="p-6">
         <div className="flex-1 min-w-0">
           {/* Title — with highlight if available */}
-          <h3 className="text-[20px] font-semibold leading-snug text-foreground">
+          <h3
+            className="text-[20px] font-semibold leading-snug text-foreground"
+            style={{ fontFamily: 'var(--font-heading)' }}
+          >
             {hit.highlight?.title ? (
               <span className="search-highlight" dangerouslySetInnerHTML={{ __html: hit.highlight.title[0] }} />
             ) : (
@@ -886,10 +968,10 @@ function SearchPaperCard({
 
           {/* Authors */}
           {hit.authors && hit.authors.length > 0 && (
-            <div className="mt-2.5 flex items-center gap-2 text-[18px] text-muted-foreground">
+            <div className="mt-2.5 flex items-center gap-2 text-[16px] text-muted-foreground">
               <User className="h-4 w-4 shrink-0" />
-              <span className="font-medium text-[16px] text-muted-foreground/70">Authors:</span>
-              <span className="text-[16px]">
+              <span className="font-medium text-muted-foreground/70">Authors:</span>
+              <span>
                 {hit.highlight?.authors
                   ? <span className="search-highlight" dangerouslySetInnerHTML={{ __html: hit.highlight.authors.join(', ') }} />
                   : hit.authors.join(', ')}
@@ -936,17 +1018,20 @@ function SearchPaperCard({
             )}
           </div>
 
-          {/* Abstract with Read more toggle */}
+          {/* Abstract */}
           {hit.abstract && (
             <AbstractText text={hit.abstract} highlight={hit.highlight?.abstract} />
           )}
 
-          {/* Tags — as Badge components */}
+          {/* Tags */}
           {hit.keywords && hit.keywords.length > 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <Tag className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+              <Tag className="h-4 w-4 shrink-0 text-kain-green/60" />
               {hit.keywords.map((kw) => (
-                <Badge key={kw} variant="secondary" className="text-[13px] font-normal">
+                <Badge
+                  key={kw}
+                  className="bg-kain-green-light text-kain-green border-0 text-[13px] font-normal hover:bg-kain-green-light/80"
+                >
                   {kw}
                 </Badge>
               ))}
@@ -956,7 +1041,7 @@ function SearchPaperCard({
 
         <Separator className="my-3.5" />
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Button variant="outline" size="default" className="gap-2 text-[16px]" onClick={onDownload}>
             <Download className="h-4 w-4" />
             Download PDF
@@ -985,7 +1070,7 @@ function SearchPaperCard({
             <Button
               variant={isSaved ? 'default' : 'ghost'}
               size="default"
-              className="gap-2 text-[16px]"
+              className={`gap-2 text-[16px] ${isSaved ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
               onClick={onToggleSave}
             >
               {isSaved ? (

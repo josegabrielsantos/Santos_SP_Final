@@ -38,9 +38,12 @@ import {
 import Link from 'next/link';
 import { useToggleLike, useTogglePostDislike, useVotePoll, useReportPost, useClosePoll, useDeletePost } from '@/lib/api/posts';
 import { useAppSelector } from '@/store/hooks';
+import { useViewTracking } from '@/hooks/useViewTracking';
 import type { Post } from '@/lib/types';
 import { formatDistanceToNow, format } from 'date-fns';
 import { MediaGallery } from './media-gallery';
+import { motion } from 'framer-motion';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // ─── Tag color system ──────────────────────────────────────────
 
@@ -294,6 +297,8 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
 
   const postUrl = `/posts/${post._id}`;
 
+  const viewRef = useViewTracking(post._id, post.tags ?? [], !!userId);
+
   const navigateToPost = () => router.push(postUrl);
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -335,7 +340,11 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
       : null;
 
     return (
-      <div
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        ref={viewRef}
         onClick={handleCardClick}
         className="cursor-pointer overflow-hidden rounded-xl bg-card card-shadow transition-shadow hover:card-shadow-hover"
       >
@@ -578,13 +587,17 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   // ─── Normal Post Card ────────────────────────────────────────
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      ref={viewRef}
       onClick={handleCardClick}
       className="cursor-pointer overflow-hidden rounded-xl bg-card card-shadow transition-shadow hover:card-shadow-hover"
     >
@@ -932,6 +945,27 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
             Comment
           </button>
         </div>
+      </div>
+    </motion.div>
+  );
+}
+
+export function PostCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-xl bg-white card-shadow p-5">
+      <div className="flex items-center gap-3 mb-4">
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <div className="flex-1">
+          <Skeleton className="h-4 w-32 mb-1.5" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+      </div>
+      <Skeleton className="h-5 w-3/4 mb-2" />
+      <Skeleton className="h-4 w-full mb-1.5" />
+      <Skeleton className="h-4 w-2/3 mb-4" />
+      <div className="flex gap-2">
+        <Skeleton className="h-6 w-16 rounded-full" />
+        <Skeleton className="h-6 w-20 rounded-full" />
       </div>
     </div>
   );

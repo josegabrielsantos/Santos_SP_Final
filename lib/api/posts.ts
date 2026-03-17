@@ -231,6 +231,7 @@ export function useToggleLike() {
     },
     onSettled: (_data, _err, postId) => {
       qc.invalidateQueries({ queryKey: ['posts', postId] });
+      qc.invalidateQueries({ queryKey: ['posts', 'recommended'] });
     },
   });
 }
@@ -324,6 +325,22 @@ export function useClosePoll() {
       qc.invalidateQueries({ queryKey: ['posts', postId] });
       qc.invalidateQueries({ queryKey: ['posts'] });
     },
+  });
+}
+
+// ─── Recommended posts (For You feed) ──────────────────────────
+
+export function useRecommendedPosts(enabled = true) {
+  return useQuery<{ posts: Post[]; isPersonalized: boolean }>({
+    queryKey: ['posts', 'recommended'],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get('/recommendations/posts');
+      return data;
+    },
+    staleTime: 10 * 60 * 1000,   // 10 min — matches backend cache TTL
+    gcTime: 15 * 60 * 1000,       // keep in memory 15 min after unmount
+    refetchOnWindowFocus: false,   // switching tabs shouldn't re-fetch the feed
+    enabled,
   });
 }
 

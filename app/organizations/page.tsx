@@ -2,14 +2,36 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, Users, FileText, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Search, Users, FileText } from 'lucide-react';
 import { useOrganizations } from '@/lib/api/organizations';
+
+function OrgCardSkeleton() {
+  return (
+    <div className="card-shadow rounded-xl overflow-hidden bg-white">
+      <div className="h-1 bg-border/40" />
+      <div className="p-5 flex items-start gap-3.5">
+        <Skeleton className="h-12 w-12 rounded-full shrink-0" />
+        <div className="flex-1 flex flex-col gap-2">
+          <Skeleton className="h-4 w-3/4 rounded" />
+          <Skeleton className="h-3 w-full rounded" />
+          <Skeleton className="h-3 w-2/3 rounded" />
+          <div className="mt-2 flex gap-4">
+            <Skeleton className="h-3 w-20 rounded" />
+            <Skeleton className="h-3 w-16 rounded" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function OrganizationsPage() {
   const [search, setSearch] = useState('');
@@ -27,9 +49,14 @@ export default function OrganizationsPage() {
         <main className="flex flex-1 justify-center">
           <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
             {/* Header */}
-            <div className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <motion.div
+              className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+            >
               <div>
-                <h1 className="text-[28px] font-bold tracking-tight text-foreground">
+                <h1 className="font-heading text-[28px] font-bold tracking-tight text-foreground">
                   Organizations
                 </h1>
                 <p className="mt-1.5 text-[16px] text-muted-foreground">
@@ -48,11 +75,14 @@ export default function OrganizationsPage() {
                   }}
                 />
               </div>
-            </div>
+            </motion.div>
 
+            {/* Loading skeletons */}
             {isLoading && (
-              <div className="flex justify-center py-14">
-                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              <div className="grid gap-5 sm:grid-cols-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <OrgCardSkeleton key={i} />
+                ))}
               </div>
             )}
 
@@ -63,51 +93,70 @@ export default function OrganizationsPage() {
             )}
 
             {/* Org grid */}
-            <div className="grid gap-5 sm:grid-cols-2">
-              {data?.organizations.map((org) => {
-                const orgInitials = org.name
-                  .split(/[\s()]+/)
-                  .filter(Boolean)
-                  .map((w) => w[0])
-                  .join('')
-                  .slice(0, 2)
-                  .toUpperCase();
+            <AnimatePresence>
+              {!isLoading && data && (
+                <div className="grid gap-5 sm:grid-cols-2">
+                  {data.organizations.map((org, index) => {
+                    const orgInitials = org.name
+                      .split(/[\s()]+/)
+                      .filter(Boolean)
+                      .map((w) => w[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase();
 
-                return (
-                  <Card key={org._id} className="group cursor-pointer overflow-hidden border-border/60 bg-white shadow-sm transition-shadow hover:shadow-md" onClick={() => router.push(`/organizations/${org.slug}`)}>
-                    <div className="h-1 bg-gradient-to-r from-primary/40 to-primary/10" />
-                    <CardContent className="p-5">
-                      <div className="flex items-start gap-3.5">
-                        <Avatar size="lg" className="shrink-0">
-                          <AvatarImage src={org.avatar ?? undefined} alt={org.name} />
-                          <AvatarFallback className="bg-primary/10 text-[16px] font-bold text-primary">
-                            {orgInitials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col gap-1.5 min-w-0">
-                          <h3 className="text-[16px] font-semibold leading-snug text-foreground line-clamp-2">
-                            {org.name}
-                          </h3>
-                          <p className="text-[14px] leading-relaxed text-muted-foreground line-clamp-2">
-                            {org.description}
-                          </p>
-                          <div className="mt-2.5 flex items-center gap-3.5">
-                            <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
-                              <Users className="h-3.5 w-3.5" />
-                              {org.memberCount} members
-                            </span>
-                            <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
-                              <FileText className="h-3.5 w-3.5" />
-                              {org.postCount} posts
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                    return (
+                      <motion.div
+                        key={org._id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.04, duration: 0.22 }}
+                      >
+                        <Card
+                          className="group cursor-pointer overflow-hidden rounded-xl border-border/60 bg-white card-shadow transition-shadow hover:card-shadow-hover"
+                          onClick={() => router.push(`/organizations/${org.slug}`)}
+                        >
+                          <div className="h-1 bg-gradient-to-r from-primary/40 to-primary/10" />
+                          <CardContent className="p-5">
+                            <div className="flex items-start gap-3.5">
+                              <Avatar size="lg" className="shrink-0">
+                                <AvatarImage src={org.avatar ?? undefined} alt={org.name} />
+                                <AvatarFallback className="bg-primary/10 text-[16px] font-bold text-primary">
+                                  {orgInitials}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col gap-1.5 min-w-0">
+                                <h3 className="font-heading text-[16px] font-semibold leading-snug text-foreground line-clamp-2">
+                                  {org.name}
+                                </h3>
+                                {org.category && (
+                                  <span className="inline-flex w-fit items-center rounded-full bg-kain-green-light px-2.5 py-0.5 text-[12px] font-medium text-kain-green">
+                                    {org.category}
+                                  </span>
+                                )}
+                                <p className="text-[14px] leading-relaxed text-muted-foreground line-clamp-2">
+                                  {org.description}
+                                </p>
+                                <div className="mt-2.5 flex items-center gap-3.5">
+                                  <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
+                                    <Users className="h-3.5 w-3.5" />
+                                    {org.memberCount} members
+                                  </span>
+                                  <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
+                                    <FileText className="h-3.5 w-3.5" />
+                                    {org.postCount} posts
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </AnimatePresence>
 
             {data && data.organizations.length === 0 && !isLoading && (
               <p className="py-14 text-center text-[16px] text-muted-foreground">
