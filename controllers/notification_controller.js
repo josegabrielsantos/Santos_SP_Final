@@ -80,4 +80,22 @@ const markAsRead = async (req, res) => {
   }
 };
 
-export { getNotifications, getUnreadCount, markAsRead };
+const getNotificationSummary = async (req, res) => {
+  try {
+    const [unreadCount, notifications] = await Promise.all([
+      Notification.countDocuments({ recipientId: req.user._id, isRead: false }),
+      Notification.find({ recipientId: req.user._id })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate('senderId', 'displayName avatar')
+        .populate('postId', 'title')
+        .populate('organizationId', 'name slug'),
+    ]);
+    res.status(200).json({ unreadCount, notifications });
+  } catch (error) {
+    console.log('Error in getNotificationSummary:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+export { getNotifications, getUnreadCount, markAsRead, getNotificationSummary };

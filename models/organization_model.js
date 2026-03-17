@@ -53,6 +53,19 @@ const organizationSchema = new mongoose.Schema(
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
       default: [],
     },
+    welcomeMessage: {
+      type: String,
+      maxlength: 500,
+      default: null,
+    },
+    pinnedPostIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Post' }],
+      default: [],
+      validate: {
+        validator: (v) => v.length <= 3,
+        message: 'Cannot pin more than 3 posts.',
+      },
+    },
     isActive: {
       type: Boolean,
       required: true,

@@ -111,7 +111,7 @@ const getOrganization = async (req, res) => {
  */
 const updateOrganization = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, welcomeMessage } = req.body;
     let { bannerImage, avatar } = req.body;
 
     const org = await Organization.findById(req.params.id);
@@ -125,6 +125,7 @@ const updateOrganization = async (req, res) => {
     if (description !== undefined) org.description = description;
     if (bannerImage !== undefined) org.bannerImage = bannerImage;
     if (avatar !== undefined) org.avatar = avatar;
+    if (welcomeMessage !== undefined) org.welcomeMessage = welcomeMessage;
 
     await org.save();
     res.status(200).json(org);
@@ -602,6 +603,155 @@ const leaveOrganization = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/organizations/:id/posts/pending
+ * List posts pending approval for this org. Org admin only.
+ */
+const getPendingOrgPosts = async (req, res) => {
+  try {
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+
+    const posts = await Post.find({ organizationId: org._id, status: 'pending' })
+      .sort({ createdAt: -1 })
+      .populate('authorId', 'displayName avatar _id');
+
+    res.status(200).json({ posts });
+  } catch (error) {
+    console.log('Error in getPendingOrgPosts:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * POST /api/organizations/:id/posts/:postId/approve
+ * Approve a pending post. Org admin only.
+ */
+const approveOrgPost = async (req, res) => {
+  try {
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+
+    const post = await Post.findOne({ _id: req.params.postId, organizationId: org._id, status: 'pending' });
+    if (!post) return res.status(404).json({ error: 'Pending post not found.' });
+
+    post.status = 'published';
+    post.publishedAt = new Date();
+    await post.save();
+
+    // Notify the author
+    try {
+      await Notification.create({
+        recipientId: post.authorId,
+        senderId: req.user._id,
+        type: 'post_approved',
+        organizationId: org._id,
+        postId: post._id,
+        message: `Your post "${post.title}" was approved in ${org.name}.`,
+      });
+    } catch (notifErr) {
+      console.log('Error creating approval notification:', notifErr.message);
+    }
+
+    res.status(200).json({ message: 'Post approved.' });
+  } catch (error) {
+    console.log('Error in approveOrgPost:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * POST /api/organizations/:id/posts/:postId/reject
+ * Reject a pending post. Org admin only.
+ */
+const rejectOrgPost = async (req, res) => {
+  try {
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+
+    const post = await Post.findOne({ _id: req.params.postId, organizationId: org._id, status: 'pending' });
+    if (!post) return res.status(404).json({ error: 'Pending post not found.' });
+
+    const { reason } = req.body;
+    post.status = 'hidden';
+    await post.save();
+
+    // Notify the author
+    try {
+      const msg = reason
+        ? `Your post "${post.title}" was rejected in ${org.name}: ${reason}`
+        : `Your post "${post.title}" was rejected in ${org.name}.`;
+      await Notification.create({
+        recipientId: post.authorId,
+        senderId: req.user._id,
+        type: 'post_rejected',
+        organizationId: org._id,
+        postId: post._id,
+        message: msg,
+      });
+    } catch (notifErr) {
+      console.log('Error creating rejection notification:', notifErr.message);
+    }
+
+    res.status(200).json({ message: 'Post rejected.' });
+  } catch (error) {
+    console.log('Error in rejectOrgPost:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+const pinOrgPost = async (req, res) => {
+  try {
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+    const { postId } = req.body;
+    if (!postId) return res.status(400).json({ error: 'postId is required.' });
+
+    const pid = new mongoose.Types.ObjectId(postId);
+    if (org.pinnedPostIds.some((p) => p.equals(pid))) {
+      return res.status(200).json(org); // already pinned
+    }
+    if (org.pinnedPostIds.length >= 3) {
+      return res.status(400).json({ error: 'Cannot pin more than 3 posts.' });
+    }
+    org.pinnedPostIds.push(pid);
+    await org.save();
+    res.status(200).json(org);
+  } catch (error) {
+    console.log('Error in pinOrgPost:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+const unpinOrgPost = async (req, res) => {
+  try {
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+    org.pinnedPostIds = org.pinnedPostIds.filter(
+      (p) => !p.equals(new mongoose.Types.ObjectId(req.params.postId))
+    );
+    await org.save();
+    res.status(200).json(org);
+  } catch (error) {
+    console.log('Error in unpinOrgPost:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+const getOrgPinnedPosts = async (req, res) => {
+  try {
+    const org = await Organization.findById(req.params.id).populate({
+      path: 'pinnedPostIds',
+      populate: { path: 'authorId', select: 'displayName avatar _id' },
+    });
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+    res.status(200).json({ posts: org.pinnedPostIds });
+  } catch (error) {
+    console.log('Error in getOrgPinnedPosts:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
 export {
   createOrganization,
   getOrganizations,
@@ -620,4 +770,10 @@ export {
   approveJoin,
   rejectJoin,
   leaveOrganization,
+  getPendingOrgPosts,
+  approveOrgPost,
+  rejectOrgPost,
+  pinOrgPost,
+  unpinOrgPost,
+  getOrgPinnedPosts,
 };

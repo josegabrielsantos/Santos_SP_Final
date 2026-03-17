@@ -9,6 +9,8 @@ import {
   downloadPaper,
   uploadPaperFile,
   parsePdf,
+  enrichDoi,
+  bulkImportCsv,
 } from '../controllers/paper_controller.js';
 import { protectRoute, optionalAuth } from '../middleware/protectRoute.js';
 
@@ -17,6 +19,8 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 
 router.post('/upload', protectRoute, upload.single('file'), uploadPaperFile);
 router.post('/parse-pdf', protectRoute, parsePdf);
+router.post('/enrich-doi', protectRoute, enrichDoi);
+router.post('/bulk-csv', protectRoute, upload.single('file'), bulkImportCsv);
 router.post('/', protectRoute, createPaper);
 router.get('/', optionalAuth, getPapers);
 router.get('/:id', getPaper);

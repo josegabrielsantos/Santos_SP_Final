@@ -207,8 +207,53 @@ const suggest = async (req, res) => {
       return res.status(400).json({ error: 'Query parameter "q" is required.' });
     }
 
+    if (type === 'all') {
+      const [postsResult, papersResult] = await Promise.all([
+        esClient.search({
+          index: KMS_POSTS_INDEX,
+          body: {
+            size: 5,
+            query: {
+              match_phrase_prefix: { title: { query: q, max_expansions: 10 } },
+            },
+            _source: ['title'],
+          },
+        }),
+        esClient.search({
+          index: KMS_PAPERS_INDEX,
+          body: {
+            size: 5,
+            query: {
+              match_phrase_prefix: { title: { query: q, max_expansions: 10 } },
+            },
+            _source: ['title'],
+          },
+        }),
+      ]);
+
+      const postHits = postsResult.hits.hits.map((hit) => ({
+        _id: hit._id,
+        title: hit._source.title,
+        type: 'post',
+        _score: hit._score,
+      }));
+      const paperHits = papersResult.hits.hits.map((hit) => ({
+        _id: hit._id,
+        title: hit._source.title,
+        type: 'paper',
+        _score: hit._score,
+      }));
+
+      const merged = [...postHits, ...paperHits]
+        .sort((a, b) => b._score - a._score)
+        .slice(0, 5)
+        .map(({ _score, ...rest }) => rest);
+
+      return res.status(200).json(merged);
+    }
+
     const index = type === 'papers' ? KMS_PAPERS_INDEX : KMS_POSTS_INDEX;
-    const field = type === 'papers' ? 'title' : 'title';
+    const resultType = type === 'papers' ? 'paper' : 'post';
 
     const result = await esClient.search({
       index,
@@ -216,7 +261,7 @@ const suggest = async (req, res) => {
         size: 5,
         query: {
           match_phrase_prefix: {
-            [field]: {
+            title: {
               query: q,
               max_expansions: 10,
             },
@@ -229,6 +274,7 @@ const suggest = async (req, res) => {
     const suggestions = result.hits.hits.map((hit) => ({
       _id: hit._id,
       title: hit._source.title,
+      type: resultType,
     }));
 
     res.status(200).json(suggestions);

@@ -368,6 +368,159 @@ const parsePdf = async (req, res) => {
   }
 };
 
+function parseCsv(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  if (lines.length < 1) return { headers: [], rows: [] };
+
+  function parseRow(line) {
+    const fields = [];
+    let i = 0;
+    while (i <= line.length) {
+      if (i === line.length) { fields.push(''); break; }
+      if (line[i] === '"') {
+        i++;
+        let val = '';
+        while (i < line.length) {
+          if (line[i] === '"' && line[i + 1] === '"') { val += '"'; i += 2; }
+          else if (line[i] === '"') { i++; break; }
+          else { val += line[i++]; }
+        }
+        fields.push(val);
+        if (line[i] === ',') i++;
+      } else {
+        let val = '';
+        while (i < line.length && line[i] !== ',') val += line[i++];
+        fields.push(val.trim());
+        if (line[i] === ',') i++;
+      }
+    }
+    return fields;
+  }
+
+  const headers = parseRow(lines[0]).map((h) => h.toLowerCase().trim());
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const values = parseRow(line);
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h] = values[idx] ?? ''; });
+    rows.push(obj);
+  }
+  return { headers, rows };
+}
+
+const bulkImportCsv = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'CSV file is required.' });
+
+    const text = req.file.buffer.toString('utf-8');
+    const { headers, rows } = parseCsv(text);
+
+    if (!headers.includes('title')) {
+      return res.status(400).json({ error: 'CSV must include a "title" column.' });
+    }
+
+    const { organizationId } = req.body;
+
+    if (!organizationId) {
+      return res.status(400).json({ error: 'organizationId is required for bulk CSV import.' });
+    }
+
+    const org = await Organization.findById(organizationId);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+    const uid = req.user._id.toString();
+    const isOrgAdmin =
+      org.ownerId.toString() === uid ||
+      org.adminIds.map(String).includes(uid);
+    if (!isOrgAdmin && req.user.role !== 'website_admin') {
+      return res.status(403).json({ error: 'Only organization admins can bulk import papers.' });
+    }
+
+    let created = 0;
+    const errors = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNum = i + 2;
+      const title = row.title?.trim();
+      if (!title) {
+        errors.push({ row: rowNum, reason: 'Title is required.' });
+        continue;
+      }
+      const authors = row.authors
+        ? row.authors.split(';').map((a) => a.trim()).filter(Boolean)
+        : [];
+      const keywords = row.keywords
+        ? row.keywords.split(';').map((k) => k.trim()).filter(Boolean)
+        : [];
+      const yearRaw = row.year ? parseInt(row.year.trim(), 10) : null;
+      const year = yearRaw && !isNaN(yearRaw) ? yearRaw : null;
+
+      try {
+        const paper = new Paper({
+          title,
+          authors,
+          abstract: row.abstract?.trim() || null,
+          keywords,
+          doi: row.doi?.trim() || null,
+          isbn: row.isbn?.trim() || null,
+          year,
+          journal: row.journal?.trim() || null,
+          uploadedBy: req.user._id,
+          organizationId: organizationId || null,
+          fileUrl: null,
+          isPublished: true,
+        });
+        await paper.save();
+        created++;
+      } catch (err) {
+        errors.push({ row: rowNum, reason: err.message });
+      }
+    }
+
+    res.status(200).json({ created, skipped: errors.length, errors });
+  } catch (error) {
+    console.log('Error in bulkImportCsv:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+const enrichDoi = async (req, res) => {
+  try {
+    const { doi } = req.body;
+    if (!doi?.trim()) return res.status(400).json({ error: 'DOI is required.' });
+
+    const cleanDoi = doi.trim().replace(/^https?:\/\/doi\.org\//i, '');
+    const response = await fetch(`https://api.crossref.org/works/${encodeURIComponent(cleanDoi)}`, {
+      headers: { 'User-Agent': 'UPLB-KAIN/1.0 (mailto:admin@uplb.edu.ph)' },
+    });
+
+    if (!response.ok) {
+      return res.status(404).json({ error: 'DOI not found in CrossRef.' });
+    }
+
+    const json = await response.json();
+    const work = json.message;
+
+    const title = work.title?.[0] ?? null;
+    const authors = (work.author ?? []).map((a) =>
+      [a.given, a.family].filter(Boolean).join(' ')
+    );
+    const abstract = work.abstract
+      ? work.abstract.replace(/<[^>]+>/g, '').trim()
+      : null;
+    const year = work.published?.['date-parts']?.[0]?.[0] ?? null;
+    const journal = work['container-title']?.[0] ?? null;
+    const keywords = (work.subject ?? []).slice(0, 10);
+
+    res.status(200).json({ title, authors, abstract, year, journal, keywords, doi: cleanDoi });
+  } catch (error) {
+    console.log('Error in enrichDoi:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
 export {
   createPaper,
   getPapers,
@@ -377,4 +530,6 @@ export {
   downloadPaper,
   uploadPaperFile,
   parsePdf,
+  enrichDoi,
+  bulkImportCsv,
 };

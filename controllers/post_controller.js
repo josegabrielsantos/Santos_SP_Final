@@ -75,6 +75,10 @@ const createPost = async (req, res) => {
       }
     }
 
+    // Org-scoped posts always enter the approval pipeline regardless of client-supplied status.
+    // Personal posts (no org) use client status, defaulting to 'published'.
+    const resolvedStatus = organizationId ? 'pending' : (status || 'published');
+
     const post = new Post({
       title,
       body: body || null,
@@ -83,7 +87,7 @@ const createPost = async (req, res) => {
       authorId: req.user._id,
       organizationId: organizationId || null,
       type: normalizedType,
-      status: status || 'draft',
+      status: resolvedStatus,
       mediaUrls: mediaUrls || [],
       paperIds: paperIds || [],
       poll: poll || undefined,
@@ -98,7 +102,7 @@ const createPost = async (req, res) => {
             abstract: paperMetadata.abstract || null,
           }
         : null,
-      publishedAt: (status === 'published') ? new Date() : null,
+      publishedAt: (resolvedStatus === 'published') ? new Date() : null,
     });
 
     await post.save();
