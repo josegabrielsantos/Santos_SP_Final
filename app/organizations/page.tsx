@@ -18,7 +18,7 @@ export default function OrganizationsPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="min-h-screen bg-page-bg">
       <AuthenticatedNavbar />
 
       <div className="flex">
@@ -74,12 +74,9 @@ export default function OrganizationsPage() {
                   .toUpperCase();
 
                 return (
-                  <Card
-                    key={org._id}
-                    className="border-border/60 bg-white shadow-sm transition-shadow hover:shadow-md cursor-pointer"
-                    onClick={() => router.push(`/organizations/${org.slug}`)}
-                  >
-                    <CardContent className="p-6">
+                  <Card key={org._id} className="group cursor-pointer overflow-hidden border-border/60 bg-white shadow-sm transition-shadow hover:shadow-md" onClick={() => router.push(`/organizations/${org.slug}`)}>
+                    <div className="h-1 bg-gradient-to-r from-primary/40 to-primary/10" />
+                    <CardContent className="p-5">
                       <div className="flex items-start gap-3.5">
                         <Avatar size="lg" className="shrink-0">
                           <AvatarImage src={org.avatar ?? undefined} alt={org.name} />
@@ -105,11 +102,6 @@ export default function OrganizationsPage() {
                             </span>
                           </div>
                         </div>
-                      </div>
-                      <div className="mt-5">
-                        <Button variant="outline" size="default" className="w-full text-[14px]">
-                          View Organization
-                        </Button>
                       </div>
                     </CardContent>
                   </Card>

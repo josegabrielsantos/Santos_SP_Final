@@ -6,6 +6,7 @@ import type {
   OrgsResponse,
   OrgMembersResponse,
   PostsResponse,
+  Post,
 } from '@/lib/types';
 
 // ─── List organisations ─────────────────────────────────────────
@@ -178,8 +179,9 @@ export function usePromoteAdmin() {
 
   return useMutation({
     mutationFn: async ({ orgId, userId }: { orgId: string; userId: string }) => {
-      const { data } = await axiosInstance.put(
-        `/organizations/${orgId}/admins/${userId}/promote`
+      const { data } = await axiosInstance.post(
+        `/organizations/${orgId}/admins`,
+        { userId }
       );
       return data;
     },
@@ -194,8 +196,139 @@ export function useDemoteAdmin() {
 
   return useMutation({
     mutationFn: async ({ orgId, userId }: { orgId: string; userId: string }) => {
-      const { data } = await axiosInstance.put(
-        `/organizations/${orgId}/admins/${userId}/demote`
+      const { data } = await axiosInstance.delete(
+        `/organizations/${orgId}/admins/${userId}`
+      );
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations'] });
+    },
+  });
+}
+
+// ─── Pending posts (org post approval pipeline) ──────────────────
+
+export function useOrgPendingPosts(orgId: string | undefined) {
+  return useQuery<{ posts: Post[] }>({
+    queryKey: ['organizations', orgId, 'posts', 'pending'],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<{ posts: Post[] }>(
+        `/organizations/${orgId}/posts/pending`
+      );
+      return data;
+    },
+    enabled: !!orgId,
+  });
+}
+
+export function useApprovePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ orgId, postId }: { orgId: string; postId: string }) => {
+      const { data } = await axiosInstance.post(
+        `/organizations/${orgId}/posts/${postId}/approve`
+      );
+      return data;
+    },
+    onSuccess: (_data, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ['organizations', orgId, 'posts', 'pending'] });
+      qc.invalidateQueries({ queryKey: ['organizations', orgId, 'posts'] });
+    },
+  });
+}
+
+export function useRejectPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ orgId, postId, reason }: { orgId: string; postId: string; reason?: string }) => {
+      const { data } = await axiosInstance.post(
+        `/organizations/${orgId}/posts/${postId}/reject`,
+        { reason }
+      );
+      return data;
+    },
+    onSuccess: (_data, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ['organizations', orgId, 'posts', 'pending'] });
+    },
+  });
+}
+
+// ─── Pinned posts ────────────────────────────────────────────────
+
+export function useOrgPinnedPosts(orgId: string | undefined) {
+  return useQuery<{ posts: Post[] }>({
+    queryKey: ['organizations', orgId, 'posts', 'pinned'],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<{ posts: Post[] }>(`/organizations/${orgId}/posts/pinned`);
+      return data;
+    },
+    enabled: !!orgId,
+  });
+}
+
+export function usePinPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ orgId, postId }: { orgId: string; postId: string }) => {
+      const { data } = await axiosInstance.post(`/organizations/${orgId}/posts/pin`, { postId });
+      return data;
+    },
+    onSuccess: (_data, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ['organizations', orgId, 'posts', 'pinned'] });
+    },
+  });
+}
+
+export function useUnpinPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ orgId, postId }: { orgId: string; postId: string }) => {
+      const { data } = await axiosInstance.delete(`/organizations/${orgId}/posts/${postId}/pin`);
+      return data;
+    },
+    onSuccess: (_data, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ['organizations', orgId, 'posts', 'pinned'] });
+    },
+  });
+}
+
+// ─── Update org ─────────────────────────────────────────────────
+
+export function useUpdateOrg() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      orgId,
+      payload,
+    }: {
+      orgId: string;
+      payload: {
+        name?: string;
+        description?: string;
+        avatar?: string | null;
+        bannerImage?: string | null;
+        welcomeMessage?: string | null;
+      };
+    }) => {
+      const { data } = await axiosInstance.put(`/organizations/${orgId}`, payload);
+      return data;
+    },
+    onSuccess: (_data, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ['organizations'] });
+    },
+  });
+}
+
+// ─── Remove member (kick) ────────────────────────────────────────
+
+export function useRemoveMember() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ orgId, userId }: { orgId: string; userId: string }) => {
+      const { data } = await axiosInstance.delete(
+        `/organizations/${orgId}/members/${userId}`
       );
       return data;
     },

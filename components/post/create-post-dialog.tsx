@@ -19,13 +19,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCreatePost, useParsePdf } from '@/lib/api/posts';
+import { useEnrichDoi } from '@/lib/api/papers';
 import { useUploadFile, useDeleteUploadedFile } from '@/lib/api/upload';
-import { useOrganizations } from '@/lib/api/organizations';
 import { useAppSelector } from '@/store/hooks';
+import { useUserOrganizations } from '@/lib/api/users';
 import type { PostType, PaperMetadataInput } from '@/lib/types';
 import {
   Plus,
   X,
+  Clock,
   ImagePlus,
   BarChart3,
   Send,
@@ -93,7 +95,8 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
   const uploadFile = useUploadFile();
   const deleteUploadedFile = useDeleteUploadedFile();
   const parsePdf = useParsePdf();
-  const { data: orgsData } = useOrganizations({ limit: 100 });
+  const enrichDoi = useEnrichDoi();
+  const { data: userOrgs } = useUserOrganizations(user?._id);
 
   const {
     register,
@@ -370,14 +373,16 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
           }
         : null;
 
+    const isOrgPost = values.organizationId && values.organizationId !== 'personal';
+
     await createPost.mutateAsync({
       title: values.title,
       body: bodyJson,
       bodyText,
       tags: cleanTags,
-      organizationId: values.organizationId === 'personal' ? null : values.organizationId,
+      organizationId: isOrgPost ? values.organizationId : null,
       type: values.type,
-      status: 'published',
+      status: isOrgPost ? 'pending' : 'published',
       mediaUrls,
       poll,
       paperMetadata,
@@ -475,7 +480,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
                       {selectedType !== 'research_paper' && (
                         <SelectItem value="personal">Personal</SelectItem>
                       )}
-                      {orgsData?.organizations?.map((org) => (
+                      {userOrgs?.map((org) => (
                         <SelectItem key={org._id} value={org._id}>
                           {org.name}
                         </SelectItem>
@@ -675,12 +680,49 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-[14px] font-medium text-muted-foreground">DOI</Label>
-                    <Input
-                      placeholder="e.g. 10.1000/xyz123"
-                      value={paperDoi}
-                      onChange={(e) => setPaperDoi(e.target.value)}
-                      className="text-[16px]"
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="e.g. 10.1000/xyz123"
+                        value={paperDoi}
+                        onChange={(e) => setPaperDoi(e.target.value)}
+                        className="text-[16px]"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="default"
+                        className="shrink-0 gap-1.5 text-[14px]"
+                        disabled={!paperDoi.trim() || enrichDoi.isPending}
+                        onClick={async () => {
+                          if (!paperDoi.trim()) return;
+                          try {
+                            const data = await enrichDoi.mutateAsync(paperDoi.trim());
+                            if (data.title) setPaperResearchTitle(data.title);
+                            if (data.abstract) setPaperAbstract(data.abstract);
+                            if (data.journal) setPaperJournal(data.journal);
+                            if (data.year) setPaperDatePublished(`${data.year}-01-01`);
+                            if (data.authors?.length) setPaperAuthors(data.authors);
+                            if (data.keywords?.length) {
+                              setTags((prev) => {
+                                const existing = prev.filter((t) => t.trim());
+                                const newKeywords = data.keywords.slice(0, 5);
+                                const merged = [...existing, ...newKeywords].slice(0, 10);
+                                return merged.length > 0 ? merged : [''];
+                              });
+                            }
+                          } catch {
+                            // silently fail
+                          }
+                        }}
+                      >
+                        {enrichDoi.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3.5 w-3.5" />
+                        )}
+                        {enrichDoi.isPending ? 'Fetching…' : 'Fetch from DOI'}
+                      </Button>
+                    </div>
                     <span className="text-[12px] text-muted-foreground/60">Optional — Digital Object Identifier</span>
                   </div>
                   <div className="flex flex-col gap-1">
@@ -925,27 +967,35 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
           <Separator />
 
           {/* Submit */}
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={createPost.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="gap-2"
-              disabled={createPost.isPending}
-            >
-              {createPost.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              Publish
-            </Button>
+          <div className="flex items-center justify-between gap-2">
+            {watch('organizationId') && watch('organizationId') !== 'personal' && (
+              <p className="text-[13px] text-amber-600 flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                Org posts require admin approval before publishing.
+              </p>
+            )}
+            <div className="flex gap-2 ml-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={createPost.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="gap-2"
+                disabled={createPost.isPending}
+              >
+                {createPost.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                {watch('organizationId') && watch('organizationId') !== 'personal' ? 'Submit for Review' : 'Publish'}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

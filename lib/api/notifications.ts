@@ -33,6 +33,20 @@ export function useUnreadNotificationCount() {
   });
 }
 
+// ─── Summary endpoint (unread count + latest notifications) ─────
+
+export function useNotificationSummary() {
+  return useQuery<{ unreadCount: number; notifications: import('@/lib/types').Notification[] }>({
+    queryKey: ['notifications', 'summary'],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get('/notifications/summary');
+      return data;
+    },
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+}
+
 // ─── Mark notifications as read ─────────────────────────────────
 
 export function useMarkNotificationsRead() {

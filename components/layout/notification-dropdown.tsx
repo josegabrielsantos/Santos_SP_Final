@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Bell, MessageCircle, Reply, AtSign, ThumbsUp, UserPlus, Check, X, Building2, Loader2 } from 'lucide-react';
-import { useNotifications, useUnreadNotificationCount, useMarkNotificationsRead } from '@/lib/api/notifications';
+import { useNotifications, useNotificationSummary, useMarkNotificationsRead } from '@/lib/api/notifications';
 import { formatDistanceToNow } from 'date-fns';
 import type { Notification } from '@/lib/types';
 
@@ -57,7 +57,7 @@ function notifIconBg(type: Notification['type']) {
     case 'join_rejected':
       return 'bg-red-100 text-red-600';
     default:
-      return 'bg-gray-100 text-gray-600';
+      return 'bg-muted text-muted-foreground';
   }
 }
 
@@ -65,7 +65,7 @@ export function NotificationDropdown() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { data: unreadData } = useUnreadNotificationCount();
+  const { data: summaryData } = useNotificationSummary();
   const {
     data: notifsPages,
     isLoading,
@@ -75,8 +75,8 @@ export function NotificationDropdown() {
   } = useNotifications();
   const markRead = useMarkNotificationsRead();
 
-  const unreadCount = unreadData?.count ?? 0;
-  const notifications = notifsPages?.pages.flatMap((p) => p.notifications) ?? [];
+  const unreadCount = summaryData?.unreadCount ?? 0;
+  const notifications = notifsPages?.pages.flatMap((p) => p.notifications) ?? summaryData?.notifications ?? [];
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -124,7 +124,7 @@ export function NotificationDropdown() {
       >
         <Bell className="h-[22px] w-[22px]" />
         {unreadCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-bold text-white">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}

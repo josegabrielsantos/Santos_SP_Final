@@ -146,6 +146,33 @@ export function useToggleSavePaper() {
   });
 }
 
+// ─── Get multiple papers by IDs ─────────────────────────────────
+
+export function usePapersByIds(ids: string[]) {
+  return useQuery<Paper[]>({
+    queryKey: ['papers', 'byIds', ids],
+    queryFn: async () => {
+      const results = await Promise.all(
+        ids.map((id) => axiosInstance.get<Paper>(`/papers/${id}`).then((r) => r.data))
+      );
+      return results;
+    },
+    enabled: ids.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// ─── Enrich paper metadata from DOI ─────────────────────────────
+
+export function useEnrichDoi() {
+  return useMutation({
+    mutationFn: async (doi: string) => {
+      const { data } = await axiosInstance.post('/papers/enrich-doi', { doi });
+      return data as { title: string; authors: string[]; abstract: string | null; year: number | null; journal: string | null; keywords: string[]; doi: string };
+    },
+  });
+}
+
 // ─── Get saved papers ───────────────────────────────────────────
 
 export function useSavedPapers(enabled = true) {
@@ -156,5 +183,35 @@ export function useSavedPapers(enabled = true) {
       return data;
     },
     enabled,
+  });
+}
+
+// ─── Bulk import papers from CSV ────────────────────────────────
+
+export function useBulkImportPapers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      file,
+      organizationId,
+    }: {
+      file: File;
+      organizationId?: string;
+    }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (organizationId) formData.append('organizationId', organizationId);
+      const { data } = await axiosInstance.post('/papers/bulk-csv', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return data as {
+        created: number;
+        skipped: number;
+        errors: { row: number; reason: string }[];
+      };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['papers'] });
+    },
   });
 }

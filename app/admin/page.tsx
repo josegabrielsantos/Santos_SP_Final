@@ -62,26 +62,18 @@ export default function AdminDashboardPage() {
         })}
       </div>
 
-      {/* Placeholder for future charts */}
-      <div className="mt-9 grid gap-5 lg:grid-cols-2">
-        <Card className="border-border/60 border-dashed bg-white/50 shadow-none">
-          <CardContent className="flex flex-col items-center justify-center p-14 text-center">
-            <TrendingUp className="mb-3 h-9 w-9 text-muted-foreground/40" />
-            <h3 className="text-[16px] font-semibold text-muted-foreground">User Growth Chart</h3>
-            <p className="mt-1 text-[14px] text-muted-foreground/70">
-              Visualization coming soon — track signups over time
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 border-dashed bg-white/50 shadow-none">
-          <CardContent className="flex flex-col items-center justify-center p-14 text-center">
-            <FileText className="mb-3 h-9 w-9 text-muted-foreground/40" />
-            <h3 className="text-[16px] font-semibold text-muted-foreground">Post Activity Chart</h3>
-            <p className="mt-1 text-[14px] text-muted-foreground/70">
-              Visualization coming soon — track posts & engagement
-            </p>
-          </CardContent>
-        </Card>
+      {/* Analytics shortcut */}
+      <div className="mt-9">
+        <a
+          href="/admin/analytics"
+          className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-6 py-4 text-primary transition-colors hover:bg-primary/10"
+        >
+          <TrendingUp className="h-6 w-6 shrink-0" />
+          <div>
+            <p className="text-[16px] font-semibold">View Analytics Dashboard</p>
+            <p className="text-[14px] text-primary/70">Charts for posts, users, papers, and org activity</p>
+          </div>
+        </a>
       </div>
     </div>
   );

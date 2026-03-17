@@ -102,6 +102,7 @@ export interface OrgSummary {
 export interface Organization extends OrgSummary {
   description?: string | null;
   bannerImage?: string | null;
+  welcomeMessage?: string | null;
   ownerId: UserSummary;
   adminIds: UserSummary[];
   memberIds: UserSummary[];

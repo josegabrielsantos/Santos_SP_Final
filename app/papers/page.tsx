@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -37,11 +39,13 @@ import {
 } from 'lucide-react';
 import { usePapers, useSearchPapers, useDownloadPaper, useToggleSavePaper, useSavedPapers } from '@/lib/api/papers';
 import { useAppSelector } from '@/store/hooks';
+import { CitationButton } from '@/components/paper/citation-button';
 import type { Paper, PaperSearchHit } from '@/lib/types';
 
 export default function PapersPage() {
   const currentUser = useAppSelector((s) => s.auth.user);
   const isLoggedIn = !!currentUser;
+  const searchParams = useSearchParams();
 
   // Filter tab
   const [activeTab, setActiveTab] = useState<'all' | 'my-orgs'>('all');
@@ -76,6 +80,17 @@ export default function PapersPage() {
   const [searchPage, setSearchPage] = useState(1);
   const [downloadError, setDownloadError] = useState('');
   const [copiedPaperId, setCopiedPaperId] = useState('');
+
+  // Pre-populate search from navbar ?q= param
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q && q.trim()) {
+      setSearchQuery(q.trim());
+      setActiveSearchCriteria({ q: q.trim(), sort: 'relevance' });
+      setSearchPage(1);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isSearching = Object.keys(activeSearchCriteria).length > 0;
 
@@ -163,8 +178,8 @@ export default function PapersPage() {
     setPage(1);
   }, []);
 
-  const handleTabChange = useCallback((tab: 'all' | 'my-orgs') => {
-    setActiveTab(tab);
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveTab(tab as 'all' | 'my-orgs');
     setPage(1);
   }, []);
 
@@ -226,7 +241,7 @@ export default function PapersPage() {
     .join(' | ') || 'Advanced criteria';
 
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="min-h-screen bg-page-bg">
       <AuthenticatedNavbar />
 
       <div className="flex">
@@ -285,33 +300,29 @@ export default function PapersPage() {
                 disabled={!isLoggedIn}
               >
                 <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Filters & Advanced Search
+                Filters &amp; Advanced Search
               </Button>
             </div>
 
-            {/* Filtering tabs */}
+            {/* Filtering tabs — shadcn Tabs */}
             {isLoggedIn && (
-              <div className="mb-5 flex gap-1.5 rounded-lg bg-muted/50 p-1.5">
-                <button
-                  onClick={() => handleTabChange('all')}
-                  className={`flex-1 rounded-md px-3.5 py-2 text-[18px] font-medium transition-colors ${
-                    activeTab === 'all'
-                      ? 'bg-white text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  All Research Papers
-                </button>
-                <button
-                  onClick={() => handleTabChange('my-orgs')}
-                  className={`flex-1 rounded-md px-3.5 py-2 text-[18px] font-medium transition-colors ${
-                    activeTab === 'my-orgs'
-                      ? 'bg-white text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  My Organization&apos;s Research Papers
-                </button>
+              <div className="mb-5">
+                <Tabs value={activeTab} onValueChange={handleTabChange}>
+                  <TabsList className="w-full rounded-none border-b border-border/50 bg-transparent p-0">
+                    <TabsTrigger
+                      value="all"
+                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none px-5 py-3 text-[15px] font-medium"
+                    >
+                      All Research Papers
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="my-orgs"
+                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none px-5 py-3 text-[15px] font-medium"
+                    >
+                      My Organization&apos;s Research Papers
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
             )}
 
@@ -625,6 +636,42 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
+// ─── Abstract with "Read more" toggle ───────────────────────────
+
+function AbstractText({ text, highlight }: { text: string; highlight?: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text.length > 200;
+
+  if (highlight && highlight.length > 0) {
+    // When we have highlighted content, always show it (it's already truncated by ES)
+    return (
+      <div className="mt-3">
+        <span className="text-[16px] font-medium text-muted-foreground/70">Abstract: </span>
+        <span className="text-[18px] leading-relaxed text-muted-foreground search-highlight"
+          dangerouslySetInnerHTML={{ __html: highlight.join(' … ') }}
+        />
+      </div>
+    );
+  }
+
+  const displayed = isLong && !expanded ? text.slice(0, 200) + '…' : text;
+
+  return (
+    <div className="mt-3">
+      <span className="text-[16px] font-medium text-muted-foreground/70">Abstract: </span>
+      <span className="text-[18px] leading-relaxed text-muted-foreground">{displayed}</span>
+      {isLong && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="ml-1.5 text-[15px] font-medium text-primary hover:underline"
+        >
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Paper Card (from MongoDB data) ─────────────────────────────
 
 function PaperCard({
@@ -647,7 +694,7 @@ function PaperCard({
   const router = useRouter();
 
   return (
-    <Card className="border-border/60 bg-white shadow-sm transition-shadow hover:shadow-md">
+    <Card className="border-border/60 bg-card shadow-sm transition-shadow hover:shadow-md">
       <CardContent className="p-6">
         <div className="flex-1 min-w-0">
           {/* Title */}
@@ -699,22 +746,18 @@ function PaperCard({
             </span>
           </div>
 
-          {/* Abstract */}
-          {paper.abstract && (
-            <div className="mt-3">
-              <span className="text-[16px] font-medium text-muted-foreground/70">Abstract: </span>
-              <span className="text-[18px] leading-relaxed text-muted-foreground line-clamp-3">
-                {paper.abstract}
-              </span>
-            </div>
-          )}
+          {/* Abstract with Read more toggle */}
+          {paper.abstract && <AbstractText text={paper.abstract} />}
 
-          {/* Tags */}
+          {/* Tags — as Badge components */}
           {paper.keywords.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-baseline gap-1.5 text-[16px] text-muted-foreground">
-              <Tag className="h-4 w-4 shrink-0 mt-0.5" />
-              <span className="font-medium text-muted-foreground/70">Tags:</span>
-              <span>{paper.keywords.join(', ')}</span>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <Tag className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+              {paper.keywords.map((kw) => (
+                <Badge key={kw} variant="secondary" className="text-[13px] font-normal">
+                  {kw}
+                </Badge>
+              ))}
             </div>
           )}
 
@@ -773,6 +816,7 @@ function PaperCard({
               View
             </Button>
           )}
+          <CitationButton paper={paper} />
           <Button
             variant="outline"
             size="default"
@@ -828,13 +872,13 @@ function SearchPaperCard({
   linkCopied: boolean;
 }) {
   return (
-    <Card className="border-border/60 bg-white shadow-sm transition-shadow hover:shadow-md">
+    <Card className="border-border/60 bg-card shadow-sm transition-shadow hover:shadow-md">
       <CardContent className="p-6">
         <div className="flex-1 min-w-0">
           {/* Title — with highlight if available */}
           <h3 className="text-[20px] font-semibold leading-snug text-foreground">
             {hit.highlight?.title ? (
-              <span dangerouslySetInnerHTML={{ __html: hit.highlight.title[0] }} />
+              <span className="search-highlight" dangerouslySetInnerHTML={{ __html: hit.highlight.title[0] }} />
             ) : (
               hit.title
             )}
@@ -847,7 +891,7 @@ function SearchPaperCard({
               <span className="font-medium text-[16px] text-muted-foreground/70">Authors:</span>
               <span className="text-[16px]">
                 {hit.highlight?.authors
-                  ? <span dangerouslySetInnerHTML={{ __html: hit.highlight.authors.join(', ') }} />
+                  ? <span className="search-highlight" dangerouslySetInnerHTML={{ __html: hit.highlight.authors.join(', ') }} />
                   : hit.authors.join(', ')}
               </span>
             </div>
@@ -892,26 +936,20 @@ function SearchPaperCard({
             )}
           </div>
 
-          {/* Abstract */}
+          {/* Abstract with Read more toggle */}
           {hit.abstract && (
-            <div className="mt-3">
-              <span className="text-[16px] font-medium text-muted-foreground/70">Abstract: </span>
-              <span className="text-[18px] leading-relaxed text-muted-foreground line-clamp-3">
-                {hit.highlight?.abstract ? (
-                  <span dangerouslySetInnerHTML={{ __html: hit.highlight.abstract.join(' … ') }} />
-                ) : (
-                  hit.abstract
-                )}
-              </span>
-            </div>
+            <AbstractText text={hit.abstract} highlight={hit.highlight?.abstract} />
           )}
 
-          {/* Tags */}
+          {/* Tags — as Badge components */}
           {hit.keywords && hit.keywords.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-baseline gap-1.5 text-[16px] text-muted-foreground">
-              <Tag className="h-4 w-4 shrink-0 mt-0.5" />
-              <span className="font-medium text-muted-foreground/70">Tags:</span>
-              <span>{hit.keywords.join(', ')}</span>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <Tag className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+              {hit.keywords.map((kw) => (
+                <Badge key={kw} variant="secondary" className="text-[13px] font-normal">
+                  {kw}
+                </Badge>
+              ))}
             </div>
           )}
         </div>

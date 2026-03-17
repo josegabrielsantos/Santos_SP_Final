@@ -84,6 +84,28 @@ export function useToggleUserActive() {
   });
 }
 
+// ─── Admin analytics charts ─────────────────────────────────────
+
+export interface AdminCharts {
+  postsOverTime: { month: string; count: number }[];
+  papersOverTime: { month: string; count: number }[];
+  registrationsOverTime: { month: string; count: number }[];
+  postTypeDistribution: { type: string; count: number }[];
+  topTags: { tag: string; count: number }[];
+  orgsByActivity: { name: string; postCount: number }[];
+}
+
+export function useAdminCharts() {
+  return useQuery<AdminCharts>({
+    queryKey: ['admin', 'charts'],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<AdminCharts>('/admin/analytics');
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 // ─── Create organization (admin) ────────────────────────────────
 
 export function useAdminCreateOrg() {

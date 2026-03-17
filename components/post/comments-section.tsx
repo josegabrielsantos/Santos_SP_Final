@@ -10,6 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import Link from 'next/link';
 import { ThumbsUp, ThumbsDown, Reply, Trash2, Loader2, ChevronDown, ArrowUpDown } from 'lucide-react';
 import {
   useComments,
@@ -49,10 +50,11 @@ function initials(name: string) {
 
 // ─── Main comments section ──────────────────────────────────────
 
-export function CommentsSection({ postId, orgAccessRole = 'member' }: { postId: string; orgAccessRole?: 'member' | 'follower' | 'none' }) {
+export function CommentsSection({ postId, orgAccessRole = 'member', commentCount }: { postId: string; orgAccessRole?: 'member' | 'follower' | 'none'; commentCount?: number }) {
   const [sort, setSort] = useState<CommentSort>('top');
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useComments(postId, sort);
   const createComment = useCreateComment();
+  const user = useAppSelector((s) => s.auth.user);
 
   const allComments = data?.pages.flatMap((p) => p.comments) ?? [];
 
@@ -67,7 +69,9 @@ export function CommentsSection({ postId, orgAccessRole = 'member' }: { postId: 
     <div className="flex flex-col gap-4 px-6 pb-5">
       <Separator />
       <div className="flex items-center justify-between">
-        <h4 className="text-[18px] font-semibold text-foreground">Comments</h4>
+        <h4 className="text-[18px] font-semibold text-foreground">
+          {commentCount !== undefined ? `${commentCount} Comment${commentCount !== 1 ? 's' : ''}` : 'Comments'}
+        </h4>
         <div className="flex items-center gap-1.5">
           <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
           <select
@@ -84,11 +88,21 @@ export function CommentsSection({ postId, orgAccessRole = 'member' }: { postId: 
 
       {/* New comment form */}
       {canComment ? (
-        <CommentEditor
-          placeholder="Write a comment…"
-          onSubmit={handleSubmit}
-          isPending={createComment.isPending}
-        />
+        <div className="flex gap-3">
+          <Avatar className="mt-1 h-8 w-8 shrink-0">
+            <AvatarImage src={user?.avatar ?? undefined} alt={user?.displayName ?? ''} />
+            <AvatarFallback className="bg-primary/10 text-[11px] font-semibold text-primary">
+              {user?.displayName?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() ?? 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <CommentEditor
+              placeholder="Write a comment…"
+              onSubmit={handleSubmit}
+              isPending={createComment.isPending}
+            />
+          </div>
+        </div>
       ) : (
         <p className="text-[16px] text-muted-foreground italic">
           {orgAccessRole === 'follower'
@@ -168,6 +182,8 @@ function CommentItem({
     typeof comment.authorId === 'object' ? comment.authorId.displayName : 'Unknown';
   const authorAvatar =
     typeof comment.authorId === 'object' ? comment.authorId.avatar ?? undefined : undefined;
+  const commentAuthorId =
+    typeof comment.authorId === 'object' ? comment.authorId._id : null;
   const isAuthor = userId && typeof comment.authorId === 'object' && comment.authorId._id === userId;
 
   const timeAgo = formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true });
@@ -222,7 +238,13 @@ function CommentItem({
         <div className="min-w-0 flex-1 flex flex-col gap-1">
           <div className="rounded-lg bg-muted/40 px-3.5 py-2.5 overflow-hidden">
             <div className="flex items-center gap-2">
-              <span className="text-[15px] font-semibold text-foreground">{authorName}</span>
+              {commentAuthorId ? (
+                <Link href={`/profile/${commentAuthorId}`} className="text-[15px] font-semibold text-foreground hover:underline">
+                  {authorName}
+                </Link>
+              ) : (
+                <span className="text-[15px] font-semibold text-foreground">{authorName}</span>
+              )}
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
                   <TooltipTrigger asChild>

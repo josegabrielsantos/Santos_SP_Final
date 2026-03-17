@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
 import { Sidebar } from '@/components/layout/sidebar';
 import { AnnouncementsPanel } from '@/components/home/announcements-panel';
@@ -9,7 +10,9 @@ import { CreatePostDialog } from '@/components/post/create-post-dialog';
 import { usePosts, useFeaturedPosts } from '@/lib/api/posts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ChevronLeft, ChevronRight, Sparkles, Plus } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Loader2, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { useAppSelector } from '@/store/hooks';
 import type { Post } from '@/lib/types';
 
 export default function HomePage() {
@@ -17,6 +20,7 @@ export default function HomePage() {
   const { data, isLoading, isError } = usePosts({ page, limit: 20 });
   const { data: featuredPosts } = useFeaturedPosts();
   const carouselRef = useRef<HTMLDivElement>(null);
+  const user = useAppSelector((s) => s.auth.user);
 
   const scrollCarousel = (dir: 'left' | 'right') => {
     if (!carouselRef.current) return;
@@ -25,7 +29,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="min-h-screen bg-page-bg">
       <AuthenticatedNavbar />
 
       <div className="flex">
@@ -71,12 +75,15 @@ export default function HomePage() {
             {/* Create post trigger */}
             <CreatePostDialog>
               <Card className="cursor-pointer border-border/60 bg-white shadow-sm transition-shadow hover:shadow-md">
-                <CardContent className="flex items-center gap-3.5 p-5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                    <Plus className="h-5 w-5 text-primary" />
-                  </div>
-                  <span className="text-[17px] text-muted-foreground">
-                    What&apos;s on your mind? Create a post…
+                <CardContent className="flex items-center gap-3 p-4">
+                  <Avatar className="h-9 w-9 shrink-0">
+                    <AvatarImage src={user?.avatar ?? undefined} alt={user?.displayName ?? ''} />
+                    <AvatarFallback className="bg-primary/10 text-[12px] font-semibold text-primary">
+                      {user?.displayName?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() ?? 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="flex-1 rounded-full border border-border/60 bg-muted/30 px-4 py-2 text-[15px] text-muted-foreground hover:bg-muted/60 transition-colors">
+                    What&apos;s on your mind?
                   </span>
                 </CardContent>
               </Card>
@@ -140,12 +147,14 @@ export default function HomePage() {
 /* ─── Featured card (small horizontal card) ─────────────────── */
 
 function FeaturedCard({ post }: { post: Post }) {
+  const router = useRouter();
   const authorName =
     typeof post.authorId === 'object' ? post.authorId.displayName : 'Unknown';
+  const postUrl = `/posts/${post._id}`;
 
   return (
-    <Card className="w-[345px] shrink-0 border-border/60 bg-white shadow-sm">
-      <CardContent className="p-4">
+    <Card className="w-[345px] shrink-0 cursor-pointer border-border/60 bg-white shadow-sm" onClick={() => router.push(postUrl)}>
+      <CardContent>
         <h3 className="text-[17px] font-semibold leading-snug text-foreground line-clamp-2">
           {post.title}
         </h3>

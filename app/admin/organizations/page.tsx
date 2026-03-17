@@ -264,7 +264,7 @@ export default function AdminOrganizationsPage() {
           {data?.organizations.map((org) => (
             <div
               key={org._id}
-              className="grid grid-cols-[1fr_120px_120px_100px_60px] items-center gap-4 border-b border-border/30 px-5 py-3 last:border-b-0"
+              className="grid grid-cols-[1fr_120px_120px_100px_60px] items-center gap-4 border-b border-border/30 px-5 py-3 last:border-b-0 transition-colors hover:bg-muted/30"
             >
               {/* Org info */}
               <div className="flex items-center gap-3 min-w-0">

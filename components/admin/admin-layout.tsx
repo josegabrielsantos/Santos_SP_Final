@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAppSelector } from '@/store/hooks';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Users, Building2, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, ArrowLeft, ShieldCheck, BarChart2, MessageSquare } from 'lucide-react';
 import { useEffect } from 'react';
 
 const adminNav = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { label: 'Analytics', href: '/admin/analytics', icon: BarChart2 },
+  { label: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
   { label: 'Users', href: '/admin/users', icon: Users },
   { label: 'Organizations', href: '/admin/organizations', icon: Building2 },
 ];
@@ -30,7 +32,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-muted/20">
+    <div className="flex min-h-screen bg-page-bg">
       {/* Sidebar */}
       <aside className="sticky top-0 flex h-screen w-[250px] shrink-0 flex-col border-r border-border/50 bg-white">
         {/* Header */}
@@ -42,7 +44,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         {/* Nav */}
         <nav className="flex flex-1 flex-col gap-1 p-3">
           {adminNav.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = item.href === '/admin' ? pathname === item.href : pathname.startsWith(item.href);
             const Icon = item.icon;
             return (
               <Link

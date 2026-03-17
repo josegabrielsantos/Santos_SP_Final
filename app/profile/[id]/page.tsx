@@ -17,7 +17,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Loader2,
@@ -55,7 +54,7 @@ export default function ProfilePage() {
 
   if (userLoading) {
     return (
-      <div className="min-h-screen bg-muted/20">
+      <div className="min-h-screen bg-page-bg">
         <AuthenticatedNavbar />
         <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -66,7 +65,7 @@ export default function ProfilePage() {
 
   if (isError || !user) {
     return (
-      <div className="min-h-screen bg-muted/20">
+      <div className="min-h-screen bg-page-bg">
         <AuthenticatedNavbar />
         <div className="flex justify-center py-20">
           <p className="text-muted-foreground">User not found.</p>
@@ -75,8 +74,11 @@ export default function ProfilePage() {
     );
   }
 
+  const postCount = postsData?.total ?? postsData?.posts?.length ?? 0;
+  const orgCount = orgs?.length ?? 0;
+
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="min-h-screen bg-page-bg">
       <AuthenticatedNavbar />
 
       <div className="flex">
@@ -85,81 +87,105 @@ export default function ProfilePage() {
         <main className="flex flex-1 justify-center">
           <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
             {/* Profile header */}
-            <Card className="border-border/60 bg-white shadow-sm">
-              <CardContent className="p-7">
-                <div className="flex items-start gap-6">
-                  <Avatar className="h-[92px] w-[92px] shrink-0 ring-2 ring-primary/10">
+            <Card className="border-border/60 bg-card shadow-sm overflow-hidden">
+              {/* Cover / banner */}
+              <div className="h-32 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent" />
+
+              <CardContent className="px-7 pb-7 pt-0">
+                {/* Avatar — overlapping the banner */}
+                <div className="-mt-12 mb-4 flex items-end justify-between">
+                  <Avatar className="h-[92px] w-[92px] shrink-0 ring-4 ring-card shadow-md">
                     <AvatarImage src={user.avatar ?? undefined} alt={user.displayName} />
                     <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
                       {initials(user.displayName)}
                     </AvatarFallback>
                   </Avatar>
-
-                  <div className="flex flex-1 flex-col gap-1.5">
-                    <div className="flex items-center gap-2.5">
-                      <h1 className="text-[23px] font-bold text-foreground">{user.displayName}</h1>
-                      {user.role === 'website_admin' && (
-                        <Badge variant="default" className="text-[12px]">
-                          Admin
-                        </Badge>
-                      )}
-                    </div>
-
-                    <p className="text-[16px] text-muted-foreground">{user.email}</p>
-
-                    {user.bio && (
-                      <p className="mt-1.5 text-[16px] text-foreground/80">{user.bio}</p>
-                    )}
-
-                    {/* Expertise & certifications */}
-                    <div className="mt-3.5 flex flex-wrap gap-2">
-                      {user.expertise?.map((e) => (
-                        <Badge
-                          key={e}
-                          variant="secondary"
-                          className="text-[12px] font-normal"
-                        >
-                          {e}
-                        </Badge>
-                      ))}
-                      {user.certifications?.map((c) => (
-                        <Badge
-                          key={c}
-                          variant="outline"
-                          className="gap-1.5 text-[12px] font-normal"
-                        >
-                          <Award className="h-3 w-3" />
-                          {c}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    {user.createdAt && (
-                      <p className="mt-2.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
-                        <Calendar className="h-3.5 w-3.5" />
-                        Joined {new Date(user.createdAt).toLocaleDateString('en-US', {
-                          month: 'long',
-                          year: 'numeric',
-                        })}
-                      </p>
-                    )}
-                  </div>
+                  {isOwnProfile && (
+                    <span className="text-[13px] text-muted-foreground">Your profile</span>
+                  )}
                 </div>
+
+                {/* Name + role badge */}
+                <div className="flex items-center gap-2.5">
+                  <h1 className="text-[23px] font-bold text-foreground">{user.displayName}</h1>
+                  {user.role === 'website_admin' && (
+                    <Badge variant="default" className="text-[12px]">
+                      Admin
+                    </Badge>
+                  )}
+                </div>
+
+                <p className="text-[16px] text-muted-foreground">{user.email}</p>
+
+                {user.bio && (
+                  <p className="mt-1.5 text-[16px] text-foreground/80">{user.bio}</p>
+                )}
+
+                {/* Stats row */}
+                <div className="mt-3 flex items-center gap-1 text-[14px] text-muted-foreground">
+                  <span className="font-semibold text-foreground">{postCount}</span>
+                  <span>Post{postCount !== 1 ? 's' : ''}</span>
+                  <span className="mx-2 text-border">|</span>
+                  <span className="font-semibold text-foreground">{orgCount}</span>
+                  <span>Organization{orgCount !== 1 ? 's' : ''}</span>
+                </div>
+
+                {/* Expertise & certifications */}
+                <div className="mt-3.5 flex flex-wrap gap-2">
+                  {user.expertise?.map((e) => (
+                    <Badge
+                      key={e}
+                      variant="secondary"
+                      className="text-[12px] font-normal"
+                    >
+                      {e}
+                    </Badge>
+                  ))}
+                  {user.certifications?.map((c) => (
+                    <Badge
+                      key={c}
+                      variant="outline"
+                      className="gap-1.5 text-[12px] font-normal"
+                    >
+                      <Award className="h-3 w-3" />
+                      {c}
+                    </Badge>
+                  ))}
+                </div>
+
+                {user.createdAt && (
+                  <p className="mt-2.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Joined {new Date(user.createdAt).toLocaleDateString('en-US', {
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </p>
+                )}
               </CardContent>
             </Card>
 
             {/* Tabs: Posts, Organizations, Following */}
             <Tabs defaultValue="posts" className="mt-5">
-              <TabsList>
-                <TabsTrigger value="posts" className="gap-2">
+              <TabsList className="w-full rounded-none border-b border-border/50 bg-transparent p-0">
+                <TabsTrigger
+                  value="posts"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none px-5 py-3 text-[15px] font-medium gap-2"
+                >
                   <FileText className="h-4 w-4" />
                   Posts
                 </TabsTrigger>
-                <TabsTrigger value="organizations" className="gap-2">
+                <TabsTrigger
+                  value="organizations"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none px-5 py-3 text-[15px] font-medium gap-2"
+                >
                   <Building2 className="h-4 w-4" />
                   Organizations
                 </TabsTrigger>
-                <TabsTrigger value="following" className="gap-2">
+                <TabsTrigger
+                  value="following"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none px-5 py-3 text-[15px] font-medium gap-2"
+                >
                   <Heart className="h-4 w-4" />
                   Following
                 </TabsTrigger>
@@ -210,7 +236,7 @@ export default function ProfilePage() {
 
               {/* Organizations tab */}
               <TabsContent value="organizations" className="mt-5">
-                <Card className="border-border/60 bg-white shadow-sm">
+                <Card className="border-border/60 bg-card shadow-sm">
                   <CardContent className="p-6">
                     <h3 className="mb-3.5 text-[14px] font-semibold uppercase text-muted-foreground">
                       Member of ({orgs?.length ?? 0})
@@ -232,7 +258,7 @@ export default function ProfilePage() {
 
               {/* Following tab */}
               <TabsContent value="following" className="mt-5">
-                <Card className="border-border/60 bg-white shadow-sm">
+                <Card className="border-border/60 bg-card shadow-sm">
                   <CardContent className="p-6">
                     <h3 className="mb-3.5 text-[14px] font-semibold uppercase text-muted-foreground">
                       Following ({followed?.length ?? 0})

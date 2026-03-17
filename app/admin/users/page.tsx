@@ -88,7 +88,7 @@ export default function AdminUsersPage() {
             return (
               <div
                 key={user._id}
-                className="grid grid-cols-[1fr_200px_100px_100px_60px] items-center gap-4 border-b border-border/30 px-5 py-3 last:border-b-0"
+                className="grid grid-cols-[1fr_200px_100px_100px_60px] items-center gap-4 border-b border-border/30 px-5 py-3 last:border-b-0 transition-colors hover:bg-muted/30"
               >
                 {/* User info */}
                 <div className="flex items-center gap-3 min-w-0">

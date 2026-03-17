@@ -19,7 +19,32 @@ import {
   useDemoteAdmin,
   useFollowOrg,
   useUnfollowOrg,
+  useRemoveMember,
+  useOrgPendingPosts,
+  useApprovePost,
+  useRejectPost,
+  useOrgPinnedPosts,
+  usePinPost,
+  useUnpinPost,
 } from '@/lib/api/organizations';
+import { useOrgAnalytics } from '@/lib/api/analytics';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useAppSelector } from '@/store/hooks';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +59,7 @@ import {
   Plus,
   LogOut,
   UserPlus,
+  UserMinus,
   ShieldCheck,
   ShieldMinus,
   Check,
@@ -42,7 +68,14 @@ import {
   Heart,
   HeartOff,
   Image as ImageIcon,
+  Inbox,
+  BarChart2,
+  Settings,
+  Pin,
+  PinOff,
+  UploadCloud,
 } from 'lucide-react';
+import { BulkImportDialog } from '@/components/paper/bulk-import-dialog';
 import type { UserSummary } from '@/lib/types';
 
 function initials(name: string) {
@@ -76,12 +109,27 @@ export default function OrgDetailPage() {
   const demoteAdmin = useDemoteAdmin();
   const followOrg = useFollowOrg();
   const unfollowOrg = useUnfollowOrg();
+  const removeMember = useRemoveMember();
+  const approvePost = useApprovePost();
+  const rejectPost = useRejectPost();
 
+  const { data: pendingPostsData } = useOrgPendingPosts(orgId);
+  const pendingCount = pendingPostsData?.posts.length ?? 0;
+  const { data: orgAnalytics } = useOrgAnalytics(orgId);
+  const { data: pinnedPostsData } = useOrgPinnedPosts(orgId);
+  const pinPost = usePinPost();
+  const unpinPost = useUnpinPost();
+
+  const [descExpanded, setDescExpanded] = useState(false);
   const [expandedComments, setExpandedComments] = useState<string | null>(null);
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [kickTarget, setKickTarget] = useState<{ _id: string; displayName: string } | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{ postId: string; title: string } | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   if (orgLoading) {
     return (
-      <div className="min-h-screen bg-muted/20">
+      <div className="min-h-screen bg-page-bg">
         <AuthenticatedNavbar />
         <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -92,7 +140,7 @@ export default function OrgDetailPage() {
 
   if (!org) {
     return (
-      <div className="min-h-screen bg-muted/20">
+      <div className="min-h-screen bg-page-bg">
         <AuthenticatedNavbar />
         <div className="flex justify-center py-20">
           <p className="text-muted-foreground">Organization not found.</p>
@@ -115,7 +163,7 @@ export default function OrgDetailPage() {
     canPost ? 'member' : isFollower ? 'follower' : 'none';
 
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="min-h-screen bg-page-bg">
       <AuthenticatedNavbar />
 
       <div className="flex">
@@ -155,9 +203,24 @@ export default function OrgDetailPage() {
                 <div className="mt-10 flex items-start justify-between">
                   <div className="flex flex-1 flex-col gap-1">
                     <h1 className="text-[23px] font-bold text-foreground">{org.name}</h1>
-                    {org.description && (
-                      <p className="text-[16px] text-muted-foreground">{org.description}</p>
-                    )}
+                    {org.description && (() => {
+                      const isLong = org.description!.length > 160;
+                      return (
+                        <div>
+                          <p className="text-[16px] text-muted-foreground">
+                            {isLong && !descExpanded ? org.description!.slice(0, 160) + '…' : org.description}
+                          </p>
+                          {isLong && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDescExpanded(!descExpanded); }}
+                              className="mt-0.5 text-[14px] font-medium text-primary hover:underline"
+                            >
+                              {descExpanded ? 'Show less' : 'Read more'}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="mt-2.5 flex items-center gap-5">
                       <span className="flex items-center gap-1.5 text-[14px] text-muted-foreground">
                         <Users className="h-3.5 w-3.5" /> {org.memberCount} members
@@ -169,10 +232,38 @@ export default function OrgDetailPage() {
                         <Heart className="h-3.5 w-3.5" /> {members?.followerCount ?? org.followerIds?.length ?? 0} followers
                       </span>
                     </div>
+                    {org.welcomeMessage && (
+                      <div className="mt-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-3 text-[15px] text-foreground/80 italic">
+                        {org.welcomeMessage}
+                      </div>
+                    )}
                   </div>
 
                   {/* Action buttons */}
                   <div className="flex shrink-0 items-center gap-2">
+                    {/* Settings button (owner/admin only) */}
+                    {canManage && (
+                      <Link href={`/organizations/${slug}/settings`}>
+                        <Button variant="outline" size="sm" className="gap-2 text-[14px]">
+                          <Settings className="h-4 w-4" />
+                          Settings
+                        </Button>
+                      </Link>
+                    )}
+
+                    {/* Import CSV button (owner/admin only) */}
+                    {canManage && orgId && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 text-[14px]"
+                        onClick={() => setShowBulkImport(true)}
+                      >
+                        <UploadCloud className="h-4 w-4" />
+                        Import CSV
+                      </Button>
+                    )}
+
                     {/* Follow/Unfollow button (non-members can follow) */}
                     {userId && !isOwner && !isAdmin && !isMember && (
                       isFollower ? (
@@ -243,13 +334,137 @@ export default function OrgDetailPage() {
               </CardContent>
             </Card>
 
+            {/* Kick member confirmation dialog */}
+            <Dialog open={!!kickTarget} onOpenChange={(open) => { if (!open) setKickTarget(null); }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Remove Member</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to remove{' '}
+                    <span className="font-semibold text-foreground">{kickTarget?.displayName}</span>{' '}
+                    from this organization? This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => setKickTarget(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    disabled={removeMember.isPending}
+                    onClick={() => {
+                      if (orgId && kickTarget) {
+                        removeMember.mutate(
+                          { orgId, userId: kickTarget._id },
+                          { onSuccess: () => setKickTarget(null) }
+                        );
+                      }
+                    }}
+                  >
+                    {removeMember.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <UserMinus className="h-4 w-4" />
+                    )}
+                    Remove Member
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Reject post confirmation dialog */}
+            <Dialog open={!!rejectTarget} onOpenChange={(open) => { if (!open) { setRejectTarget(null); setRejectReason(''); } }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Reject Post</DialogTitle>
+                  <DialogDescription>
+                    Reject <span className="font-semibold text-foreground">&ldquo;{rejectTarget?.title}&rdquo;</span>? Optionally provide a reason that will be sent to the author.
+                  </DialogDescription>
+                </DialogHeader>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Reason for rejection (optional)…"
+                  rows={3}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                />
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => { setRejectTarget(null); setRejectReason(''); }}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    disabled={rejectPost.isPending}
+                    onClick={() => {
+                      if (orgId && rejectTarget) {
+                        rejectPost.mutate(
+                          { orgId, postId: rejectTarget.postId, reason: rejectReason || undefined },
+                          { onSuccess: () => { setRejectTarget(null); setRejectReason(''); } }
+                        );
+                      }
+                    }}
+                  >
+                    {rejectPost.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                    Reject Post
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             {/* Tabs */}
             <Tabs defaultValue="posts" className="mt-4">
-              <TabsList>
-                <TabsTrigger value="posts">Posts</TabsTrigger>
-                <TabsTrigger value="members">Members</TabsTrigger>
-                <TabsTrigger value="followers">Followers</TabsTrigger>
-                {canManage && <TabsTrigger value="requests">Join Requests</TabsTrigger>}
+              <TabsList className="w-full justify-start rounded-lg border border-border/60 bg-white p-0 shadow-sm h-auto">
+                <TabsTrigger
+                  value="posts"
+                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                >
+                  <FileText className="h-4 w-4" />
+                  Posts
+                </TabsTrigger>
+                <TabsTrigger
+                  value="members"
+                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                >
+                  <Users className="h-4 w-4" />
+                  Members
+                </TabsTrigger>
+                <TabsTrigger
+                  value="followers"
+                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                >
+                  <Heart className="h-4 w-4" />
+                  Followers
+                </TabsTrigger>
+                {canManage && (
+                  <TabsTrigger
+                    value="requests"
+                    className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  >
+                    <Clock className="h-4 w-4" />
+                    Join Requests
+                  </TabsTrigger>
+                )}
+                {canManage && (
+                  <TabsTrigger
+                    value="pending"
+                    className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  >
+                    <Inbox className="h-4 w-4" />
+                    Pending Posts
+                    {pendingCount > 0 && (
+                      <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[11px] font-bold text-white">
+                        {pendingCount}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                )}
+                <TabsTrigger
+                  value="analytics"
+                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                >
+                  <BarChart2 className="h-4 w-4" />
+                  Analytics
+                </TabsTrigger>
               </TabsList>
 
               {/* Posts tab */}
@@ -269,6 +484,31 @@ export default function OrgDetailPage() {
                   </CreatePostDialog>
                 )}
 
+                {/* Pinned posts */}
+                {pinnedPostsData?.posts && pinnedPostsData.posts.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Pin className="h-3.5 w-3.5" /> Pinned
+                    </h3>
+                    <div className="flex flex-col gap-3">
+                      {pinnedPostsData.posts.map((pinnedPost) => (
+                        <div key={pinnedPost._id} className="relative">
+                          <PostCard post={pinnedPost} orgAccessRole={orgAccessRole} />
+                          {canManage && (
+                            <button
+                              className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                              onClick={() => orgId && unpinPost.mutate({ orgId, postId: pinnedPost._id })}
+                              title="Unpin post"
+                            >
+                              <PinOff className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {postsLoading && (
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -276,8 +516,17 @@ export default function OrgDetailPage() {
                 )}
 
                 {postsData?.posts.map((post) => (
-                  <div key={post._id}>
+                  <div key={post._id} className="relative">
                     <PostCard post={post} orgAccessRole={orgAccessRole} />
+                    {canManage && (
+                      <button
+                        className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        onClick={() => orgId && pinPost.mutate({ orgId, postId: post._id })}
+                        title="Pin post"
+                      >
+                        <Pin className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 ))}
 
@@ -369,17 +618,28 @@ export default function OrgDetailPage() {
                               <div key={m._id} className="flex items-center justify-between">
                                 <MemberRow user={m} />
                                 {canManage && (
-                                  <Button
-                                    variant="ghost"
-                                    size="default"
-                                    className="gap-1.5 text-[14px]"
-                                    onClick={() =>
-                                      orgId && promoteAdmin.mutate({ orgId, userId: m._id })
-                                    }
-                                  >
-                                    <ShieldCheck className="h-4 w-4" />
-                                    Make Admin
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="default"
+                                      className="gap-1.5 text-[14px]"
+                                      onClick={() =>
+                                        orgId && promoteAdmin.mutate({ orgId, userId: m._id })
+                                      }
+                                    >
+                                      <ShieldCheck className="h-4 w-4" />
+                                      Make Admin
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="default"
+                                      className="gap-1.5 text-[14px] text-destructive hover:text-destructive"
+                                      onClick={() => setKickTarget(m)}
+                                    >
+                                      <UserMinus className="h-4 w-4" />
+                                      Kick
+                                    </Button>
+                                  </div>
                                 )}
                               </div>
                             ))}
@@ -455,16 +715,171 @@ export default function OrgDetailPage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-[16px] text-muted-foreground">No pending join requests.</p>
+                        <div className="flex flex-col items-center py-8 text-center">
+                          <Clock className="mb-2 h-8 w-8 text-muted-foreground/30" />
+                          <p className="text-[15px] text-muted-foreground">No pending join requests.</p>
+                        </div>
                       )}
                     </CardContent>
                   </Card>
                 </TabsContent>
               )}
+              {/* Pending posts tab */}
+              {canManage && (
+                <TabsContent value="pending" className="mt-4">
+                  <Card className="border-border/60 bg-white shadow-sm">
+                    <CardContent className="p-6">
+                      {pendingPostsData?.posts && pendingPostsData.posts.length > 0 ? (
+                        <div className="flex flex-col gap-4">
+                          {pendingPostsData.posts.map((post) => {
+                            const authorName = typeof post.authorId === 'object' ? post.authorId.displayName : 'Unknown';
+                            const authorAvatar = typeof post.authorId === 'object' ? post.authorId.avatar ?? undefined : undefined;
+                            const authorProfileId = typeof post.authorId === 'object' ? post.authorId._id : '';
+                            return (
+                              <div key={post._id} className="rounded-lg border border-border/50 bg-muted/20 p-4">
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex items-start gap-3 min-w-0">
+                                    <Avatar className="mt-0.5 h-9 w-9 shrink-0">
+                                      <AvatarImage src={authorAvatar} alt={authorName} />
+                                      <AvatarFallback className="text-[12px]">{initials(authorName)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="min-w-0">
+                                      <Link href={`/profile/${authorProfileId}`} className="text-[15px] font-semibold text-foreground hover:underline">
+                                        {authorName}
+                                      </Link>
+                                      <p className="mt-0.5 text-[17px] font-semibold text-foreground line-clamp-2">{post.title}</p>
+                                      {post.bodyText && (
+                                        <p className="mt-1 text-[14px] text-muted-foreground line-clamp-2">{post.bodyText}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-2">
+                                    <Button
+                                      size="default"
+                                      className="gap-1.5 text-[14px]"
+                                      onClick={() => orgId && approvePost.mutate({ orgId, postId: post._id })}
+                                      disabled={approvePost.isPending}
+                                    >
+                                      <Check className="h-4 w-4" />
+                                      Approve
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="default"
+                                      className="gap-1.5 text-[14px] text-destructive hover:text-destructive"
+                                      onClick={() => setRejectTarget({ postId: post._id, title: post.title })}
+                                    >
+                                      <X className="h-4 w-4" />
+                                      Reject
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center py-8 text-center">
+                          <Inbox className="mb-2 h-8 w-8 text-muted-foreground/30" />
+                          <p className="text-[15px] text-muted-foreground">No posts pending review.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
+
+              {/* Analytics tab */}
+              <TabsContent value="analytics" className="mt-4">
+                {!orgAnalytics ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <Card className="border-border/60 bg-white shadow-sm">
+                      <CardContent className="p-6">
+                        <h3 className="mb-4 text-[15px] font-semibold text-foreground">Posts Over Time (6 months)</h3>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={orgAnalytics.postsOverTime}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <Tooltip />
+                            <Bar dataKey="count" fill="#6366f1" radius={[3, 3, 0, 0]} name="Posts" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-border/60 bg-white shadow-sm">
+                      <CardContent className="p-6">
+                        <h3 className="mb-4 text-[15px] font-semibold text-foreground">Post Type Breakdown</h3>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={orgAnalytics.typeBreakdown} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <YAxis type="category" dataKey="type" width={100} tick={{ fontSize: 12 }} />
+                            <Tooltip />
+                            <Bar dataKey="count" fill="#22c55e" radius={[0, 3, 3, 0]} name="Posts" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-border/60 bg-white shadow-sm">
+                      <CardContent className="p-6">
+                        <h3 className="mb-4 text-[15px] font-semibold text-foreground">Top Tags</h3>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={orgAnalytics.topTags} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <YAxis type="category" dataKey="tag" width={110} tick={{ fontSize: 12 }} />
+                            <Tooltip />
+                            <Bar dataKey="count" fill="#f59e0b" radius={[0, 3, 3, 0]} name="Posts" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-border/60 bg-white shadow-sm">
+                      <CardContent className="p-6">
+                        <h3 className="mb-4 text-[15px] font-semibold text-foreground">Top Posts by Engagement</h3>
+                        <div className="flex flex-col gap-3">
+                          {orgAnalytics.topPosts.length === 0 ? (
+                            <p className="text-[14px] text-muted-foreground">No posts yet.</p>
+                          ) : (
+                            orgAnalytics.topPosts.map((post) => (
+                              <Link
+                                key={post._id}
+                                href={`/posts/${post._id}`}
+                                className="flex items-center justify-between gap-3 rounded-md border border-border/50 px-4 py-3 text-[14px] transition-colors hover:bg-muted/40"
+                              >
+                                <span className="line-clamp-1 font-medium text-foreground">{post.title}</span>
+                                <span className="shrink-0 text-[13px] text-muted-foreground">
+                                  {post.likeCount + post.commentCount} interactions
+                                </span>
+                              </Link>
+                            ))
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </TabsContent>
             </Tabs>
           </div>
         </main>
       </div>
+
+      {canManage && orgId && (
+        <BulkImportDialog
+          open={showBulkImport}
+          onClose={() => setShowBulkImport(false)}
+          orgId={orgId}
+        />
+      )}
     </div>
   );
 }

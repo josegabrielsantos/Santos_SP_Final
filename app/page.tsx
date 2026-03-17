@@ -18,7 +18,6 @@ import {
   FileText,
   TrendingUp,
   ArrowRight,
-  Shield,
   Globe,
 } from 'lucide-react';
 
@@ -189,10 +188,9 @@ export default function LandingPage() {
       <Separator />
 
       {/* ───────── CTA ───────── */}
-      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-          <CardContent className="flex flex-col items-center gap-6 py-14 text-center">
-            <Shield className="h-14 w-14 text-primary" />
+      <section className="bg-gradient-to-br from-primary/8 to-primary/3 py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center gap-6 text-center">
             <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Ready to explore nutrition research?
             </h2>
@@ -211,8 +209,8 @@ export default function LandingPage() {
                 <Link href="/login">Log in</Link>
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </section>
 
       {/* ───────── Footer ───────── */}
@@ -221,6 +219,12 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             <Image src="/uplb_logo.png" alt="UPLB" width={24} height={24} className="rounded-full" />
             <span className="text-[16px] font-medium text-foreground">UPLB KAIN</span>
+          </div>
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[14px] text-muted-foreground sm:justify-start">
+            <Link href="/signup" className="hover:text-foreground transition-colors">Sign up</Link>
+            <Link href="/login" className="hover:text-foreground transition-colors">Log in</Link>
+            <Link href="/papers" className="hover:text-foreground transition-colors">Papers</Link>
+            <Link href="/organizations" className="hover:text-foreground transition-colors">Organizations</Link>
           </div>
           <p className="text-[14px] text-muted-foreground">
             &copy; {new Date().getFullYear()} University of the Philippines Los Baños.
@@ -244,7 +248,7 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <Card className="group border-border/60 bg-white transition-shadow hover:shadow-md">
+    <Card className="group border-border/60 bg-white transition-all hover:shadow-md hover:-translate-y-0.5">
       <CardContent className="flex flex-col gap-3 p-6">
         <div className="flex h-[50px] w-[50px] items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
           {icon}

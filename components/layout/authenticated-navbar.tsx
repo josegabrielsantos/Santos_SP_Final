@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useAppSelector } from '@/store/hooks';
 import { useLogout } from '@/lib/api/auth';
+import { useSuggest } from '@/lib/api/search';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -14,18 +16,37 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, User, Settings, LogOut, ShieldCheck, Bell } from 'lucide-react';
-import { useUnreadNotificationCount, useMarkNotificationsRead } from '@/lib/api/notifications';
+import { Search, User, Settings, LogOut, ShieldCheck, FileText, BookOpen, MessageSquare } from 'lucide-react';
 import { NotificationDropdown } from './notification-dropdown';
+import { SusModal } from '@/components/feedback/sus-modal';
 
 export function AuthenticatedNavbar() {
   const { user } = useAppSelector((s) => s.auth);
   const logoutMutation = useLogout();
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showSus, setShowSus] = useState(false);
+
+  const { data: suggestions } = useSuggest(searchQuery);
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
     router.push('/');
+  };
+
+  const handleSearchSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSuggestionClick = (title: string) => {
+    router.push(`/search?q=${encodeURIComponent(title)}`);
+    setSearchQuery('');
+    setShowSuggestions(false);
   };
 
   const initials = user?.displayName
@@ -36,7 +57,7 @@ export function AuthenticatedNavbar() {
     .toUpperCase() ?? 'U';
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/95 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-white/95 backdrop-blur-md shadow-sm">
       <div className="mx-auto flex h-[68px] max-w-[1400px] items-center gap-4 px-4 lg:px-6">
         {/* Left – Logos */}
         <Link href="/home" className="flex shrink-0 items-center gap-2.5">
@@ -65,9 +86,56 @@ export function AuthenticatedNavbar() {
             <Search className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search posts, papers, organizations…"
+              placeholder="Search papers, posts, organizations…"
               className="h-11 w-full rounded-full border-border/80 bg-muted/40 pl-10 pr-4 text-[16px] placeholder:text-muted-foreground/70 focus-visible:ring-primary/30"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onKeyDown={handleSearchSubmit}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
             />
+            {showSuggestions && searchQuery.length >= 2 && suggestions && suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-border/60 bg-white shadow-lg">
+                {suggestions.slice(0, 5).map((s) => (
+                  <button
+                    key={s._id}
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] hover:bg-muted/50"
+                    onMouseDown={(e) => { e.preventDefault(); handleSuggestionClick(s.title); }}
+                  >
+                    {s.type === 'paper' ? (
+                      <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    )}
+                    <span className="truncate text-foreground">{s.title}</span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-3 border-t border-border/40 px-4 py-2.5 text-left text-[14px] text-muted-foreground hover:bg-muted/50"
+                  onMouseDown={(e) => { e.preventDefault(); handleSuggestionClick(searchQuery); }}
+                >
+                  <Search className="h-4 w-4 shrink-0" />
+                  <span>Search for <span className="font-medium text-foreground">{searchQuery}</span></span>
+                </button>
+              </div>
+            )}
+            {showSuggestions && searchQuery.length >= 2 && (!suggestions || suggestions.length === 0) && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-border/60 bg-white shadow-lg">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[14px] text-muted-foreground hover:bg-muted/50"
+                  onMouseDown={(e) => { e.preventDefault(); handleSuggestionClick(searchQuery); }}
+                >
+                  <Search className="h-4 w-4 shrink-0" />
+                  <span>Search for <span className="font-medium text-foreground">{searchQuery}</span></span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -111,6 +179,11 @@ export function AuthenticatedNavbar() {
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setShowSus(true)} className="cursor-pointer gap-2 text-[15px]">
+              <MessageSquare className="h-[18px] w-[18px]" />
+              Give Feedback
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
               disabled={logoutMutation.isPending}
@@ -123,6 +196,7 @@ export function AuthenticatedNavbar() {
         </DropdownMenu>
         </div>
       </div>
+      <SusModal open={showSus} onClose={() => setShowSus(false)} />
     </header>
   );
 }
