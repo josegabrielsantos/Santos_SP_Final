@@ -18,6 +18,8 @@ import uploadRoutes from './routes/upload_routes.js';
 import notificationRoutes from './routes/notification_routes.js';
 import analyticsRoutes from './routes/analytics_routes.js';
 import feedbackRoutes from './routes/feedback_routes.js';
+import activityRoutes from './routes/activity_routes.js';
+import recommendationRoutes from './routes/recommendation_routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -61,6 +63,8 @@ app.use('/api/upload', uploadLimiter, uploadRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/activity', activityRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
