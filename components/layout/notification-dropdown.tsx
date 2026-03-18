@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Bell, MessageCircle, Reply, AtSign, ThumbsUp, UserPlus, Check, X, Building2, Loader2 } from 'lucide-react';
+import { Bell, MessageCircle, Reply, AtSign, ThumbsUp, UserPlus, Check, X, FileText, Megaphone, Loader2 } from 'lucide-react';
 import { useNotifications, useNotificationSummary, useMarkNotificationsRead } from '@/lib/api/notifications';
 import { formatDistanceToNow } from 'date-fns';
 import type { Notification } from '@/lib/types';
@@ -36,6 +36,12 @@ function notifIcon(type: Notification['type']) {
       return <Check className="h-4 w-4" />;
     case 'join_rejected':
       return <X className="h-4 w-4" />;
+    case 'post_approved':
+      return <FileText className="h-4 w-4" />;
+    case 'post_rejected':
+      return <FileText className="h-4 w-4" />;
+    case 'announcement':
+      return <Megaphone className="h-4 w-4" />;
     default:
       return <Bell className="h-4 w-4" />;
   }
@@ -56,6 +62,12 @@ function notifIconBg(type: Notification['type']) {
       return 'bg-emerald-100 text-emerald-600';
     case 'join_rejected':
       return 'bg-red-100 text-red-600';
+    case 'post_approved':
+      return 'bg-emerald-100 text-emerald-600';
+    case 'post_rejected':
+      return 'bg-red-100 text-red-600';
+    case 'announcement':
+      return 'bg-amber-100 text-amber-600';
     default:
       return 'bg-muted text-muted-foreground';
   }

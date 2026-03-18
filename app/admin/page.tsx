@@ -3,6 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAdminStats } from '@/lib/api/admin';
+import { Button } from '@/components/ui/button';
 import {
   Users,
   FileText,
@@ -10,8 +11,11 @@ import {
   ShieldCheck,
   UserPlus,
   TrendingUp,
+  Megaphone,
+  Plus,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { CreateAnnouncementDialog } from '@/components/announcement/create-announcement-dialog';
 
 /* ─── Loading skeleton for a single stat card ─────────────────── */
 function StatCardSkeleton() {
@@ -82,18 +86,26 @@ export default function AdminDashboardPage() {
     <div className="bg-page-bg min-h-full">
       {/* Page heading */}
       <motion.div
-        className="mb-7"
+        className="mb-7 flex items-start justify-between"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-kain-green mb-1">
-          Admin Panel
-        </p>
-        <h1 className="text-[28px] text-foreground">Dashboard</h1>
-        <p className="mt-1 text-[15px] text-muted-foreground">
-          Overview of the UPLB KAIN platform
-        </p>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-kain-green mb-1">
+            Admin Panel
+          </p>
+          <h1 className="text-[28px] text-foreground">Dashboard</h1>
+          <p className="mt-1 text-[15px] text-muted-foreground">
+            Overview of the UPLB KAIN platform
+          </p>
+        </div>
+        <CreateAnnouncementDialog>
+          <Button className="gap-2 bg-amber-600 text-white hover:bg-amber-700">
+            <Megaphone className="h-4 w-4" />
+            Create Announcement
+          </Button>
+        </CreateAnnouncementDialog>
       </motion.div>
 
       {/* Stats grid — skeletons while loading */}

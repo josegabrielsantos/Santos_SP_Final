@@ -279,7 +279,7 @@ export interface Notification {
   _id: string;
   recipientId: string;
   senderId: NotificationSender;
-  type: 'reply' | 'comment' | 'like' | 'mention' | 'join_request' | 'join_approved' | 'join_rejected';
+  type: 'reply' | 'comment' | 'like' | 'mention' | 'join_request' | 'join_approved' | 'join_rejected' | 'post_approved' | 'post_rejected' | 'announcement';
   postId?: NotificationPost | null;
   commentId?: string | null;
   organizationId?: { _id: string; name: string; slug: string } | null;

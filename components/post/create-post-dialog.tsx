@@ -89,6 +89,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
   const [parsingPdf, setParsingPdf] = useState(false);
   const [paperMetadataLoaded, setPaperMetadataLoaded] = useState(false);
   const [parseError, setParseError] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   const user = useAppSelector((s) => s.auth.user);
   const createPost = useCreatePost();
@@ -165,13 +166,13 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
       // Research paper posts can only have one PDF at a time.
       if (selectedType === 'research_paper') {
         if (selectedPdfFiles.length > 1) {
-          alert('Only one research paper PDF can be uploaded. Please select a single PDF file.');
+          setSubmitError('Only one research paper PDF can be uploaded. Please select a single PDF file.');
           e.target.value = '';
           return;
         }
 
         if (selectedPdfFiles.length === 1 && existingPdfCount > 0) {
-          alert('A research paper PDF is already uploaded. Remove it first before uploading a new one.');
+          setSubmitError('A research paper PDF is already uploaded. Remove it first before uploading a new one.');
           e.target.value = '';
           return;
         }
@@ -186,7 +187,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
           (f) => !f.type.startsWith('image/') && !f.type.startsWith('video/')
         ).length;
         if (currentDocCount + newDocCount > 5) {
-          alert('Maximum 5 document files (PDFs, etc.) allowed per post. Images and videos are unlimited.');
+          setSubmitError('Maximum 5 document files (PDFs, etc.) allowed per post. Images and videos are unlimited.');
           e.target.value = '';
           return;
         }
@@ -343,19 +344,28 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
     // Build paper metadata for research_paper
     const researchAuthors = paperAuthors.map((a) => a.trim()).filter(Boolean);
 
+    // Clear previous submit errors
+    setSubmitError('');
+
     // Enforce organization for research papers
     if (selectedType === 'research_paper') {
       if (!values.organizationId || values.organizationId === 'personal') {
-        alert('Research paper posts must belong to an organization. Please select one.');
+        setSubmitError('Research paper posts must belong to an organization. Please select one.');
         return;
       }
       const researchPdfCount = mediaUrls.filter((u) => /\.pdf$/i.test(u)).length;
       if (researchPdfCount !== 1) {
-        alert('Research paper posts require exactly one PDF file.');
+        setSubmitError('Research paper posts require exactly one PDF file.');
         return;
       }
-      if (!paperResearchTitle.trim() || !paperDatePublished || !paperJournal.trim() || !paperAbstract.trim() || researchAuthors.length === 0) {
-        alert('Research paper posts require research title, publication date, journal, abstract, and at least one author.');
+      const missingFields: string[] = [];
+      if (!paperResearchTitle.trim()) missingFields.push('research title');
+      if (!paperDatePublished) missingFields.push('publication date');
+      if (!paperJournal.trim()) missingFields.push('journal');
+      if (!paperAbstract.trim()) missingFields.push('abstract');
+      if (researchAuthors.length === 0) missingFields.push('at least one author');
+      if (missingFields.length > 0) {
+        setSubmitError(`Missing required fields: ${missingFields.join(', ')}.`);
         return;
       }
     }
@@ -407,6 +417,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
     setParsingPdf(false);
     setPaperMetadataLoaded(false);
     setParseError('');
+    setSubmitError('');
     setOpen(false);
     skipTempCleanupOnCloseRef.current = false;
   };
@@ -966,36 +977,49 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
 
           <Separator />
 
-          {/* Submit */}
-          <div className="flex items-center justify-between gap-2">
-            {watch('organizationId') && watch('organizationId') !== 'personal' && (
-              <p className="text-[13px] text-amber-600 flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                Org posts require admin approval before publishing.
-              </p>
-            )}
-            <div className="flex gap-2 ml-auto">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={createPost.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="gap-2"
-                disabled={createPost.isPending}
-              >
-                {createPost.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-                {watch('organizationId') && watch('organizationId') !== 'personal' ? 'Submit for Review' : 'Publish'}
-              </Button>
+          {/* Inline validation error */}
+          {submitError && (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-[14px] text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{submitError}</span>
             </div>
+          )}
+
+          {/* Org approval notice */}
+          {watch('organizationId') && watch('organizationId') !== 'personal' && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-[14px] text-amber-800">
+              <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <div>
+                <p className="font-medium">This post will be submitted for admin review</p>
+                <p className="mt-0.5 text-[13px] text-amber-600">
+                  Organization posts require approval before they become visible. You will be notified once your post is accepted or rejected.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Submit */}
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={createPost.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="gap-2"
+              disabled={createPost.isPending}
+            >
+              {createPost.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              {watch('organizationId') && watch('organizationId') !== 'personal' ? 'Submit for Review' : 'Publish'}
+            </Button>
           </div>
         </form>
       </DialogContent>

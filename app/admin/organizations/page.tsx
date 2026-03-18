@@ -8,6 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -245,6 +255,7 @@ export default function AdminOrganizationsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [showCreate, setShowCreate] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data, isLoading } = useOrganizations({ page, limit: 20, search: search || undefined });
   const deleteOrg = useAdminDeleteOrg();
@@ -360,11 +371,7 @@ export default function AdminOrganizationsPage() {
                   <DropdownMenuContent align="end" className="w-44">
                     <DropdownMenuItem
                       className="cursor-pointer gap-2 text-destructive focus:text-destructive"
-                      onClick={() => {
-                        if (window.confirm(`Delete "${org.name}"? This cannot be undone.`)) {
-                          deleteOrg.mutate(org._id);
-                        }
-                      }}
+                      onClick={() => setDeleteTarget({ id: org._id, name: org.name })}
                     >
                       <Trash2 className="h-4 w-4" />
                       Delete Organization
@@ -410,6 +417,37 @@ export default function AdminOrganizationsPage() {
 
       {/* Create dialog */}
       {showCreate && <CreateOrgDialog onClose={() => setShowCreate(false)} />}
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete organization?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget && (
+                <>
+                  You are about to delete <strong className="text-foreground">&ldquo;{deleteTarget.name}&rdquo;</strong>.
+                  This will permanently remove the organization, its settings, and all associated data. This action cannot be undone.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteTarget) {
+                  deleteOrg.mutate(deleteTarget.id);
+                  setDeleteTarget(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Organization
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

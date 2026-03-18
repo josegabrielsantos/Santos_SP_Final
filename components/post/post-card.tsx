@@ -45,6 +45,16 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { MediaGallery } from './media-gallery';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 // ─── Tag color system ──────────────────────────────────────────
 
@@ -242,6 +252,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [linkCopied, setLinkCopied] = useState(false);
   const [bodyExpanded, setBodyExpanded] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const authorName =
     typeof post.authorId === 'object' ? post.authorId.displayName : 'Unknown';
@@ -326,15 +337,17 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
         ? format(new Date(post.publishedAt), 'MMMM yyyy')
         : null;
 
-    const bodyText = post.bodyText && !meta?.abstract ? post.bodyText : null;
-    const bodyIsLong = bodyText && bodyText.length > 200;
+    // Always show body text if it exists (user's thoughts on the paper)
+    const bodyText = post.bodyText || null;
+    const bodyIsLong = bodyText && bodyText.length > 300;
     const displayedBody = bodyText
       ? bodyIsLong && !bodyExpanded
-        ? bodyText.slice(0, 200) + '…'
+        ? bodyText.slice(0, 300) + '…'
         : bodyText
       : null;
 
     return (
+    <>
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
@@ -343,7 +356,8 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
         onClick={handleCardClick}
         className="cursor-pointer overflow-hidden rounded-lg border border-border border-l-4 border-l-primary bg-card transition-colors hover:bg-muted/20"
       >
-        <div className="px-4 pt-3 pb-1">
+        {/* ── Post Section: Author's contribution ── */}
+        <div className="px-4 pt-3 pb-3">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -384,7 +398,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
                 {isPostAuthor && (
                   <DropdownMenuItem
                     className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
-                    onClick={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
+                    onClick={() => setShowDeleteConfirm(true)}
                   >
                     <Trash2 className="h-4 w-4" /> Delete post
                   </DropdownMenuItem>
@@ -401,12 +415,79 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
             </DropdownMenu>
           </div>
 
-          {/* Badges row */}
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          {/* Post badge */}
+          <div className="mt-2">
             <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
               <FileText className="h-3 w-3" />
               Research Paper
             </span>
+          </div>
+
+          {/* Post title */}
+          <h3 className="mt-2 text-[18px] font-semibold leading-snug text-foreground">
+            {post.title}
+          </h3>
+
+          {/* Post body (user's thoughts / discussion) */}
+          {displayedBody && (
+            <div className="mt-2">
+              <p className="text-[15px] leading-relaxed text-foreground/80">
+                {displayedBody}
+              </p>
+              {bodyIsLong && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setBodyExpanded((v) => !v); }}
+                  className="mt-1 text-[13px] font-medium text-primary hover:underline"
+                >
+                  {bodyExpanded ? 'Show less' : 'Read more'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Tags */}
+          {post.tags.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {post.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-medium ${getTagColor(tag)}`}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Paper Section: Research paper details ── */}
+        <div className="mx-4 rounded-md border border-border bg-muted/15 p-4 mb-3">
+          <div className="flex items-center gap-1.5 mb-3">
+            <FileText className="h-3.5 w-3.5 text-primary/60" />
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Paper Details</span>
+          </div>
+
+          {/* Paper research title */}
+          {meta?.researchTitle && (
+            <h4 className="text-[16px] font-semibold leading-snug text-foreground">
+              {meta.researchTitle}
+            </h4>
+          )}
+
+          {/* Paper authors */}
+          {meta?.authors && meta.authors.length > 0 && (
+            <div className="mt-1.5">
+              <AuthorsDisplay authors={meta.authors} />
+            </div>
+          )}
+
+          {/* Paper metadata badges row */}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {meta?.journal && (
+              <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 border border-emerald-200/60">
+                {meta.journal}
+              </span>
+            )}
             {dateStr && (
               <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                 {dateStr}
@@ -430,88 +511,45 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
             )}
           </div>
 
-          {/* Title */}
-          <h3 className="mt-2 text-[18px] font-semibold leading-snug text-foreground">
-            {post.title}
-          </h3>
-
-          {/* Authors */}
-          {meta?.authors && meta.authors.length > 0 && (
-            <div className="mt-2">
-              <AuthorsDisplay authors={meta.authors} />
-            </div>
-          )}
-
-          {/* Tags */}
-          {post.tags.length > 0 && (
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {post.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-medium ${getTagColor(tag)}`}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Action buttons: Download, View, Copy Link */}
-          <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
-            {pdfUrls.length > 0 && (
-              <button
-                onClick={handleDownload(pdfUrls[0])}
-                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Download PDF
-              </button>
-            )}
-            {pdfUrls.length > 0 && (
-              <a
-                href={pdfUrls[0]}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted/50"
-              >
-                <Eye className="h-3.5 w-3.5" />
-                View
-              </a>
-            )}
-            <button
-              onClick={handleCopyLink}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted/50"
-            >
-              <Link2 className="h-3.5 w-3.5" />
-              {linkCopied ? 'Copied!' : 'Copy Link'}
-            </button>
-          </div>
-
           {/* Abstract */}
           {meta?.abstract && (
-            <div className="mt-3 rounded-md border border-border bg-muted/20 p-4">
-              <h4 className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Abstract</h4>
+            <div className="mt-3 border-t border-border/60 pt-3">
+              <h5 className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Abstract</h5>
               <p className="text-[14px] leading-relaxed text-foreground/80">{meta.abstract}</p>
             </div>
           )}
+        </div>
 
-          {/* Body text with "Read more" */}
-          {displayedBody && (
-            <div className="mt-2.5">
-              <p className="text-[14px] leading-relaxed text-muted-foreground">
-                {displayedBody}
-              </p>
-              {bodyIsLong && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setBodyExpanded((v) => !v); }}
-                  className="mt-1 text-[13px] font-medium text-primary hover:underline"
-                >
-                  {bodyExpanded ? 'Show less' : 'Read more'}
-                </button>
-              )}
-            </div>
+        {/* Action buttons: Download, View, Copy Link */}
+        <div className="mx-4 flex items-center gap-2 border-t border-border pt-3 pb-1">
+          {pdfUrls.length > 0 && (
+            <button
+              onClick={handleDownload(pdfUrls[0])}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download PDF
+            </button>
           )}
+          {pdfUrls.length > 0 && (
+            <a
+              href={pdfUrls[0]}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted/50"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              View
+            </a>
+          )}
+          <button
+            onClick={handleCopyLink}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted/50"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            {linkCopied ? 'Copied!' : 'Copy Link'}
+          </button>
         </div>
 
         {/* Engagement stats */}
@@ -578,18 +616,31 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
           </div>
         </div>
       </motion.div>
+
+      <DeletePostDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title={post.title}
+        onConfirm={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
+      />
+    </>
     );
   }
 
   // ─── Normal Post Card ────────────────────────────────────────
+  const isAnnouncement = post.type === 'announcement';
+
   return (
+    <>
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15 }}
       ref={viewRef}
       onClick={handleCardClick}
-      className="cursor-pointer overflow-hidden rounded-lg border border-border bg-card transition-colors hover:bg-muted/20"
+      className={`cursor-pointer overflow-hidden rounded-lg border border-border bg-card transition-colors hover:bg-muted/20 ${
+        isAnnouncement ? 'border-l-4 border-l-amber-500' : ''
+      }`}
     >
       {/* Header */}
       <div className="flex items-start justify-between px-4 pt-3">
@@ -906,6 +957,51 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
         </div>
       </div>
     </motion.div>
+
+    <DeletePostDialog
+      open={showDeleteConfirm}
+      onOpenChange={setShowDeleteConfirm}
+      title={post.title}
+      onConfirm={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
+    />
+    </>
+  );
+}
+
+// ─── Delete confirmation dialog ──────────────────────────────────
+
+function DeletePostDialog({
+  open,
+  onOpenChange,
+  title,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  onConfirm: () => Promise<void>;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this post?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You are about to delete <strong className="text-foreground">&ldquo;{title}&rdquo;</strong>.
+            This will permanently remove the post and all its comments. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Delete Post
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
