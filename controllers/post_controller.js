@@ -46,6 +46,13 @@ const createPost = async (req, res) => {
 
     if (!title) return res.status(400).json({ error: 'Title is required.' });
 
+    // ── Announcements: admin-only, force fields ──
+    if (normalizedType === 'announcement') {
+      if (req.user.role !== 'website_admin') {
+        return res.status(403).json({ error: 'Only website admins can create announcements.' });
+      }
+    }
+
     if (normalizedType === 'research_paper') {
       if (!organizationId) {
         return res.status(400).json({ error: 'Research paper posts must belong to an organization.' });
@@ -75,22 +82,26 @@ const createPost = async (req, res) => {
       }
     }
 
+    // Announcements always publish immediately, no org, no tags, no poll, no paper metadata.
+    const isAnnouncement = normalizedType === 'announcement';
+
     // Org-scoped posts always enter the approval pipeline regardless of client-supplied status.
     // Personal posts (no org) use client status, defaulting to 'published'.
-    const resolvedStatus = organizationId ? 'pending' : (status || 'published');
+    // Announcements always publish immediately.
+    const resolvedStatus = isAnnouncement ? 'published' : organizationId ? 'pending' : (status || 'published');
 
     const post = new Post({
       title,
       body: body || null,
       bodyText: bodyText || '',
-      tags: tags || [],
+      tags: isAnnouncement ? [] : (tags || []),
       authorId: req.user._id,
-      organizationId: organizationId || null,
+      organizationId: isAnnouncement ? null : (organizationId || null),
       type: normalizedType,
       status: resolvedStatus,
       mediaUrls: mediaUrls || [],
-      paperIds: paperIds || [],
-      poll: poll || undefined,
+      paperIds: isAnnouncement ? [] : (paperIds || []),
+      poll: isAnnouncement ? undefined : (poll || undefined),
       paperMetadata: (normalizedType === 'research_paper' && paperMetadata)
         ? {
             researchTitle: paperMetadata.researchTitle || null,
@@ -135,6 +146,34 @@ const createPost = async (req, res) => {
     // Increment org postCount
     if (organizationId && post.status === 'published') {
       await Organization.findByIdAndUpdate(organizationId, { $inc: { postCount: 1 } });
+    }
+
+    // ── Bulk notify all users for announcements (fire-and-forget) ──
+    if (isAnnouncement && post.status === 'published') {
+      (async () => {
+        try {
+          const activeUsers = await User.find(
+            { isActive: true, _id: { $ne: req.user._id } },
+            { _id: 1 }
+          ).lean();
+
+          const notifications = activeUsers.map((u) => ({
+            recipientId: u._id,
+            senderId: req.user._id,
+            type: 'announcement',
+            postId: post._id,
+            message: `New announcement: ${post.title}`,
+            isRead: false,
+          }));
+
+          if (notifications.length > 0) {
+            await Notification.insertMany(notifications, { ordered: false });
+          }
+          console.log(`[Announcement] Notified ${notifications.length} users for post ${post._id}`);
+        } catch (err) {
+          console.error('[Announcement] Failed to send bulk notifications:', err.message);
+        }
+      })();
     }
 
     res.status(201).json(post);

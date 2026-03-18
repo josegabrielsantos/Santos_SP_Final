@@ -211,6 +211,9 @@ import { indexPost, deletePost } from '../elastic/esSync.js';
 
 postSchema.post('save', async function (doc) {
   try {
+    // Announcements are not searchable — skip ES indexing
+    if (doc.type === 'announcement') return;
+
     if (doc.status === 'published') {
       await indexPost(doc);
     } else {
@@ -224,6 +227,9 @@ postSchema.post('save', async function (doc) {
 postSchema.post('findOneAndUpdate', async function (doc) {
   if (!doc) return;
   try {
+    // Announcements are not searchable — skip ES indexing
+    if (doc.type === 'announcement') return;
+
     if (doc.status === 'published') {
       await indexPost(doc);
     } else {

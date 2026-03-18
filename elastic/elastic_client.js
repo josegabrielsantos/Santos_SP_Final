@@ -141,9 +141,9 @@ export async function syncExistingData() {
     const { default: Post } = await import('../models/post_model.js');
     const { default: Paper } = await import('../models/paper_model.js');
 
-    // Sync published posts
+    // Sync published posts (exclude announcements — they are not searchable)
     console.log('[ES sync] Syncing published posts...');
-    const posts = await Post.find({ status: 'published' })
+    const posts = await Post.find({ status: 'published', type: { $ne: 'announcement' } })
       .populate('authorId', 'displayName')
       .populate('organizationId', 'name');
 
