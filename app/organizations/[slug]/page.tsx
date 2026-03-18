@@ -100,7 +100,7 @@ function OrgPageSkeleton() {
         <main className="flex flex-1 justify-center">
           <div className="w-full max-w-5xl px-5 py-7 lg:px-7 flex flex-col gap-5">
             {/* Header card skeleton */}
-            <div className="card-shadow rounded-xl overflow-hidden bg-white">
+            <div className="border border-border rounded-xl overflow-hidden bg-white">
               <Skeleton className="h-52 w-full rounded-none" />
               <div className="p-7 pt-16 flex flex-col gap-3">
                 <Skeleton className="h-6 w-56 rounded" />
@@ -117,7 +117,7 @@ function OrgPageSkeleton() {
             <Skeleton className="h-11 w-full rounded-lg" />
             {/* Post skeletons */}
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="card-shadow rounded-xl bg-white p-5 flex flex-col gap-3">
+              <div key={i} className="border border-border rounded-xl bg-white p-5 flex flex-col gap-3">
                 <div className="flex items-center gap-3">
                   <Skeleton className="h-9 w-9 rounded-full shrink-0" />
                   <div className="flex flex-col gap-1.5 flex-1">
@@ -142,7 +142,7 @@ function PostsSkeleton() {
   return (
     <>
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="card-shadow rounded-xl bg-white p-5 flex flex-col gap-3">
+        <div key={i} className="border border-border rounded-xl bg-white p-5 flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <Skeleton className="h-9 w-9 rounded-full shrink-0" />
             <div className="flex flex-col gap-1.5 flex-1">
@@ -241,7 +241,7 @@ export default function OrgDetailPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25 }}
             >
-              <Card className="overflow-hidden rounded-xl border-border/60 bg-white card-shadow">
+              <Card className="overflow-hidden rounded-xl border-border/60 bg-white border border-border">
                 {/* Banner image — richer maroon gradient fallback */}
                 <div className="relative h-52 w-full bg-gradient-to-br from-primary via-primary/80 to-primary/30">
                   {org.bannerImage ? (
@@ -264,7 +264,7 @@ export default function OrgDetailPage() {
                 <CardContent className="relative p-7">
                   {/* Avatar overlapping banner */}
                   <div className="absolute -top-12 left-7">
-                    <Avatar className="h-[92px] w-[92px] ring-4 ring-white shadow-md">
+                    <Avatar className="h-[92px] w-[92px] ring-4 ring-white ">
                       <AvatarImage src={org.avatar ?? undefined} alt={org.name} />
                       <AvatarFallback className="bg-primary/10 text-[23px] font-bold text-primary">
                         {initials(org.name)}
@@ -276,9 +276,9 @@ export default function OrgDetailPage() {
                     <div className="flex flex-1 flex-col gap-1">
                       <h1 className="font-heading text-[23px] font-bold text-foreground">{org.name}</h1>
                       {/* Category badge */}
-                      {org.category && (
+                      {(org as any).category && (
                         <span className="inline-flex w-fit items-center rounded-full bg-kain-green-light px-2.5 py-0.5 text-[12px] font-medium text-kain-green mb-0.5">
-                          {org.category}
+                          {(org as any).category}
                         </span>
                       )}
                       {org.description && (() => {
@@ -492,7 +492,7 @@ export default function OrgDetailPage() {
 
             {/* Tabs */}
             <Tabs defaultValue="posts" className="mt-4">
-              <TabsList className="w-full justify-start rounded-lg border border-border/60 bg-white p-0 card-shadow h-auto">
+              <TabsList className="w-full justify-start rounded-lg border border-border/60 bg-white p-0 border border-border h-auto">
                 <TabsTrigger
                   value="posts"
                   className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
@@ -550,7 +550,7 @@ export default function OrgDetailPage() {
               <TabsContent value="posts" className="mt-4 flex flex-col gap-4">
                 {canPost && (
                   <CreatePostDialog defaultOrgId={orgId}>
-                    <Card className="cursor-pointer rounded-xl border-border/60 bg-white card-shadow transition-shadow hover:card-shadow-hover">
+                    <Card className="cursor-pointer rounded-xl border-border/60 bg-white border border-border transition-shadow hover:border-border/80">
                       <CardContent className="flex items-center gap-3.5 p-5">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                           <Plus className="h-5 w-5 text-primary" />
@@ -653,7 +653,7 @@ export default function OrgDetailPage() {
 
               {/* Members tab */}
               <TabsContent value="members" className="mt-4">
-                <Card className="rounded-xl border-border/60 bg-white card-shadow">
+                <Card className="rounded-xl border-border/60 bg-white border border-border">
                   <CardContent className="p-6">
                     {members && (
                       <div className="flex flex-col gap-4">
@@ -758,7 +758,7 @@ export default function OrgDetailPage() {
 
               {/* Followers tab */}
               <TabsContent value="followers" className="mt-4">
-                <Card className="rounded-xl border-border/60 bg-white card-shadow">
+                <Card className="rounded-xl border-border/60 bg-white border border-border">
                   <CardContent className="p-6">
                     <h3 className="mb-3 font-heading text-[14px] font-semibold uppercase text-muted-foreground">
                       Followers ({members?.followerCount ?? 0})
@@ -786,7 +786,7 @@ export default function OrgDetailPage() {
               {/* Join requests tab */}
               {canManage && (
                 <TabsContent value="requests" className="mt-4">
-                  <Card className="rounded-xl border-border/60 bg-white card-shadow">
+                  <Card className="rounded-xl border-border/60 bg-white border border-border">
                     <CardContent className="p-6">
                       {members?.pendingMembers && members.pendingMembers.length > 0 ? (
                         <div className="flex flex-col gap-3">
@@ -843,7 +843,7 @@ export default function OrgDetailPage() {
               {/* Pending posts tab */}
               {canManage && (
                 <TabsContent value="pending" className="mt-4">
-                  <Card className="rounded-xl border-border/60 bg-white card-shadow">
+                  <Card className="rounded-xl border-border/60 bg-white border border-border">
                     <CardContent className="p-6">
                       {pendingPostsData?.posts && pendingPostsData.posts.length > 0 ? (
                         <div className="flex flex-col gap-4">
@@ -916,7 +916,7 @@ export default function OrgDetailPage() {
                 {!orgAnalytics ? (
                   <div className="grid gap-4 lg:grid-cols-2">
                     {Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} className="card-shadow rounded-xl bg-white p-6 flex flex-col gap-3">
+                      <div key={i} className="border border-border rounded-xl bg-white p-6 flex flex-col gap-3">
                         <Skeleton className="h-4 w-48 rounded" />
                         <Skeleton className="h-[200px] w-full rounded-lg" />
                       </div>
@@ -929,7 +929,7 @@ export default function OrgDetailPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.25 }}
                   >
-                    <Card className="rounded-xl border-border/60 bg-white card-shadow">
+                    <Card className="rounded-xl border-border/60 bg-white border border-border">
                       <CardContent className="p-6">
                         <h3 className="mb-4 font-heading text-[15px] font-semibold text-foreground">Posts Over Time (6 months)</h3>
                         <ResponsiveContainer width="100%" height={200}>
@@ -944,7 +944,7 @@ export default function OrgDetailPage() {
                       </CardContent>
                     </Card>
 
-                    <Card className="rounded-xl border-border/60 bg-white card-shadow">
+                    <Card className="rounded-xl border-border/60 bg-white border border-border">
                       <CardContent className="p-6">
                         <h3 className="mb-4 font-heading text-[15px] font-semibold text-foreground">Post Type Breakdown</h3>
                         <ResponsiveContainer width="100%" height={200}>
@@ -959,7 +959,7 @@ export default function OrgDetailPage() {
                       </CardContent>
                     </Card>
 
-                    <Card className="rounded-xl border-border/60 bg-white card-shadow">
+                    <Card className="rounded-xl border-border/60 bg-white border border-border">
                       <CardContent className="p-6">
                         <h3 className="mb-4 font-heading text-[15px] font-semibold text-foreground">Top Tags</h3>
                         <ResponsiveContainer width="100%" height={200}>
@@ -974,7 +974,7 @@ export default function OrgDetailPage() {
                       </CardContent>
                     </Card>
 
-                    <Card className="rounded-xl border-border/60 bg-white card-shadow">
+                    <Card className="rounded-xl border-border/60 bg-white border border-border">
                       <CardContent className="p-6">
                         <h3 className="mb-4 font-heading text-[15px] font-semibold text-foreground">Top Posts by Engagement</h3>
                         <div className="flex flex-col gap-3">

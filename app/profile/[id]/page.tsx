@@ -40,7 +40,7 @@ function initials(name: string) {
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: 'easeOut' } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: [0, 0, 0.2, 1] as const } },
 };
 
 const staggerContainer = {
@@ -52,7 +52,7 @@ function ProfileSkeleton() {
   return (
     <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
       {/* Header card skeleton */}
-      <Card className="rounded-xl border-border/60 bg-white card-shadow overflow-hidden">
+      <Card className="rounded-xl border-border/60 bg-white border border-border overflow-hidden">
         {/* Banner */}
         <Skeleton className="h-32 w-full rounded-none" />
         <CardContent className="px-7 pb-7 pt-0">
@@ -83,7 +83,7 @@ function ProfileSkeleton() {
         </div>
         <div className="mt-5 flex flex-col gap-5">
           {[...Array(3)].map((_, i) => (
-            <Card key={i} className="rounded-xl border-border/60 bg-white card-shadow">
+            <Card key={i} className="rounded-xl border-border/60 bg-white border border-border">
               <CardContent className="p-5 space-y-3">
                 <Skeleton className="h-4 w-3/4 rounded" />
                 <Skeleton className="h-3 w-full rounded" />
@@ -151,7 +151,7 @@ export default function ProfilePage() {
           <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
             {/* Profile header */}
             <motion.div variants={fadeUp} initial="hidden" animate="visible">
-              <Card className="rounded-xl border-border/60 bg-white card-shadow overflow-hidden">
+              <Card className="rounded-xl border-border/60 bg-white border border-border overflow-hidden">
                 {/* Cover / banner — rich maroon gradient */}
                 <div className="relative h-32 bg-gradient-to-r from-primary via-primary/80 to-primary/40">
                   {/* subtle texture overlay */}
@@ -161,7 +161,7 @@ export default function ProfilePage() {
                 <CardContent className="px-7 pb-7 pt-0">
                   {/* Avatar — overlapping the banner */}
                   <div className="-mt-12 mb-4 flex items-end justify-between">
-                    <Avatar className="h-[92px] w-[92px] shrink-0 ring-4 ring-white shadow-lg">
+                    <Avatar className="h-[92px] w-[92px] shrink-0 ring-4 ring-white ">
                       <AvatarImage src={user.avatar ?? undefined} alt={user.displayName} />
                       <AvatarFallback className="bg-primary text-2xl font-bold text-white">
                         {initials(user.displayName)}
@@ -273,7 +273,7 @@ export default function ProfilePage() {
                   {postsLoading ? (
                     <div className="flex flex-col gap-5">
                       {[...Array(3)].map((_, i) => (
-                        <Card key={i} className="rounded-xl border-border/60 bg-white card-shadow">
+                        <Card key={i} className="rounded-xl border-border/60 bg-white border border-border">
                           <CardContent className="p-5 space-y-3">
                             <Skeleton className="h-4 w-3/4 rounded" />
                             <Skeleton className="h-3 w-full rounded" />
@@ -330,7 +330,7 @@ export default function ProfilePage() {
 
                 {/* Organizations tab */}
                 <TabsContent value="organizations" className="mt-5">
-                  <Card className="rounded-xl border-border/60 bg-white card-shadow">
+                  <Card className="rounded-xl border-border/60 bg-white border border-border">
                     <CardContent className="p-6">
                       <h3 className="mb-3.5 font-heading text-[14px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Member of ({orgs?.length ?? 0})
@@ -359,7 +359,7 @@ export default function ProfilePage() {
 
                 {/* Following tab */}
                 <TabsContent value="following" className="mt-5">
-                  <Card className="rounded-xl border-border/60 bg-white card-shadow">
+                  <Card className="rounded-xl border-border/60 bg-white border border-border">
                     <CardContent className="p-6">
                       <h3 className="mb-3.5 font-heading text-[14px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Following ({followed?.length ?? 0})

@@ -15,7 +15,7 @@ import { useOrganizations } from '@/lib/api/organizations';
 
 function OrgCardSkeleton() {
   return (
-    <div className="card-shadow rounded-xl overflow-hidden bg-white">
+    <div className="border border-border rounded-xl overflow-hidden bg-white">
       <div className="h-1 bg-border/40" />
       <div className="p-5 flex items-start gap-3.5">
         <Skeleton className="h-12 w-12 rounded-full shrink-0" />
@@ -113,7 +113,7 @@ export default function OrganizationsPage() {
                         transition={{ delay: index * 0.04, duration: 0.22 }}
                       >
                         <Card
-                          className="group cursor-pointer overflow-hidden rounded-xl border-border/60 bg-white card-shadow transition-shadow hover:card-shadow-hover"
+                          className="group cursor-pointer overflow-hidden rounded-xl border-border/60 bg-white border border-border transition-shadow hover:border-border/80"
                           onClick={() => router.push(`/organizations/${org.slug}`)}
                         >
                           <div className="h-1 bg-gradient-to-r from-primary/40 to-primary/10" />
@@ -129,9 +129,9 @@ export default function OrganizationsPage() {
                                 <h3 className="font-heading text-[16px] font-semibold leading-snug text-foreground line-clamp-2">
                                   {org.name}
                                 </h3>
-                                {org.category && (
+                                {(org as any).category && (
                                   <span className="inline-flex w-fit items-center rounded-full bg-kain-green-light px-2.5 py-0.5 text-[12px] font-medium text-kain-green">
-                                    {org.category}
+                                    {(org as any).category}
                                   </span>
                                 )}
                                 <p className="text-[14px] leading-relaxed text-muted-foreground line-clamp-2">

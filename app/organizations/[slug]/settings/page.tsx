@@ -138,7 +138,7 @@ export default function OrgSettingsPage() {
 
             <div className="flex flex-col gap-6">
               {/* General */}
-              <Card className="border-border/60 bg-white shadow-sm">
+              <Card className="border-border/60 bg-white ">
                 <CardContent className="p-6">
                   <h2 className="mb-4 text-[16px] font-semibold text-foreground">General</h2>
                   <div className="flex flex-col gap-4">
@@ -187,7 +187,7 @@ export default function OrgSettingsPage() {
               </Card>
 
               {/* Branding */}
-              <Card className="border-border/60 bg-white shadow-sm">
+              <Card className="border-border/60 bg-white ">
                 <CardContent className="p-6">
                   <h2 className="mb-4 text-[16px] font-semibold text-foreground">Branding</h2>
                   <div className="flex flex-col gap-6">

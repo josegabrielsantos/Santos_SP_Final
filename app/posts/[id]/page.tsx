@@ -85,7 +85,7 @@ export default function PostDiscussionPage() {
                 <PostCard post={post} orgAccessRole={orgAccessRole} />
 
                 {/* Comments section */}
-                <Card className="overflow-hidden rounded-xl border-border/60 bg-white shadow-sm">
+                <Card className="overflow-hidden rounded-xl border-border/60 bg-white ">
                   <CommentsSection postId={postId} orgAccessRole={orgAccessRole} commentCount={post.commentCount} />
                 </Card>
 
@@ -111,7 +111,7 @@ function RelatedPapers({ paperIds }: { paperIds: string[] }) {
       <h2 className="mb-3 text-[18px] font-bold text-foreground">Related Papers</h2>
       <div className="flex flex-col gap-3">
         {papers.map((paper: Paper) => (
-          <Card key={paper._id} className="border-border/60 bg-white shadow-sm">
+          <Card key={paper._id} className="border-border/60 bg-white ">
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 min-w-0">

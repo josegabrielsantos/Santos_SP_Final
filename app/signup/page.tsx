@@ -112,7 +112,7 @@ export default function SignupPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
           >
-            <Card className="w-full border-border/50 bg-white card-shadow-md rounded-2xl">
+            <Card className="w-full border-border/50 bg-white border border-border rounded-2xl">
               <CardContent className="px-8 py-9 sm:px-10">
                 {/* Branding */}
                 <div className="flex flex-col items-center gap-5">

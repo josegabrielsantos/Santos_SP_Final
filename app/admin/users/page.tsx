@@ -97,7 +97,7 @@ export default function AdminUsersPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.08 }}
       >
-        <Card className="border-border/50 bg-white card-shadow overflow-hidden">
+        <Card className="border-border/50 bg-white border border-border overflow-hidden">
           <CardContent className="p-0">
             {/* Table header */}
             <div className="grid grid-cols-[1fr_200px_100px_100px_60px] gap-4 border-b border-border/40 bg-muted/30 px-5 py-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">

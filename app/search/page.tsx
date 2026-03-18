@@ -50,14 +50,14 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 14 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: 'easeOut' } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0, 0, 0.2, 1] as const } },
 };
 
 function ResultsSkeleton() {
   return (
     <div className="flex flex-col gap-3">
       {[...Array(4)].map((_, i) => (
-        <Card key={i} className="rounded-xl border-border/60 bg-white card-shadow">
+        <Card key={i} className="rounded-xl border-border/60 bg-white border border-border">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <Skeleton className="mt-0.5 h-5 w-5 shrink-0 rounded" />
@@ -82,7 +82,7 @@ function OrgsSkeleton() {
   return (
     <div className="flex flex-col gap-3">
       {[...Array(4)].map((_, i) => (
-        <Card key={i} className="rounded-xl border-border/60 bg-white card-shadow">
+        <Card key={i} className="rounded-xl border-border/60 bg-white border border-border">
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
               <Skeleton className="h-12 w-12 rounded-full shrink-0" />
@@ -404,7 +404,7 @@ export default function SearchPage() {
                     {orgs.map((org) => (
                       <motion.div key={org._id} variants={itemVariants}>
                         <Link href={`/organizations/${org.slug}`}>
-                          <Card className="rounded-xl border-border/60 bg-white card-shadow hover:card-shadow-hover transition-shadow cursor-pointer">
+                          <Card className="rounded-xl border-border/60 bg-white border border-border hover:border-border/80 transition-shadow cursor-pointer">
                             <CardContent className="p-4">
                               <div className="flex items-center gap-4">
                                 <Avatar className="h-12 w-12 shrink-0">
@@ -462,7 +462,7 @@ function PostHitCard({ hit }: { hit: import('@/lib/api/search').PostSearchHit })
 
   return (
     <Link href={`/posts/${hit._id}`}>
-      <Card className="rounded-xl border-border/60 bg-white card-shadow hover:card-shadow-hover transition-shadow cursor-pointer">
+      <Card className="rounded-xl border-border/60 bg-white border border-border hover:border-border/80 transition-shadow cursor-pointer">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary/60" />
@@ -513,7 +513,7 @@ function PaperHitCard({ hit }: { hit: import('@/lib/types').PaperSearchHit }) {
   const abstractText = abstractHl ?? (hit.abstract ? hit.abstract.slice(0, 200) + (hit.abstract.length > 200 ? '…' : '') : null);
 
   return (
-    <Card className="rounded-xl border-border/60 bg-white card-shadow hover:card-shadow-hover transition-shadow">
+    <Card className="rounded-xl border-border/60 bg-white border border-border hover:border-border/80 transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <BookOpen className="mt-0.5 h-5 w-5 shrink-0 text-kain-green/70" />

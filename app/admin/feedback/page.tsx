@@ -38,19 +38,19 @@ export default function AdminFeedbackPage() {
       {data && (
         <div className="flex flex-col gap-5">
           <div className="grid gap-5 sm:grid-cols-3">
-            <Card className="border-border/60 bg-white shadow-sm">
+            <Card className="border-border/60 bg-white ">
               <CardContent className="p-6">
                 <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground">Responses</p>
                 <p className="mt-1 text-[36px] font-bold text-foreground">{data.count}</p>
               </CardContent>
             </Card>
-            <Card className="border-border/60 bg-white shadow-sm">
+            <Card className="border-border/60 bg-white ">
               <CardContent className="p-6">
                 <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground">Average SUS Score</p>
                 <p className="mt-1 text-[36px] font-bold text-foreground">{data.avgScore}</p>
               </CardContent>
             </Card>
-            <Card className="border-border/60 bg-white shadow-sm">
+            <Card className="border-border/60 bg-white ">
               <CardContent className="p-6">
                 <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground">Rating</p>
                 <p className="mt-1 text-[36px] font-bold text-foreground">{data.count > 0 ? scoreLabel(data.avgScore) : '—'}</p>
@@ -59,7 +59,7 @@ export default function AdminFeedbackPage() {
           </div>
 
           {data.responses.length > 0 && (
-            <Card className="border-border/60 bg-white shadow-sm">
+            <Card className="border-border/60 bg-white ">
               <CardContent className="p-6">
                 <h2 className="mb-4 text-[16px] font-semibold text-foreground">Individual Responses</h2>
                 <div className="flex flex-col gap-3">

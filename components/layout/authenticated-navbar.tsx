@@ -71,7 +71,7 @@ export function AuthenticatedNavbar() {
     showSuggestions && searchQuery.length >= 2;
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-primary shadow-lg">
+    <header className="sticky top-0 z-50 w-full bg-primary border-b border-white/10">
       <div className="mx-auto flex h-[64px] max-w-[1400px] items-center gap-4 px-4 lg:px-6">
         {/* Left – Logos + Brand */}
         <Link href="/home" className="flex shrink-0 items-center gap-2.5 group">
@@ -116,7 +116,7 @@ export function AuthenticatedNavbar() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -6, scale: 0.98 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border/60 bg-white shadow-xl"
+                  className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-lg border border-border bg-white"
                 >
                   {suggestions && suggestions.length > 0 && suggestions.slice(0, 5).map((s) => (
                     <button
@@ -170,7 +170,7 @@ export function AuthenticatedNavbar() {
               </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-60 rounded-xl shadow-xl">
+            <DropdownMenuContent align="end" className="w-60 rounded-lg border border-border">
               <div className="px-3 py-3">
                 <p className="text-[15px] font-semibold text-foreground">{user?.displayName}</p>
                 <p className="text-[12px] text-muted-foreground">{user?.email}</p>

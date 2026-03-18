@@ -56,7 +56,7 @@ export default function AdminAnalyticsPage() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         {/* Posts over time */}
-        <Card className="border-border/60 bg-white shadow-sm">
+        <Card className="border-border/60 bg-white ">
           <CardContent className="p-6">
             <h2 className="mb-4 text-[16px] font-semibold text-foreground">Posts Over Time</h2>
             <ResponsiveContainer width="100%" height={220}>
@@ -72,7 +72,7 @@ export default function AdminAnalyticsPage() {
         </Card>
 
         {/* Registrations over time */}
-        <Card className="border-border/60 bg-white shadow-sm">
+        <Card className="border-border/60 bg-white ">
           <CardContent className="p-6">
             <h2 className="mb-4 text-[16px] font-semibold text-foreground">User Registrations</h2>
             <ResponsiveContainer width="100%" height={220}>
@@ -88,7 +88,7 @@ export default function AdminAnalyticsPage() {
         </Card>
 
         {/* Papers over time */}
-        <Card className="border-border/60 bg-white shadow-sm">
+        <Card className="border-border/60 bg-white ">
           <CardContent className="p-6">
             <h2 className="mb-4 text-[16px] font-semibold text-foreground">Papers Uploaded</h2>
             <ResponsiveContainer width="100%" height={220}>
@@ -104,7 +104,7 @@ export default function AdminAnalyticsPage() {
         </Card>
 
         {/* Post type distribution */}
-        <Card className="border-border/60 bg-white shadow-sm">
+        <Card className="border-border/60 bg-white ">
           <CardContent className="p-6">
             <h2 className="mb-4 text-[16px] font-semibold text-foreground">Post Type Distribution</h2>
             <ResponsiveContainer width="100%" height={220}>
@@ -121,7 +121,7 @@ export default function AdminAnalyticsPage() {
         </Card>
 
         {/* Top tags */}
-        <Card className="border-border/60 bg-white shadow-sm">
+        <Card className="border-border/60 bg-white ">
           <CardContent className="p-6">
             <h2 className="mb-4 text-[16px] font-semibold text-foreground">Top Tags</h2>
             <ResponsiveContainer width="100%" height={220}>
@@ -137,7 +137,7 @@ export default function AdminAnalyticsPage() {
         </Card>
 
         {/* Orgs by activity */}
-        <Card className="border-border/60 bg-white shadow-sm">
+        <Card className="border-border/60 bg-white ">
           <CardContent className="p-6">
             <h2 className="mb-4 text-[16px] font-semibold text-foreground">Most Active Organizations</h2>
             <ResponsiveContainer width="100%" height={220}>

@@ -252,13 +252,10 @@ export default function PapersPage() {
           <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
             {/* Header */}
             <div className="mb-5">
-              <h1
-                className="text-[32px] font-bold tracking-tight text-foreground"
-                style={{ fontFamily: 'var(--font-heading)' }}
-              >
+              <h1 className="text-[28px] font-bold tracking-tight text-foreground">
                 Research Papers
               </h1>
-              <p className="mt-1.5 text-[18px] text-muted-foreground">
+              <p className="mt-1.5 text-[15px] text-muted-foreground">
                 Browse curated research on food and nutrition security
               </p>
             </div>
@@ -338,7 +335,7 @@ export default function PapersPage() {
 
             {/* Filters panel */}
             {showFilters && (
-              <Card className="mb-4 rounded-xl card-shadow">
+              <Card className="mb-4 rounded-xl border border-border">
                 <CardContent className="p-4">
                   <p className="mb-2 text-[14px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Browse Filters
@@ -660,7 +657,7 @@ export default function PapersPage() {
 
 export function PaperCardSkeleton() {
   return (
-    <div className="rounded-xl bg-card card-shadow p-6">
+    <div className="rounded-lg border border-border bg-card p-6">
       {/* Title */}
       <Skeleton className="h-6 w-3/4 rounded-md" />
       {/* Authors */}
@@ -717,10 +714,10 @@ function AbstractText({ text, highlight }: { text: string; highlight?: string[] 
 
   if (highlight && highlight.length > 0) {
     return (
-      <div className="mt-3">
-        <span className="text-[16px] font-medium text-muted-foreground/70">Abstract: </span>
+      <div className="mt-4">
+        <span className="text-[13px] font-medium text-muted-foreground/70">Abstract: </span>
         <span
-          className="text-[18px] leading-relaxed text-muted-foreground search-highlight"
+          className="text-[14px] leading-relaxed text-muted-foreground search-highlight"
           dangerouslySetInnerHTML={{ __html: highlight.join(' … ') }}
         />
       </div>
@@ -730,9 +727,9 @@ function AbstractText({ text, highlight }: { text: string; highlight?: string[] 
   const displayed = isLong && !expanded ? text.slice(0, 200) + '…' : text;
 
   return (
-    <div className="mt-3">
-      <span className="text-[16px] font-medium text-muted-foreground/70">Abstract: </span>
-      <span className="text-[18px] leading-relaxed text-muted-foreground">{displayed}</span>
+    <div className="mt-4">
+      <span className="text-[13px] font-medium text-muted-foreground/70">Abstract: </span>
+      <span className="text-[14px] leading-relaxed text-muted-foreground">{displayed}</span>
       {isLong && (
         <button
           onClick={() => setExpanded((v) => !v)}
@@ -767,43 +764,40 @@ function PaperCard({
   const router = useRouter();
 
   return (
-    <Card className="rounded-xl border-border/60 bg-card card-shadow transition-shadow hover:shadow-md">
+    <Card className="rounded-lg border border-border bg-card transition-colors hover:bg-muted/10">
       <CardContent className="p-6">
         <div className="flex-1 min-w-0">
           {/* Title */}
-          <h3
-            className="text-[20px] font-semibold leading-snug text-foreground"
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
+          <h3 className="text-[20px] font-semibold leading-snug text-foreground">
             {paper.title}
           </h3>
 
           {/* Authors */}
-          <div className="mt-2.5 flex items-center gap-2 text-[16px] text-muted-foreground">
+          <div className="mt-4 flex items-center gap-2 text-[14px] text-muted-foreground">
             <User className="h-4 w-4 shrink-0" />
             <span className="font-medium text-muted-foreground/70">Authors:</span>
             <span>{paper.authors.length > 0 ? paper.authors.join(', ') : 'Unknown'}</span>
           </div>
 
           {/* Metadata row */}
-          <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[16px] text-muted-foreground/80">
+          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-muted-foreground/80">
             {paper.journal && (
-              <span className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 shrink-0" />
+              <span className="flex items-center gap-1.5">
+                <BookOpen className="h-3.5 w-3.5 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">Journal:</span>
                 {paper.journal}
               </span>
             )}
             {paper.year && (
-              <span className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 shrink-0" />
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">Year:</span>
                 {paper.year}
               </span>
             )}
             {paper.doi && (
-              <span className="flex items-center gap-2">
-                <Hash className="h-4 w-4 shrink-0" />
+              <span className="flex items-center gap-1.5">
+                <Hash className="h-3.5 w-3.5 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">DOI:</span>
                 <a
                   href={`https://doi.org/${paper.doi}`}
@@ -815,8 +809,8 @@ function PaperCard({
                 </a>
               </span>
             )}
-            <span className="flex items-center gap-2">
-              <Download className="h-4 w-4 shrink-0" />
+            <span className="flex items-center gap-1.5">
+              <Download className="h-3.5 w-3.5 shrink-0" />
               <span className="font-medium text-muted-foreground/70">Downloads:</span>
               {paper.downloadCount}
             </span>
@@ -827,12 +821,12 @@ function PaperCard({
 
           {/* Tags */}
           {paper.keywords.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <Tag className="h-4 w-4 shrink-0 text-kain-green/60" />
+            <div className="mt-4 flex flex-wrap items-center gap-1.5">
+              <Tag className="h-3.5 w-3.5 shrink-0 text-kain-green/60" />
               {paper.keywords.map((kw) => (
                 <Badge
                   key={kw}
-                  className="bg-kain-green-light text-kain-green border-0 text-[13px] font-normal hover:bg-kain-green-light/80"
+                  className="bg-kain-green-light text-kain-green border border-kain-green/20 text-[12px] font-normal hover:bg-kain-green-light/80"
                 >
                   {kw}
                 </Badge>
@@ -842,15 +836,15 @@ function PaperCard({
 
           {/* Uploaded by */}
           {paper.uploadedBy && (
-            <div className="mt-3.5 flex items-center gap-2.5 text-[16px] text-muted-foreground/80">
+            <div className="mt-4 flex items-center gap-2 text-[13px] text-muted-foreground/80">
               <span className="text-muted-foreground/60">Uploaded by</span>
               <button
                 onClick={() => router.push(`/profile/${paper.uploadedBy._id}`)}
-                className="inline-flex items-center gap-2 text-foreground hover:underline"
+                className="inline-flex items-center gap-1.5 text-foreground hover:underline"
               >
-                <Avatar className="h-6 w-6">
+                <Avatar className="h-5 w-5">
                   <AvatarImage src={paper.uploadedBy.avatar ?? undefined} alt={paper.uploadedBy.displayName} />
-                  <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
+                  <AvatarFallback className="bg-primary/10 text-[9px] font-bold text-primary">
                     {getInitials(paper.uploadedBy.displayName)}
                   </AvatarFallback>
                 </Avatar>
@@ -861,11 +855,11 @@ function PaperCard({
                   <span className="text-muted-foreground/60">in</span>
                   <button
                     onClick={() => router.push(`/organizations/${paper.organizationId!.slug}`)}
-                    className="inline-flex items-center gap-2 text-primary hover:underline"
+                    className="inline-flex items-center gap-1.5 text-primary hover:underline"
                   >
-                    <Avatar className="h-6 w-6">
+                    <Avatar className="h-5 w-5">
                       <AvatarImage src={paper.organizationId.avatar ?? undefined} alt={paper.organizationId.name} />
-                      <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
+                      <AvatarFallback className="bg-primary/10 text-[9px] font-bold text-primary">
                         {getInitials(paper.organizationId.name)}
                       </AvatarFallback>
                     </Avatar>
@@ -877,54 +871,54 @@ function PaperCard({
           )}
         </div>
 
-        <Separator className="my-3.5" />
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button variant="outline" size="default" className="gap-2 text-[16px]" onClick={onDownload}>
-            <Download className="h-4 w-4" />
-            Download PDF
-          </Button>
-          {paper.fileUrl && (
+        <div className="mt-5 border-t border-border pt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-[13px]" onClick={onDownload}>
+              <Download className="h-3.5 w-3.5" />
+              Download PDF
+            </Button>
+            {paper.fileUrl && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-[13px] border border-border hover:bg-muted/50"
+                onClick={() => window.open(paper.fileUrl!, '_blank')}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                View
+              </Button>
+            )}
+            <CitationButton paper={paper} />
             <Button
               variant="outline"
-              size="default"
-              className="gap-2 text-[16px]"
-              onClick={() => window.open(paper.fileUrl!, '_blank')}
+              size="sm"
+              className="gap-1.5 text-[13px] border border-border hover:bg-muted/50"
+              onClick={onCopyLink}
             >
-              <Eye className="h-4 w-4" />
-              View
+              <Link2 className="h-3.5 w-3.5" />
+              {linkCopied ? 'Copied!' : 'Copy Link'}
             </Button>
-          )}
-          <CitationButton paper={paper} />
-          <Button
-            variant="outline"
-            size="default"
-            className="gap-2 text-[16px]"
-            onClick={onCopyLink}
-          >
-            <Link2 className="h-4 w-4" />
-            {linkCopied ? 'Copied!' : 'Copy Link'}
-          </Button>
-          {isLoggedIn && (
-            <Button
-              variant={isSaved ? 'default' : 'ghost'}
-              size="default"
-              className={`gap-2 text-[16px] ${isSaved ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
-              onClick={onToggleSave}
-            >
-              {isSaved ? (
-                <>
-                  <BookmarkCheck className="h-4 w-4" />
-                  Saved
-                </>
-              ) : (
-                <>
-                  <Bookmark className="h-4 w-4" />
-                  Save
-                </>
-              )}
-            </Button>
-          )}
+            {isLoggedIn && (
+              <Button
+                variant={isSaved ? 'default' : 'outline'}
+                size="sm"
+                className={`gap-1.5 text-[13px] ${isSaved ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-border hover:bg-muted/50'}`}
+                onClick={onToggleSave}
+              >
+                {isSaved ? (
+                  <>
+                    <BookmarkCheck className="h-3.5 w-3.5" />
+                    Saved
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="h-3.5 w-3.5" />
+                    Save
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -951,14 +945,11 @@ function SearchPaperCard({
   linkCopied: boolean;
 }) {
   return (
-    <Card className="rounded-xl border-border/60 bg-card card-shadow transition-shadow hover:shadow-md">
+    <Card className="rounded-xl border-border/60 bg-card border border-border transition-colors hover:bg-muted/10">
       <CardContent className="p-6">
         <div className="flex-1 min-w-0">
-          {/* Title — with highlight if available */}
-          <h3
-            className="text-[20px] font-semibold leading-snug text-foreground"
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
+          {/* Title */}
+          <h3 className="text-[20px] font-semibold leading-snug text-foreground">
             {hit.highlight?.title ? (
               <span className="search-highlight" dangerouslySetInnerHTML={{ __html: hit.highlight.title[0] }} />
             ) : (
@@ -968,7 +959,7 @@ function SearchPaperCard({
 
           {/* Authors */}
           {hit.authors && hit.authors.length > 0 && (
-            <div className="mt-2.5 flex items-center gap-2 text-[16px] text-muted-foreground">
+            <div className="mt-4 flex items-center gap-2 text-[14px] text-muted-foreground">
               <User className="h-4 w-4 shrink-0" />
               <span className="font-medium text-muted-foreground/70">Authors:</span>
               <span>
@@ -980,24 +971,24 @@ function SearchPaperCard({
           )}
 
           {/* Metadata row */}
-          <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[16px] text-muted-foreground/80">
+          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-muted-foreground/80">
             {hit.journal && (
-              <span className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 shrink-0" />
+              <span className="flex items-center gap-1.5">
+                <BookOpen className="h-3.5 w-3.5 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">Journal:</span>
                 {hit.journal}
               </span>
             )}
             {hit.year && (
-              <span className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 shrink-0" />
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">Year:</span>
                 {hit.year}
               </span>
             )}
             {hit.doi && (
-              <span className="flex items-center gap-2">
-                <Hash className="h-4 w-4 shrink-0" />
+              <span className="flex items-center gap-1.5">
+                <Hash className="h-3.5 w-3.5 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">DOI:</span>
                 <a
                   href={`https://doi.org/${hit.doi}`}
@@ -1010,8 +1001,8 @@ function SearchPaperCard({
               </span>
             )}
             {hit.downloadCount !== undefined && (
-              <span className="flex items-center gap-2">
-                <Download className="h-4 w-4 shrink-0" />
+              <span className="flex items-center gap-1.5">
+                <Download className="h-3.5 w-3.5 shrink-0" />
                 <span className="font-medium text-muted-foreground/70">Downloads:</span>
                 {hit.downloadCount}
               </span>
@@ -1025,12 +1016,12 @@ function SearchPaperCard({
 
           {/* Tags */}
           {hit.keywords && hit.keywords.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <Tag className="h-4 w-4 shrink-0 text-kain-green/60" />
+            <div className="mt-4 flex flex-wrap items-center gap-1.5">
+              <Tag className="h-3.5 w-3.5 shrink-0 text-kain-green/60" />
               {hit.keywords.map((kw) => (
                 <Badge
                   key={kw}
-                  className="bg-kain-green-light text-kain-green border-0 text-[13px] font-normal hover:bg-kain-green-light/80"
+                  className="bg-kain-green-light text-kain-green border border-kain-green/20 text-[12px] font-normal hover:bg-kain-green-light/80"
                 >
                   {kw}
                 </Badge>
@@ -1039,53 +1030,53 @@ function SearchPaperCard({
           )}
         </div>
 
-        <Separator className="my-3.5" />
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button variant="outline" size="default" className="gap-2 text-[16px]" onClick={onDownload}>
-            <Download className="h-4 w-4" />
-            Download PDF
-          </Button>
-          {hit.fileUrl && (
+        <div className="mt-5 border-t border-border pt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-[13px]" onClick={onDownload}>
+              <Download className="h-3.5 w-3.5" />
+              Download PDF
+            </Button>
+            {hit.fileUrl && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-[13px] border border-border hover:bg-muted/50"
+                onClick={() => window.open(hit.fileUrl!, '_blank')}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                View
+              </Button>
+            )}
             <Button
               variant="outline"
-              size="default"
-              className="gap-2 text-[16px]"
-              onClick={() => window.open(hit.fileUrl!, '_blank')}
+              size="sm"
+              className="gap-1.5 text-[13px] border border-border hover:bg-muted/50"
+              onClick={onCopyLink}
             >
-              <Eye className="h-4 w-4" />
-              View
+              <Link2 className="h-3.5 w-3.5" />
+              {linkCopied ? 'Copied!' : 'Copy Link'}
             </Button>
-          )}
-          <Button
-            variant="outline"
-            size="default"
-            className="gap-2 text-[16px]"
-            onClick={onCopyLink}
-          >
-            <Link2 className="h-4 w-4" />
-            {linkCopied ? 'Copied!' : 'Copy Link'}
-          </Button>
-          {isLoggedIn && (
-            <Button
-              variant={isSaved ? 'default' : 'ghost'}
-              size="default"
-              className={`gap-2 text-[16px] ${isSaved ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
-              onClick={onToggleSave}
-            >
-              {isSaved ? (
-                <>
-                  <BookmarkCheck className="h-4 w-4" />
-                  Saved
-                </>
-              ) : (
-                <>
-                  <Bookmark className="h-4 w-4" />
-                  Save
-                </>
-              )}
-            </Button>
-          )}
+            {isLoggedIn && (
+              <Button
+                variant={isSaved ? 'default' : 'outline'}
+                size="sm"
+                className={`gap-1.5 text-[13px] ${isSaved ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-border hover:bg-muted/50'}`}
+                onClick={onToggleSave}
+              >
+                {isSaved ? (
+                  <>
+                    <BookmarkCheck className="h-3.5 w-3.5" />
+                    Saved
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="h-3.5 w-3.5" />
+                    Save
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -96,7 +96,7 @@ function CreateOrgDialog({ onClose }: { onClose: () => void }) {
         exit={{ opacity: 0, scale: 0.97, y: 8 }}
         transition={{ duration: 0.22, ease: 'easeOut' }}
       >
-        <Card className="bg-white border-border/50 card-shadow-md rounded-2xl">
+        <Card className="bg-white border-border/50 border border-border rounded-2xl">
           <CardContent className="p-7">
             <div className="mb-6 flex items-center justify-between">
               <div>
@@ -297,7 +297,7 @@ export default function AdminOrganizationsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.08 }}
       >
-        <Card className="border-border/50 bg-white card-shadow overflow-hidden">
+        <Card className="border-border/50 bg-white border border-border overflow-hidden">
           <CardContent className="p-0">
             {/* Table header */}
             <div className="grid grid-cols-[1fr_120px_120px_100px_60px] gap-4 border-b border-border/40 bg-muted/30 px-5 py-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">

@@ -34,6 +34,7 @@ import {
   Link2,
   Eye,
   Trash2,
+  Share2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToggleLike, useTogglePostDislike, useVotePoll, useReportPost, useClosePoll, useDeletePost } from '@/lib/api/posts';
@@ -48,14 +49,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 // ─── Tag color system ──────────────────────────────────────────
 
 const TAG_COLORS = [
-  'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20',
-  'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20',
-  'bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-600/20',
-  'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20',
-  'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/20',
-  'bg-cyan-50 text-cyan-700 ring-1 ring-inset ring-cyan-600/20',
-  'bg-fuchsia-50 text-fuchsia-700 ring-1 ring-inset ring-fuchsia-600/20',
-  'bg-lime-50 text-lime-700 ring-1 ring-inset ring-lime-600/20',
+  'bg-blue-50 text-blue-700 border border-blue-200/60',
+  'bg-emerald-50 text-emerald-700 border border-emerald-200/60',
+  'bg-violet-50 text-violet-700 border border-violet-200/60',
+  'bg-amber-50 text-amber-700 border border-amber-200/60',
+  'bg-rose-50 text-rose-700 border border-rose-200/60',
+  'bg-cyan-50 text-cyan-700 border border-cyan-200/60',
+  'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200/60',
+  'bg-lime-50 text-lime-700 border border-lime-200/60',
 ];
 
 function getTagColor(tag: string) {
@@ -90,21 +91,21 @@ function getFileName(url: string) {
 function PostTypeBadge({ type }: { type: string }) {
   if (type === 'announcement') {
     return (
-      <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200 border text-[12px] font-semibold">
+      <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-medium px-2 py-0">
         Announcement
       </Badge>
     );
   }
   if (type === 'poll') {
     return (
-      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200 border text-[12px] font-semibold">
+      <Badge className="bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-medium px-2 py-0">
         Poll
       </Badge>
     );
   }
   if (type === 'update') {
     return (
-      <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-emerald-200 border text-[12px] font-semibold">
+      <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-medium px-2 py-0">
         Update
       </Badge>
     );
@@ -132,14 +133,12 @@ function AuthorsDisplay({ authors }: { authors: string[] }) {
     const containerWidth = container.clientWidth;
     const etAlWidth = ctx.measureText(', et al.').width;
 
-    // Check if all authors fit
     const fullText = authors.join(', ');
     if (ctx.measureText(fullText).width <= containerWidth) {
       setVisibleCount(authors.length);
       return;
     }
 
-    // Find max authors that fit with " et al."
     const availableWidth = containerWidth - etAlWidth - 4;
     let text = '';
     let count = 0;
@@ -169,11 +168,11 @@ function AuthorsDisplay({ authors }: { authors: string[] }) {
   const remaining = authors.slice(visibleCount);
 
   return (
-    <div ref={containerRef} className="w-full overflow-hidden whitespace-nowrap text-[17px] text-foreground/70">
+    <div ref={containerRef} className="w-full overflow-hidden whitespace-nowrap text-[14px] text-muted-foreground">
       {visible.map((author, idx) => (
         <span key={idx}>
-          <span className="font-medium">{author}</span>
-          {idx < visible.length - 1 && <span className="text-muted-foreground">, </span>}
+          <span className="font-medium text-foreground/70">{author}</span>
+          {idx < visible.length - 1 && <span>, </span>}
         </span>
       ))}
       {remaining.length > 0 && (
@@ -219,7 +218,6 @@ async function downloadFile(url: string, filename: string) {
 
 interface PostCardProps {
   post: Post;
-  /** User's access level for this post's org. Defaults to 'member' (full access). */
   orgAccessRole?: 'member' | 'follower' | 'none';
 }
 
@@ -238,13 +236,11 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
   const liked = userId ? post.likedBy.includes(userId) : false;
   const disliked = userId ? post.dislikedBy.includes(userId) : false;
 
-  // Org access restrictions
   const canLike = orgAccessRole === 'member' || orgAccessRole === 'follower';
   const canComment = orgAccessRole === 'member';
 
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [linkCopied, setLinkCopied] = useState(false);
-  // "Read more" toggle for research_paper body text
   const [bodyExpanded, setBodyExpanded] = useState(false);
 
   const authorName =
@@ -321,7 +317,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
     downloadFile(url, getFileName(url));
   };
 
-  // ─── Research Paper (ResearchGate-style) Card ─────────────────
+  // ─── Research Paper Card ─────────────────────────────────────
   if (post.type === 'research_paper') {
     const meta = post.paperMetadata;
     const dateStr = meta?.datePublished
@@ -330,7 +326,6 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
         ? format(new Date(post.publishedAt), 'MMMM yyyy')
         : null;
 
-    // "Read more" for long body text (>200 chars)
     const bodyText = post.bodyText && !meta?.abstract ? post.bodyText : null;
     const bodyIsLong = bodyText && bodyText.length > 200;
     const displayedBody = bodyText
@@ -341,82 +336,79 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
 
     return (
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.15 }}
         ref={viewRef}
         onClick={handleCardClick}
-        className="cursor-pointer overflow-hidden rounded-xl bg-card card-shadow transition-shadow hover:card-shadow-hover"
+        className="cursor-pointer overflow-hidden rounded-lg border border-border border-l-4 border-l-primary bg-card transition-colors hover:bg-muted/20"
       >
-        {/* Top accent bar */}
-        <div className="h-1.5 bg-gradient-to-r from-teal-500 to-emerald-500" />
-
-        <div className="px-7 pt-6 pb-3.5">
-          {/* Posted by header */}
-          <div className="mb-3.5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
+        <div className="px-4 pt-3 pb-1">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Avatar className="h-7 w-7">
                 <AvatarImage src={authorAvatar} alt={authorName} />
-                <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-600 text-[11px] font-bold text-white">
+                <AvatarFallback className="bg-kain-green text-white text-[10px] font-bold">
                   {initials(authorName)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex items-center gap-1.5 text-[16px] text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
                 <Link
                   href={`/profile/${authorId}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="font-medium text-foreground hover:underline"
+                  className="font-semibold text-foreground hover:underline"
                 >
                   {authorName}
                 </Link>
-                <span>&middot;</span>
-                <span>{timeAgo}</span>
                 {orgName && (
                   <>
-                    <span>&middot;</span>
+                    <span>·</span>
                     <span className="font-medium text-primary">{orgName}</span>
                   </>
                 )}
+                <span>·</span>
+                <span>{timeAgo}</span>
               </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:bg-muted">
-                  <MoreHorizontal className="h-6 w-6" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted/50">
+                  <MoreHorizontal className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg">
-                <DropdownMenuItem className="cursor-pointer gap-2.5 rounded-lg text-[17px]">
-                  <Bookmark className="h-5 w-5" /> Save post
+              <DropdownMenuContent align="end" className="w-48 rounded-lg border border-border">
+                <DropdownMenuItem className="cursor-pointer gap-2 text-[13px]">
+                  <Bookmark className="h-4 w-4" /> Save post
                 </DropdownMenuItem>
                 {isPostAuthor && (
                   <DropdownMenuItem
-                    className="cursor-pointer gap-2.5 rounded-lg text-[17px] text-destructive focus:text-destructive"
+                    className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
                     onClick={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
                   >
-                    <Trash2 className="h-5 w-5" /> Delete post
+                    <Trash2 className="h-4 w-4" /> Delete post
                   </DropdownMenuItem>
                 )}
                 {!isPostAuthor && (
                   <DropdownMenuItem
-                    className="cursor-pointer gap-2.5 rounded-lg text-[17px] text-destructive focus:text-destructive"
+                    className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
                     onClick={() => reportPost.mutate(post._id)}
                   >
-                    <Flag className="h-5 w-5" /> Report post
+                    <Flag className="h-4 w-4" /> Report post
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
 
-          {/* Badges row: Paper Type + Date + DOI + ISBN */}
-          <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-teal-50 px-3 py-1.5 text-[15px] font-semibold uppercase tracking-wide text-teal-700">
-              <FileText className="h-4 w-4" />
+          {/* Badges row */}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+              <FileText className="h-3 w-3" />
               Research Paper
             </span>
             {dateStr && (
-              <span className="inline-flex items-center rounded-md bg-muted px-3 py-1.5 text-[15px] font-medium text-muted-foreground">
+              <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                 {dateStr}
               </span>
             )}
@@ -426,37 +418,37 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center rounded-md bg-blue-50 px-3 py-1.5 text-[15px] font-medium text-blue-700 hover:underline"
+                className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 hover:underline"
               >
                 DOI: {meta.doi}
               </a>
             )}
             {meta?.isbn && (
-              <span className="inline-flex items-center rounded-md bg-purple-50 px-3 py-1.5 text-[15px] font-medium text-purple-700">
+              <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-medium text-purple-700">
                 ISBN: {meta.isbn}
               </span>
             )}
           </div>
 
           {/* Title */}
-          <h3 className="text-[25px] font-bold leading-tight text-foreground">
+          <h3 className="mt-2 text-[18px] font-semibold leading-snug text-foreground">
             {post.title}
           </h3>
 
-          {/* Authors — single line, full width, et al. on overflow */}
+          {/* Authors */}
           {meta?.authors && meta.authors.length > 0 && (
-            <div className="mt-2.5">
+            <div className="mt-2">
               <AuthorsDisplay authors={meta.authors} />
             </div>
           )}
 
           {/* Tags */}
           {post.tags.length > 0 && (
-            <div className="mt-3.5 flex flex-wrap gap-2.5">
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
               {post.tags.map((tag) => (
                 <span
                   key={tag}
-                  className={`inline-flex items-center rounded-full px-3.5 py-1 text-[15px] font-medium ${getTagColor(tag)}`}
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-medium ${getTagColor(tag)}`}
                 >
                   {tag}
                 </span>
@@ -464,14 +456,14 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
             </div>
           )}
 
-          {/* Action buttons row: Download, View, Copy Link */}
-          <div className="mt-5 flex items-center gap-3 border-t border-border pt-3.5">
+          {/* Action buttons: Download, View, Copy Link */}
+          <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
             {pdfUrls.length > 0 && (
               <button
                 onClick={handleDownload(pdfUrls[0])}
-                className="inline-flex items-center gap-2.5 rounded-lg bg-teal-600 px-6 py-3 text-[17px] font-medium text-white shadow-sm transition-colors hover:bg-teal-700"
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                <Download className="h-5 w-5" />
+                <Download className="h-3.5 w-3.5" />
                 Download PDF
               </button>
             )}
@@ -481,39 +473,39 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-2.5 rounded-lg border border-border bg-card px-6 py-3 text-[17px] font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted/50"
               >
-                <Eye className="h-5 w-5" />
+                <Eye className="h-3.5 w-3.5" />
                 View
               </a>
             )}
             <button
               onClick={handleCopyLink}
-              className="inline-flex items-center gap-2.5 rounded-lg border border-border bg-card px-6 py-3 text-[17px] font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted/50"
             >
-              <Link2 className="h-5 w-5" />
+              <Link2 className="h-3.5 w-3.5" />
               {linkCopied ? 'Copied!' : 'Copy Link'}
             </button>
           </div>
 
           {/* Abstract */}
           {meta?.abstract && (
-            <div className="mt-5 rounded-lg border border-border bg-muted/30 p-5">
-              <h4 className="mb-2 text-[15px] font-semibold uppercase tracking-wide text-muted-foreground">Abstract</h4>
-              <p className="text-[17px] leading-relaxed text-foreground/80">{meta.abstract}</p>
+            <div className="mt-3 rounded-md border border-border bg-muted/20 p-4">
+              <h4 className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Abstract</h4>
+              <p className="text-[14px] leading-relaxed text-foreground/80">{meta.abstract}</p>
             </div>
           )}
 
-          {/* Body text with "Read more" toggle */}
+          {/* Body text with "Read more" */}
           {displayedBody && (
-            <div className="mt-3.5">
-              <p className="text-[17px] leading-relaxed text-muted-foreground">
+            <div className="mt-2.5">
+              <p className="text-[14px] leading-relaxed text-muted-foreground">
                 {displayedBody}
               </p>
               {bodyIsLong && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setBodyExpanded((v) => !v); }}
-                  className="mt-1.5 text-[15px] font-medium text-primary hover:underline"
+                  className="mt-1 text-[13px] font-medium text-primary hover:underline"
                 >
                   {bodyExpanded ? 'Show less' : 'Read more'}
                 </button>
@@ -524,16 +516,14 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
 
         {/* Engagement stats */}
         {(post.likeCount !== 0 || post.commentCount > 0) && (
-          <div className="mx-7 mt-2.5 flex items-center justify-between text-[16px] text-muted-foreground">
+          <div className="mx-4 mt-2 flex items-center justify-between border-t border-border pt-2 text-[13px] text-muted-foreground">
             {post.likeCount !== 0 ? (
-              <div className="flex items-center gap-2">
-                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-white ${post.likeCount > 0 ? 'bg-primary' : 'bg-destructive'}`}>
-                  {post.likeCount > 0 ? (
-                    <ThumbsUp className="h-3.5 w-3.5 fill-white" />
-                  ) : (
-                    <ThumbsDown className="h-3.5 w-3.5 fill-white" />
-                  )}
-                </div>
+              <div className="flex items-center gap-1.5">
+                {post.likeCount > 0 ? (
+                  <ThumbsUp className="h-3.5 w-3.5 text-primary" />
+                ) : (
+                  <ThumbsDown className="h-3.5 w-3.5 text-destructive" />
+                )}
                 <span className={post.likeCount < 0 ? 'text-destructive' : ''}>{post.likeCount}</span>
               </div>
             ) : (
@@ -550,39 +540,39 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
         )}
 
         {/* Action bar */}
-        <div className="mx-7 mt-2.5 border-t border-border py-2 pb-3">
+        <div className="mx-4 mt-1 border-t border-border py-1.5">
           <div className="flex items-center">
             <button
               onClick={(e) => { e.stopPropagation(); userId && canLike && toggleLike.mutate(post._id); }}
               disabled={!userId || !canLike || toggleLike.isPending}
               title={!canLike ? 'You must be a member or follower of this organization' : undefined}
-              className={`flex flex-1 items-center justify-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[17px] font-medium transition-colors ${
-                !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : liked ? 'text-primary hover:bg-muted/60' : 'text-muted-foreground hover:bg-muted/60'
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-colors ${
+                !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : liked ? 'text-primary hover:bg-primary/5' : 'text-muted-foreground hover:bg-muted/50'
               }`}
             >
-              <ThumbsUp className={`h-6 w-6 ${liked ? 'fill-primary' : ''}`} />
+              <ThumbsUp className={`h-4 w-4 ${liked ? 'fill-primary' : ''}`} />
               Like
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); userId && canLike && toggleDislike.mutate(post._id); }}
               disabled={!userId || !canLike || toggleDislike.isPending}
               title={!canLike ? 'You must be a member or follower of this organization' : undefined}
-              className={`flex flex-1 items-center justify-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[17px] font-medium transition-colors ${
-                !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : disliked ? 'text-destructive hover:bg-muted/60' : 'text-muted-foreground hover:bg-muted/60'
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-colors ${
+                !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : disliked ? 'text-destructive hover:bg-destructive/5' : 'text-muted-foreground hover:bg-muted/50'
               }`}
             >
-              <ThumbsDown className={`h-6 w-6 ${disliked ? 'fill-destructive' : ''}`} />
+              <ThumbsDown className={`h-4 w-4 ${disliked ? 'fill-destructive' : ''}`} />
               Dislike
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); if (canComment) navigateToPost(); }}
               disabled={!canComment}
               title={!canComment ? (orgAccessRole === 'follower' ? 'Followers cannot comment — join the organization to comment' : 'You must be a member of this organization to comment') : undefined}
-              className={`flex flex-1 items-center justify-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[17px] font-medium transition-colors ${
-                !canComment ? 'cursor-not-allowed opacity-50 text-muted-foreground' : 'text-muted-foreground hover:bg-muted/60'
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-colors ${
+                !canComment ? 'cursor-not-allowed opacity-50 text-muted-foreground' : 'text-muted-foreground hover:bg-muted/50'
               }`}
             >
-              <MessageCircle className="h-6 w-6" />
+              <MessageCircle className="h-4 w-4" />
               Comment
             </button>
           </div>
@@ -594,40 +584,38 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
   // ─── Normal Post Card ────────────────────────────────────────
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.15 }}
       ref={viewRef}
       onClick={handleCardClick}
-      className="cursor-pointer overflow-hidden rounded-xl bg-card card-shadow transition-shadow hover:card-shadow-hover"
+      className="cursor-pointer overflow-hidden rounded-lg border border-border bg-card transition-colors hover:bg-muted/20"
     >
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between px-6 pt-6">
-        <div className="flex items-center gap-3.5">
-          <Avatar className="h-[50px] w-[50px] ring-2 ring-background shadow-sm">
+      {/* Header */}
+      <div className="flex items-start justify-between px-4 pt-3">
+        <div className="flex items-center gap-2">
+          <Avatar className="h-8 w-8">
             <AvatarImage src={authorAvatar} alt={authorName} />
-            <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary text-[16px] font-bold text-primary-foreground">
+            <AvatarFallback className="bg-primary text-primary-foreground text-[11px] font-bold">
               {initials(authorName)}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Link
                 href={`/profile/${authorId}`}
                 onClick={(e) => e.stopPropagation()}
-                className="text-[19px] font-semibold text-foreground hover:underline"
+                className="text-[13px] font-semibold text-foreground hover:underline"
               >
                 {authorName}
               </Link>
               {orgName && (
                 <>
-                  <span className="text-[16px] text-muted-foreground">in</span>
-                  <span className="text-[17px] font-medium text-primary">{orgName}</span>
+                  <span className="text-[12px] text-muted-foreground">in</span>
+                  <span className="text-[13px] font-medium text-primary">{orgName}</span>
                 </>
               )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[16px] text-muted-foreground">{timeAgo}</span>
+              <span className="text-[12px] text-muted-foreground">· {timeAgo}</span>
             </div>
           </div>
         </div>
@@ -637,135 +625,94 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted/50"
             >
-              <MoreHorizontal className="h-6 w-6" />
+              <MoreHorizontal className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg">
-            <DropdownMenuItem className="cursor-pointer gap-2.5 rounded-lg text-[17px]">
-              <Bookmark className="h-5 w-5" /> Save post
+          <DropdownMenuContent align="end" className="w-48 rounded-lg border border-border">
+            <DropdownMenuItem className="cursor-pointer gap-2 text-[13px]">
+              <Bookmark className="h-4 w-4" /> Save post
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer gap-2.5 rounded-lg text-[17px]">
-              <EyeOff className="h-5 w-5" /> Hide post
+            <DropdownMenuItem className="cursor-pointer gap-2 text-[13px]">
+              <EyeOff className="h-4 w-4" /> Hide post
             </DropdownMenuItem>
             {isPostAuthor && (
               <DropdownMenuItem
-                className="cursor-pointer gap-2.5 rounded-lg text-[17px] text-destructive focus:text-destructive"
+                className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
                 onClick={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
               >
-                <Trash2 className="h-5 w-5" /> Delete post
+                <Trash2 className="h-4 w-4" /> Delete post
               </DropdownMenuItem>
             )}
             {!isPostAuthor && (
               <DropdownMenuItem
-                className="cursor-pointer gap-2.5 rounded-lg text-[17px] text-destructive focus:text-destructive"
+                className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
                 onClick={() => reportPost.mutate(post._id)}
               >
-                <Flag className="h-5 w-5" /> Report post
+                <Flag className="h-4 w-4" /> Report post
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      {/* ── Content: Title + Type Badge + Tags + Body ── */}
-      <div className="px-6 pb-2.5 pt-3.5">
-        <div className="flex items-start gap-2.5 flex-wrap">
-          <h3 className="text-[21px] font-semibold leading-snug text-foreground">
+      {/* Content */}
+      <div className="px-4 pb-1 pt-2">
+        <div className="flex items-start gap-2 flex-wrap">
+          <h3 className="text-[18px] font-semibold leading-snug text-foreground">
             {post.title}
           </h3>
           <PostTypeBadge type={post.type} />
         </div>
 
-        {/* Tags */}
-        {post.tags.length > 0 && (
-          <div className="mt-2.5 flex flex-wrap gap-2.5">
-            {post.tags.map((tag) => (
-              <span
-                key={tag}
-                className={`inline-flex items-center rounded-full px-3.5 py-1 text-[15px] font-medium ${getTagColor(tag)}`}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
         {post.bodyText && (
-          <p className="mt-2.5 text-[18px] leading-relaxed text-muted-foreground line-clamp-4">
+          <p className="mt-1.5 text-[15px] leading-relaxed text-foreground/80 line-clamp-3">
             {post.bodyText}
           </p>
         )}
       </div>
 
-      {/* ── Media Gallery (edge-to-edge) ── */}
+      {/* Media Gallery */}
       {visualUrls.length > 0 && (
-        <div className="media-gallery mx-6 mt-1" data-interactive>
+        <div className="media-gallery mx-4 mt-1.5" data-interactive>
           <MediaGallery urls={visualUrls} />
         </div>
       )}
 
-      {/* ── Research Paper PDFs (full width, below gallery) ── */}
-      {post.type === 'research_paper' && pdfUrls.length > 0 && (
-        <div className="mx-6 mt-3.5 flex flex-col gap-2.5">
-          {pdfUrls.map((url) => (
-            <a
-              key={url}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="group flex items-center gap-3.5 rounded-xl border border-border bg-gradient-to-r from-muted/50 to-card p-5 transition-all hover:border-primary/30 hover:shadow-sm"
-            >
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-500 transition-colors group-hover:bg-red-100">
-                <FileText className="h-6 w-6" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[17px] font-medium text-foreground">
-                  {getFileName(url)}
-                </p>
-                <p className="text-[15px] text-muted-foreground">PDF Document</p>
-              </div>
-              <Download className="h-6 w-6 shrink-0 text-muted-foreground group-hover:text-primary" />
-            </a>
-          ))}
-        </div>
-      )}
-
-      {/* ── Normal post PDFs (prominent) ── */}
-      {post.type !== 'research_paper' && pdfUrls.length > 0 && (
-        <div className="mx-6 mt-3.5 flex flex-col gap-2.5">
+      {/* PDFs */}
+      {pdfUrls.length > 0 && (
+        <div className="mx-4 mt-2.5 flex flex-col gap-2">
           {pdfUrls.map((url) => (
             <div
               key={url}
-              className="group flex items-center gap-3.5 rounded-xl border-2 border-red-100 bg-gradient-to-r from-red-50/60 to-card p-5 transition-all hover:border-red-200 hover:shadow-sm"
+              className="group flex items-center gap-3 rounded-md border border-border p-3 transition-colors hover:bg-muted/30"
             >
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600">
-                <FileText className="h-6 w-6" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-600">
+                <FileText className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[17px] font-medium text-foreground">
+                <p className="truncate text-[14px] font-medium text-foreground">
                   {getFileName(url)}
                 </p>
-                <p className="text-[15px] text-muted-foreground">PDF Document</p>
+                <p className="text-[12px] text-muted-foreground">PDF Document</p>
               </div>
-              <div className="flex shrink-0 items-center gap-2.5">
+              <div className="flex shrink-0 items-center gap-2">
                 <a
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-[16px] font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted/50"
                 >
-                  <ExternalLink className="h-5 w-5" />
+                  <ExternalLink className="h-3.5 w-3.5" />
                   View
                 </a>
                 <button
                   onClick={handleDownload(url)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-[16px] font-medium text-white shadow-sm transition-colors hover:bg-red-700"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
-                  <Download className="h-5 w-5" />
+                  <Download className="h-3.5 w-3.5" />
                   Download
                 </button>
               </div>
@@ -774,23 +721,37 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
         </div>
       )}
 
-      {/* ── Poll ── */}
+      {/* Tags */}
+      {post.tags.length > 0 && (
+        <div className="mx-4 mt-2.5 flex flex-wrap gap-1.5">
+          {post.tags.map((tag) => (
+            <span
+              key={tag}
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-medium ${getTagColor(tag)}`}
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Poll */}
       {post.poll && (
-        <div className="mx-6 mt-3.5 rounded-xl border border-border bg-muted/20 p-6">
-          <div className="mb-3.5 flex items-center justify-between">
-            <div className="flex items-center gap-2.5 text-[18px] font-semibold text-foreground">
-              <BarChart3 className="h-6 w-6 text-primary" />
+        <div className="mx-4 mt-2.5 rounded-md border border-border bg-muted/10 p-4">
+          <div className="mb-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[15px] font-semibold text-foreground">
+              <BarChart3 className="h-5 w-5 text-primary" />
               {post.poll.question}
             </div>
             {isPollClosed && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-[14px] font-medium text-muted-foreground">
-                <Lock className="h-4 w-4" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-[12px] font-medium text-muted-foreground">
+                <Lock className="h-3.5 w-3.5" />
                 Closed
               </span>
             )}
           </div>
 
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2">
             {post.poll.options.map((opt) => {
               const pct =
                 post.poll!.totalVotes > 0
@@ -807,26 +768,26 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
                   key={opt.optionId}
                   onClick={(e) => { e.stopPropagation(); toggleOption(opt.optionId); }}
                   disabled={!!showResults || !!isPollClosed}
-                  className={`relative flex items-center justify-between overflow-hidden rounded-xl border px-5 py-3.5 text-[17px] transition-all ${
+                  className={`relative flex items-center justify-between overflow-hidden rounded-md border px-4 py-2.5 text-[14px] transition-all ${
                     isSelected || votedForThis
-                      ? 'border-primary/40 bg-primary/5'
-                      : 'border-border hover:border-border/80 hover:bg-muted/40'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:bg-muted/30'
                   } ${showResults || isPollClosed ? 'cursor-default' : 'cursor-pointer'}`}
                 >
                   {showResults && (
                     <div
-                      className="absolute inset-y-0 left-0 rounded-xl bg-primary/10 transition-all duration-500"
+                      className="absolute inset-y-0 left-0 bg-primary/10 transition-all duration-500"
                       style={{ width: `${pct}%` }}
                     />
                   )}
-                  <span className="relative z-10 flex items-center gap-2.5 font-medium text-foreground/80">
+                  <span className="relative z-10 flex items-center gap-2 font-medium text-foreground/80">
                     {votedForThis && (
-                      <Check className="h-5 w-5 text-primary" />
+                      <Check className="h-4 w-4 text-primary" />
                     )}
                     {opt.text}
                   </span>
                   {showResults && (
-                    <span className="relative z-10 flex items-center gap-2.5 text-[16px]">
+                    <span className="relative z-10 flex items-center gap-2 text-[13px]">
                       <span className="font-semibold text-foreground">
                         {pct}%
                       </span>
@@ -841,7 +802,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
           {!showResults && !isPollClosed && selectedOptions.length > 0 && (
             <Button
               size="default"
-              className="mt-3.5 rounded-lg text-[16px]"
+              className="mt-2.5 rounded-md bg-primary text-[13px] text-primary-foreground hover:bg-primary/90"
               onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleVote(); }}
               disabled={votePoll.isPending}
             >
@@ -849,8 +810,8 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
             </Button>
           )}
 
-          <div className="mt-3.5 flex items-center justify-between">
-            <p className="text-[16px] text-muted-foreground">
+          <div className="mt-2.5 flex items-center justify-between">
+            <p className="text-[13px] text-muted-foreground">
               {post.poll.totalVotes} vote
               {post.poll.totalVotes !== 1 ? 's' : ''}
               {post.poll.isMultiple && ' · Multiple answers'}
@@ -859,9 +820,9 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
               <button
                 onClick={(e) => { e.stopPropagation(); closePoll.mutate(post._id); }}
                 disabled={closePoll.isPending}
-                className="inline-flex items-center gap-1.5 text-[16px] font-medium text-muted-foreground transition-colors hover:text-destructive"
+                className="inline-flex items-center gap-1 text-[13px] font-medium text-muted-foreground transition-colors hover:text-destructive"
               >
-                <Lock className="h-4 w-4" />
+                <Lock className="h-3.5 w-3.5" />
                 Close Poll
               </button>
             )}
@@ -869,18 +830,16 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
         </div>
       )}
 
-      {/* ── Engagement stats ── */}
+      {/* Engagement stats */}
       {(post.likeCount !== 0 || post.commentCount > 0) && (
-        <div className="mx-6 mt-3.5 flex items-center justify-between text-[16px] text-muted-foreground">
+        <div className="mx-4 mt-2 flex items-center justify-between border-t border-border pt-2 text-[13px] text-muted-foreground">
           {post.likeCount !== 0 ? (
-            <div className="flex items-center gap-2">
-              <div className={`flex h-6 w-6 items-center justify-center rounded-full text-white ${post.likeCount > 0 ? 'bg-primary' : 'bg-destructive'}`}>
-                {post.likeCount > 0 ? (
-                  <ThumbsUp className="h-3.5 w-3.5 fill-white" />
-                ) : (
-                  <ThumbsDown className="h-3.5 w-3.5 fill-white" />
-                )}
-              </div>
+            <div className="flex items-center gap-1.5">
+              {post.likeCount > 0 ? (
+                <ThumbsUp className="h-3.5 w-3.5 text-primary" />
+              ) : (
+                <ThumbsDown className="h-3.5 w-3.5 text-destructive" />
+              )}
               <span className={post.likeCount < 0 ? 'text-destructive' : ''}>{post.likeCount}</span>
             </div>
           ) : (
@@ -900,21 +859,21 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
         </div>
       )}
 
-      {/* ── Action bar ── */}
-      <div className="mx-6 mt-2.5 border-t border-border py-2 pb-3">
+      {/* Action bar */}
+      <div className="mx-4 mt-1 border-t border-border py-1.5">
         <div className="flex items-center">
           <button
             onClick={(e) => { e.stopPropagation(); userId && canLike && toggleLike.mutate(post._id); }}
             disabled={!userId || !canLike || toggleLike.isPending}
             title={!canLike ? 'You must be a member or follower of this organization' : undefined}
-            className={`flex flex-1 items-center justify-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[17px] font-medium transition-colors ${
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-colors ${
               !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : liked
-                ? 'text-primary hover:bg-muted/60'
-                : 'text-muted-foreground hover:bg-muted/60'
+                ? 'text-primary hover:bg-primary/5'
+                : 'text-muted-foreground hover:bg-muted/50'
             }`}
           >
             <ThumbsUp
-              className={`h-6 w-6 ${liked ? 'fill-primary' : ''}`}
+              className={`h-4 w-4 ${liked ? 'fill-primary' : ''}`}
             />
             Like
           </button>
@@ -922,14 +881,14 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
             onClick={(e) => { e.stopPropagation(); userId && canLike && toggleDislike.mutate(post._id); }}
             disabled={!userId || !canLike || toggleDislike.isPending}
             title={!canLike ? 'You must be a member or follower of this organization' : undefined}
-            className={`flex flex-1 items-center justify-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[17px] font-medium transition-colors ${
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-colors ${
               !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : disliked
-                ? 'text-destructive hover:bg-muted/60'
-                : 'text-muted-foreground hover:bg-muted/60'
+                ? 'text-destructive hover:bg-destructive/5'
+                : 'text-muted-foreground hover:bg-muted/50'
             }`}
           >
             <ThumbsDown
-              className={`h-6 w-6 ${disliked ? 'fill-destructive' : ''}`}
+              className={`h-4 w-4 ${disliked ? 'fill-destructive' : ''}`}
             />
             Dislike
           </button>
@@ -937,11 +896,11 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
             onClick={(e) => { e.stopPropagation(); if (canComment) navigateToPost(); }}
             disabled={!canComment}
             title={!canComment ? (orgAccessRole === 'follower' ? 'Followers cannot comment — join the organization to comment' : 'You must be a member of this organization to comment') : undefined}
-            className={`flex flex-1 items-center justify-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[17px] font-medium transition-colors ${
-              !canComment ? 'cursor-not-allowed opacity-50 text-muted-foreground' : 'text-muted-foreground hover:bg-muted/60'
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-colors ${
+              !canComment ? 'cursor-not-allowed opacity-50 text-muted-foreground' : 'text-muted-foreground hover:bg-muted/50'
             }`}
           >
-            <MessageCircle className="h-6 w-6" />
+            <MessageCircle className="h-4 w-4" />
             Comment
           </button>
         </div>
@@ -952,20 +911,20 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
 
 export function PostCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-xl bg-white card-shadow p-5">
-      <div className="flex items-center gap-3 mb-4">
-        <Skeleton className="h-10 w-10 rounded-full" />
+    <div className="overflow-hidden rounded-lg border border-border bg-card p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Skeleton className="h-8 w-8 rounded-full" />
         <div className="flex-1">
-          <Skeleton className="h-4 w-32 mb-1.5" />
-          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-3.5 w-32 mb-1" />
+          <Skeleton className="h-3 w-20" />
         </div>
       </div>
       <Skeleton className="h-5 w-3/4 mb-2" />
-      <Skeleton className="h-4 w-full mb-1.5" />
-      <Skeleton className="h-4 w-2/3 mb-4" />
-      <div className="flex gap-2">
-        <Skeleton className="h-6 w-16 rounded-full" />
-        <Skeleton className="h-6 w-20 rounded-full" />
+      <Skeleton className="h-3.5 w-full mb-1.5" />
+      <Skeleton className="h-3.5 w-2/3 mb-3" />
+      <div className="flex gap-1.5">
+        <Skeleton className="h-5 w-14 rounded-full" />
+        <Skeleton className="h-5 w-18 rounded-full" />
       </div>
     </div>
   );

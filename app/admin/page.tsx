@@ -16,7 +16,7 @@ import { motion } from 'framer-motion';
 /* ─── Loading skeleton for a single stat card ─────────────────── */
 function StatCardSkeleton() {
   return (
-    <Card className="border-border/50 bg-white card-shadow">
+    <Card className="border-border/50 bg-white border border-border">
       <CardContent className="flex items-center gap-5 p-6">
         <Skeleton className="h-[50px] w-[50px] rounded-xl" />
         <div className="flex flex-col gap-2">
@@ -109,7 +109,7 @@ export default function AdminDashboardPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.05 }}
                 >
-                  <Card className="border-border/50 bg-white card-shadow">
+                  <Card className="border-border/50 bg-white border border-border">
                     <CardContent className="flex items-center gap-5 p-6">
                       <div
                         className={`flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-xl ${c.iconClass}`}

@@ -3,19 +3,33 @@
 import { usePublicTrends } from '@/lib/api/analytics';
 import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
 import { Sidebar } from '@/components/layout/sidebar';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
-  ResponsiveContainer,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
+import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
 } from 'recharts';
 
-const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#14b8a6', '#a855f7', '#f97316', '#0ea5e9'];
+const papersByYearConfig = {
+  count: { label: 'Papers', color: 'var(--chart-1)' },
+} satisfies ChartConfig;
+
+const topKeywordsConfig = {
+  count: { label: 'Papers', color: 'var(--chart-2)' },
+} satisfies ChartConfig;
+
+const papersByOrgConfig = {
+  count: { label: 'Papers', color: 'var(--chart-3)' },
+} satisfies ChartConfig;
 
 export default function AnalyticsPage() {
   const { data, isLoading } = usePublicTrends();
@@ -29,64 +43,81 @@ export default function AnalyticsPage() {
         <main className="min-w-0 flex-1">
           <div className="mb-6">
             <h1 className="text-[26px] font-bold tracking-tight text-foreground">Research Trends</h1>
-            <p className="mt-1 text-[15px] text-muted-foreground">
+            <p className="mt-1 text-[14px] text-muted-foreground">
               Aggregated insights from papers and knowledge shared on UPLB KAIN
             </p>
           </div>
 
           {isLoading && (
-            <div className="flex justify-center py-24">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <div className="grid gap-5 lg:grid-cols-2">
+              <Card className="border border-border bg-card lg:col-span-2">
+                <CardHeader><Skeleton className="h-5 w-48" /></CardHeader>
+                <CardContent><Skeleton className="h-[240px] w-full rounded-md" /></CardContent>
+              </Card>
+              <Card className="border border-border bg-card">
+                <CardHeader><Skeleton className="h-5 w-36" /></CardHeader>
+                <CardContent><Skeleton className="h-[280px] w-full rounded-md" /></CardContent>
+              </Card>
+              <Card className="border border-border bg-card">
+                <CardHeader><Skeleton className="h-5 w-44" /></CardHeader>
+                <CardContent><Skeleton className="h-[280px] w-full rounded-md" /></CardContent>
+              </Card>
             </div>
           )}
 
           {data && (
             <div className="grid gap-5 lg:grid-cols-2">
               {/* Papers by year */}
-              <Card className="border-border/60 bg-white shadow-sm lg:col-span-2">
-                <CardContent className="p-6">
-                  <h2 className="mb-4 text-[16px] font-semibold text-foreground">Papers by Publication Year</h2>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <BarChart data={data.papersByYear}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="year" tick={{ fontSize: 12 }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#6366f1" radius={[3, 3, 0, 0]} name="Papers" />
+              <Card className="border border-border bg-card lg:col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-[15px] font-semibold">Papers by Publication Year</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={papersByYearConfig} className="h-[240px] w-full">
+                    <BarChart data={data.papersByYear} accessibilityLayer>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                      <XAxis dataKey="year" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
               </Card>
 
               {/* Top keywords */}
-              <Card className="border-border/60 bg-white shadow-sm">
-                <CardContent className="p-6">
-                  <h2 className="mb-4 text-[16px] font-semibold text-foreground">Top Keywords</h2>
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={data.topKeywords} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <YAxis type="category" dataKey="keyword" width={130} tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#22c55e" radius={[0, 3, 3, 0]} name="Papers" />
+              <Card className="border border-border bg-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-[15px] font-semibold">Top Keywords</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={topKeywordsConfig} className="h-[280px] w-full">
+                    <BarChart data={data.topKeywords} layout="vertical" accessibilityLayer>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
+                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                      <YAxis type="category" dataKey="keyword" width={130} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="count" fill="var(--color-count)" radius={[0, 4, 4, 0]} />
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
               </Card>
 
               {/* Papers by org */}
-              <Card className="border-border/60 bg-white shadow-sm">
-                <CardContent className="p-6">
-                  <h2 className="mb-4 text-[16px] font-semibold text-foreground">Papers by Organization</h2>
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={data.papersByOrg} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#f59e0b" radius={[0, 3, 3, 0]} name="Papers" />
+              <Card className="border border-border bg-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-[15px] font-semibold">Papers by Organization</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={papersByOrgConfig} className="h-[280px] w-full">
+                    <BarChart data={data.papersByOrg} layout="vertical" accessibilityLayer>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
+                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                      <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="count" fill="var(--color-count)" radius={[0, 4, 4, 0]} />
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
               </Card>
             </div>

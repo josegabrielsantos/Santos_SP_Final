@@ -29,7 +29,7 @@ const fadeUp = {
   visible: (delay = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.45, ease: 'easeOut', delay },
+    transition: { duration: 0.45, ease: [0, 0, 0.2, 1] as const, delay },
   }),
 };
 
@@ -117,9 +117,9 @@ export default function LandingPage() {
               className="flex shrink-0 items-center gap-5"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' }}
+              transition={{ duration: 0.5, delay: 0.2, ease: [0, 0, 0.2, 1] as const }}
             >
-              <div className="relative h-40 w-40 overflow-hidden rounded-3xl border border-border bg-white p-4 card-shadow-md sm:h-48 sm:w-48">
+              <div className="relative h-40 w-40 overflow-hidden rounded-3xl border border-border bg-white p-4 border border-border sm:h-48 sm:w-48">
                 <Image
                   src="/uplb_logo.png"
                   alt="UPLB Logo"
@@ -128,7 +128,7 @@ export default function LandingPage() {
                   priority
                 />
               </div>
-              <div className="relative h-40 w-40 overflow-hidden rounded-3xl border border-border bg-white p-4 card-shadow-md sm:h-48 sm:w-48">
+              <div className="relative h-40 w-40 overflow-hidden rounded-3xl border border-border bg-white p-4 border border-border sm:h-48 sm:w-48">
                 <Image
                   src="/FaNS_logo.png"
                   alt="FaNS Logo"
@@ -348,7 +348,7 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <Card className="group border-border/50 bg-white card-shadow transition-all duration-200 hover:card-shadow-hover hover:-translate-y-0.5">
+    <Card className="group border-border/50 bg-white border border-border transition-all duration-200 hover:border-border/80 hover:-translate-y-0.5">
       <CardContent className="flex flex-col gap-3 p-6">
         <div className="flex h-[48px] w-[48px] items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
           {icon}
@@ -370,7 +370,7 @@ function ObjectiveCard({
   description: string;
 }) {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-border/50 bg-white p-8 card-shadow">
+    <div className="flex flex-col gap-4 rounded-2xl border border-border/50 bg-white p-8 border border-border">
       <span
         className="text-4xl font-extrabold text-primary/15"
         style={{ fontFamily: 'var(--font-heading)' }}
