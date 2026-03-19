@@ -76,9 +76,13 @@ import {
   Pin,
   PinOff,
   UploadCloud,
+  BookOpen,
+  Download,
 } from 'lucide-react';
 import { BulkImportDialog } from '@/components/paper/bulk-import-dialog';
-import type { UserSummary } from '@/lib/types';
+import { useOrgPapers } from '@/lib/api/papers';
+import { CitationButton } from '@/components/paper/citation-button';
+import type { Paper, UserSummary } from '@/lib/types';
 
 function initials(name: string) {
   return name
@@ -169,7 +173,9 @@ export default function OrgDetailPage() {
   const orgId = org?._id;
 
   const [postPage, setPostPage] = useState(1);
+  const [paperPage, setPaperPage] = useState(1);
   const { data: postsData, isLoading: postsLoading } = useOrgPosts(orgId, { page: postPage });
+  const { data: papersData, isLoading: papersLoading, isError: papersError } = useOrgPapers(orgId, { page: paperPage });
   const { data: members } = useOrgMembers(orgId);
 
   const requestJoin = useRequestJoin();
@@ -501,6 +507,13 @@ export default function OrgDetailPage() {
                   Posts
                 </TabsTrigger>
                 <TabsTrigger
+                  value="papers"
+                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Papers
+                </TabsTrigger>
+                <TabsTrigger
                   value="members"
                   className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
                 >
@@ -644,6 +657,69 @@ export default function OrgDetailPage() {
                       size="default"
                       onClick={() => setPostPage((p) => Math.min(postsData.pages, p + 1))}
                       disabled={postPage >= postsData.pages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Papers tab */}
+              <TabsContent value="papers" className="mt-4 flex flex-col gap-4">
+                {papersLoading && (
+                  <>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="border border-border rounded-xl bg-white p-5 flex flex-col gap-3">
+                        <Skeleton className="h-5 w-3/4 rounded" />
+                        <Skeleton className="h-4 w-1/2 rounded" />
+                        <Skeleton className="h-4 w-1/3 rounded" />
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {papersError && (
+                  <p className="py-8 text-center text-[14px] text-destructive">
+                    Failed to load papers.
+                  </p>
+                )}
+
+                {!papersLoading && !papersError && papersData?.papers.map((paper, index) => (
+                  <motion.div
+                    key={paper._id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.04, duration: 0.22 }}
+                  >
+                    <OrgPaperCard paper={paper} />
+                  </motion.div>
+                ))}
+
+                {!papersLoading && !papersError && papersData?.papers.length === 0 && (
+                  <div className="flex flex-col items-center py-8 text-center">
+                    <BookOpen className="mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <p className="text-[15px] text-muted-foreground">No papers yet.</p>
+                  </div>
+                )}
+
+                {papersData && papersData.pages > 1 && (
+                  <div className="flex items-center justify-center gap-2.5 py-5">
+                    <Button
+                      variant="outline"
+                      size="default"
+                      onClick={() => setPaperPage((p) => Math.max(1, p - 1))}
+                      disabled={paperPage <= 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-[14px] text-muted-foreground">
+                      Page {paperPage} of {papersData.pages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="default"
+                      onClick={() => setPaperPage((p) => Math.min(papersData.pages, p + 1))}
+                      disabled={paperPage >= papersData.pages}
                     >
                       Next
                     </Button>
@@ -1013,6 +1089,93 @@ export default function OrgDetailPage() {
         />
       )}
     </div>
+  );
+}
+
+function OrgPaperCard({ paper }: { paper: Paper }) {
+  const authorStr = paper.authors?.length > 0 ? paper.authors.join(', ') : null;
+  const yearJournal = [paper.year, paper.journal].filter(Boolean).join(' · ');
+
+  return (
+    <Card className="rounded-xl border-border/60 bg-white border border-border">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <BookOpen className="mt-0.5 h-5 w-5 shrink-0 text-primary/60" />
+            <div className="min-w-0">
+              {paper.sourcePostId ? (
+                <Link
+                  href={`/posts/${paper.sourcePostId}`}
+                  className="text-[15px] font-semibold text-foreground leading-snug hover:underline line-clamp-2"
+                >
+                  {paper.title}
+                </Link>
+              ) : (
+                <p className="text-[15px] font-semibold text-foreground leading-snug line-clamp-2">
+                  {paper.title}
+                </p>
+              )}
+              {authorStr && (
+                <p className="mt-0.5 text-[13px] text-muted-foreground line-clamp-1">
+                  {authorStr}
+                </p>
+              )}
+              {yearJournal && (
+                <p className="mt-0.5 text-[13px] text-muted-foreground">
+                  {yearJournal}
+                </p>
+              )}
+              {paper.abstract && (
+                <p className="mt-1.5 text-[13px] text-muted-foreground line-clamp-2">
+                  {paper.abstract}
+                </p>
+              )}
+              {paper.keywords?.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {paper.keywords.slice(0, 6).map((kw) => (
+                    <Badge key={kw} variant="secondary" className="text-[11px] font-medium">
+                      {kw}
+                    </Badge>
+                  ))}
+                  {paper.keywords.length > 6 && (
+                    <span className="text-[11px] text-muted-foreground self-center">
+                      +{paper.keywords.length - 6} more
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className="mt-2 flex items-center gap-1 text-[12px] text-muted-foreground">
+                <Download className="h-3 w-3" />
+                {paper.downloadCount} downloads
+                {paper.doi && (
+                  <>
+                    <span className="mx-1">·</span>
+                    <span>DOI: {paper.doi}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1">
+            <CitationButton paper={paper} />
+            {paper.fileUrl && (
+              <a
+                href={paper.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Button variant="outline" size="sm" className="gap-1.5 text-[13px]">
+                  <Download className="h-3.5 w-3.5" />
+                  PDF
+                </Button>
+              </a>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -43,6 +43,32 @@ export function usePapers(params?: {
   });
 }
 
+// ─── Get papers by organization ──────────────────────────────────
+
+export function useOrgPapers(
+  orgId: string | undefined,
+  params?: { page?: number; limit?: number; sort?: 'newest' | 'oldest' | 'downloads' },
+) {
+  const page = params?.page ?? 1;
+  const limit = params?.limit ?? 20;
+
+  return useQuery<PapersResponse>({
+    queryKey: ['papers', 'org', orgId, params],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<PapersResponse>('/papers', {
+        params: {
+          page,
+          limit,
+          organizationId: orgId,
+          sort: params?.sort || undefined,
+        },
+      });
+      return data;
+    },
+    enabled: !!orgId,
+  });
+}
+
 // ─── Get single paper ───────────────────────────────────────────
 
 export function usePaper(id: string | undefined) {
