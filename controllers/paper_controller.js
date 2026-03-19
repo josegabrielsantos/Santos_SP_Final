@@ -71,6 +71,10 @@ const getPapers = async (req, res) => {
       if (req.query.yearFrom) filter.year.$gte = parseInt(req.query.yearFrom);
       if (req.query.yearTo) filter.year.$lte = parseInt(req.query.yearTo);
     }
+    // Filter by specific organization
+    if (req.query.organizationId) {
+      filter.organizationId = req.query.organizationId;
+    }
     // Filter by user's organizations
     if (req.query.myOrgs === 'true' && req.user) {
       const uid = req.user._id.toString();
