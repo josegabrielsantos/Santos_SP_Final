@@ -26,27 +26,58 @@ export interface SearchResponse {
   papers?: { total: number; hits: PaperSearchHit[] };
 }
 
-export function useSearch(params: {
+export interface SearchParams {
   q: string;
   type?: 'all' | 'posts' | 'papers';
+  // Paper filters
   sort?: string;
   author?: string;
   yearFrom?: string;
   yearTo?: string;
   tags?: string;
+  tagMode?: string;
+  title?: string;
+  // Post filters
+  postType?: string;
+  postTags?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  // Pagination
+  page?: number;
+  limit?: number;
+  // Future: semantic search
+  // semantic?: boolean;
   enabled?: boolean;
-}) {
+}
+
+export function useSearch(params: SearchParams) {
+  const hasQuery = !!params.q?.trim();
+  const hasFilters =
+    !!params.author?.trim() ||
+    !!params.yearFrom?.trim() ||
+    !!params.yearTo?.trim() ||
+    !!params.tags?.trim() ||
+    !!params.title?.trim() ||
+    !!params.postType?.trim() ||
+    !!params.postTags?.trim() ||
+    !!params.dateFrom?.trim() ||
+    !!params.dateTo?.trim();
+
   return useQuery<SearchResponse>({
     queryKey: ['search', params],
     queryFn: async () => {
       const { enabled: _enabled, ...queryParams } = params;
+      // Remove undefined/empty values
+      const cleaned = Object.fromEntries(
+        Object.entries(queryParams).filter(([, v]) => v !== undefined && v !== '')
+      );
       const { data } = await axiosInstance.get<SearchResponse>('/search', {
-        params: queryParams,
+        params: cleaned,
       });
       return data;
     },
     staleTime: 30_000,
-    enabled: !!params.q && params.enabled !== false,
+    enabled: (hasQuery || hasFilters) && params.enabled !== false,
   });
 }
 
