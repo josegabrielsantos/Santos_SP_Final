@@ -7,13 +7,11 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { AnnouncementsPanel } from '@/components/home/announcements-panel';
 import { PostCard, PostCardSkeleton } from '@/components/post/post-card';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CreatePostDialog } from '@/components/post/create-post-dialog';
+import { CreatePostTrigger } from '@/components/post/create-post-trigger';
 import { usePosts, useFeaturedPosts, useRecommendedPosts } from '@/lib/api/posts';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ChevronLeft, ChevronRight, Sparkles, Wand2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Sparkles, Wand2 } from 'lucide-react';
 import { useAppSelector } from '@/store/hooks';
 import type { Post } from '@/lib/types';
 
@@ -74,36 +72,23 @@ export default function HomePage() {
             )}
 
             {/* Create post trigger */}
-            <CreatePostDialog>
-              <Card className="cursor-pointer border border-border bg-card transition-colors hover:bg-muted/20">
-                <CardContent className="flex items-center gap-3 p-3">
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarImage src={user?.avatar ?? undefined} alt={user?.displayName ?? ''} />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-[11px] font-bold">
-                      {user?.displayName?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() ?? 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="flex-1 rounded-full border border-border bg-muted/20 px-4 py-2 text-[14px] text-muted-foreground transition-colors hover:bg-muted/40">
-                    What&apos;s on your mind?
-                  </span>
-                </CardContent>
-              </Card>
-            </CreatePostDialog>
+            <CreatePostTrigger />
 
             {/* Feed tabs */}
             <Tabs defaultValue="foryou">
-              <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent p-0">
+              <TabsList className="w-full justify-start rounded-lg border border-border/60 bg-white p-0 h-auto">
                 <TabsTrigger
                   value="foryou"
-                  className="flex items-center gap-1.5 rounded-none border-b-2 border-transparent px-5 py-2.5 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
                 >
                   <Wand2 className="h-4 w-4" />
                   For You
                 </TabsTrigger>
                 <TabsTrigger
                   value="latest"
-                  className="rounded-none border-b-2 border-transparent px-5 py-2.5 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
                 >
+                  <Clock className="h-4 w-4" />
                   Latest
                 </TabsTrigger>
               </TabsList>

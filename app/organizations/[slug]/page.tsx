@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
 import { Sidebar } from '@/components/layout/sidebar';
 import { PostCard } from '@/components/post/post-card';
-import { CreatePostDialog } from '@/components/post/create-post-dialog';
+import { CreatePostTrigger } from '@/components/post/create-post-trigger';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   useOrganization,
@@ -58,7 +58,6 @@ import {
   Users,
   FileText,
   Loader2,
-  Plus,
   LogOut,
   UserPlus,
   UserMinus,
@@ -82,6 +81,7 @@ import {
 import { BulkImportDialog } from '@/components/paper/bulk-import-dialog';
 import { useOrgPapers } from '@/lib/api/papers';
 import { CitationButton } from '@/components/paper/citation-button';
+import { PaperCard } from '@/components/paper/paper-card';
 import type { Paper, UserSummary } from '@/lib/types';
 
 function initials(name: string) {
@@ -562,18 +562,7 @@ export default function OrgDetailPage() {
               {/* Posts tab */}
               <TabsContent value="posts" className="mt-4 flex flex-col gap-4">
                 {canPost && (
-                  <CreatePostDialog defaultOrgId={orgId}>
-                    <Card className="cursor-pointer rounded-xl border-border/60 bg-white border border-border transition-shadow hover:border-border/80">
-                      <CardContent className="flex items-center gap-3.5 p-5">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                          <Plus className="h-5 w-5 text-primary" />
-                        </div>
-                        <span className="text-[16px] text-muted-foreground">
-                          Post in {org.name}…
-                        </span>
-                      </CardContent>
-                    </Card>
-                  </CreatePostDialog>
+                  <CreatePostTrigger orgName={org.name} defaultOrgId={orgId} />
                 )}
 
                 {/* Pinned posts */}
@@ -691,7 +680,7 @@ export default function OrgDetailPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.04, duration: 0.22 }}
                   >
-                    <OrgPaperCard paper={paper} />
+                    <PaperCard paper={paper} hideOrgInfo />
                   </motion.div>
                 ))}
 
@@ -1089,93 +1078,6 @@ export default function OrgDetailPage() {
         />
       )}
     </div>
-  );
-}
-
-function OrgPaperCard({ paper }: { paper: Paper }) {
-  const authorStr = paper.authors?.length > 0 ? paper.authors.join(', ') : null;
-  const yearJournal = [paper.year, paper.journal].filter(Boolean).join(' · ');
-
-  return (
-    <Card className="rounded-xl border-border/60 bg-white border border-border">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3 min-w-0">
-            <BookOpen className="mt-0.5 h-5 w-5 shrink-0 text-primary/60" />
-            <div className="min-w-0">
-              {paper.sourcePostId ? (
-                <Link
-                  href={`/posts/${paper.sourcePostId}`}
-                  className="text-[15px] font-semibold text-foreground leading-snug hover:underline line-clamp-2"
-                >
-                  {paper.title}
-                </Link>
-              ) : (
-                <p className="text-[15px] font-semibold text-foreground leading-snug line-clamp-2">
-                  {paper.title}
-                </p>
-              )}
-              {authorStr && (
-                <p className="mt-0.5 text-[13px] text-muted-foreground line-clamp-1">
-                  {authorStr}
-                </p>
-              )}
-              {yearJournal && (
-                <p className="mt-0.5 text-[13px] text-muted-foreground">
-                  {yearJournal}
-                </p>
-              )}
-              {paper.abstract && (
-                <p className="mt-1.5 text-[13px] text-muted-foreground line-clamp-2">
-                  {paper.abstract}
-                </p>
-              )}
-              {paper.keywords?.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {paper.keywords.slice(0, 6).map((kw) => (
-                    <Badge key={kw} variant="secondary" className="text-[11px] font-medium">
-                      {kw}
-                    </Badge>
-                  ))}
-                  {paper.keywords.length > 6 && (
-                    <span className="text-[11px] text-muted-foreground self-center">
-                      +{paper.keywords.length - 6} more
-                    </span>
-                  )}
-                </div>
-              )}
-              <div className="mt-2 flex items-center gap-1 text-[12px] text-muted-foreground">
-                <Download className="h-3 w-3" />
-                {paper.downloadCount} downloads
-                {paper.doi && (
-                  <>
-                    <span className="mx-1">·</span>
-                    <span>DOI: {paper.doi}</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-1">
-            <CitationButton paper={paper} />
-            {paper.fileUrl && (
-              <a
-                href={paper.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Button variant="outline" size="sm" className="gap-1.5 text-[13px]">
-                  <Download className="h-3.5 w-3.5" />
-                  PDF
-                </Button>
-              </a>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
