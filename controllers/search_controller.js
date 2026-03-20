@@ -6,6 +6,10 @@ const KMS_PAPERS_INDEX = 'kms_papers';
 /**
  * GET /api/search?q=...&type=posts|papers|all&page=1&limit=20
  * Unified search across posts and/or papers.
+ *
+ * Post-specific filters: postType, postTags, dateFrom, dateTo
+ * Paper-specific filters: title, author, tags, tagMode, yearFrom, yearTo
+ * Shared: q (general query), sort, page, limit
  */
 const search = async (req, res) => {
   try {
@@ -21,9 +25,20 @@ const search = async (req, res) => {
       yearFrom,
       yearTo,
       sort = 'relevance',
+      // Post-specific filters
+      postType,
+      postTags,
+      dateFrom,
+      dateTo,
     } = req.query;
 
     const hasGeneralQuery = q.trim().length > 0;
+    const hasPostCriteria =
+      hasGeneralQuery ||
+      !!postType?.trim() ||
+      !!postTags?.trim() ||
+      !!dateFrom?.trim() ||
+      !!dateTo?.trim();
     const hasPaperCriteria =
       hasGeneralQuery ||
       !!title?.trim() ||
@@ -32,12 +47,16 @@ const search = async (req, res) => {
       yearFrom !== undefined ||
       yearTo !== undefined;
 
-    if ((type === 'posts' || type === 'all') && !hasGeneralQuery) {
-      return res.status(400).json({ error: 'Query parameter "q" is required for posts search.' });
+    if ((type === 'posts') && !hasPostCriteria) {
+      return res.status(400).json({ error: 'At least one search criterion is required.' });
     }
 
     if (type === 'papers' && !hasPaperCriteria) {
       return res.status(400).json({ error: 'At least one papers search criterion is required.' });
+    }
+
+    if (type === 'all' && !hasGeneralQuery && !hasPostCriteria && !hasPaperCriteria) {
+      return res.status(400).json({ error: 'At least one search criterion is required.' });
     }
 
     const from = (parseInt(page) - 1) * parseInt(limit);
@@ -45,18 +64,63 @@ const search = async (req, res) => {
     const results = {};
 
     if (type === 'posts' || type === 'all') {
+      // Build bool query for posts with filters
+      const postMust = [];
+      const postFilter = [];
+
+      if (hasGeneralQuery) {
+        postMust.push({
+          multi_match: {
+            query: q,
+            fields: ['title^3', 'bodyText^2', 'tags'],
+            fuzziness: 'AUTO',
+          },
+        });
+      }
+
+      if (postType?.trim()) {
+        postFilter.push({ term: { type: postType.trim() } });
+      }
+
+      if (postTags?.trim()) {
+        const tagList = postTags.split(',').map((t) => t.trim()).filter(Boolean);
+        if (tagList.length > 0) {
+          postFilter.push({ terms: { tags: tagList } });
+        }
+      }
+
+      if (dateFrom?.trim() || dateTo?.trim()) {
+        const dateRange = {};
+        if (dateFrom?.trim()) dateRange.gte = dateFrom.trim();
+        if (dateTo?.trim()) dateRange.lte = dateTo.trim();
+        postFilter.push({ range: { publishedAt: dateRange } });
+      }
+
+      const postQuery = {
+        bool: {
+          must: postMust.length > 0 ? postMust : [{ match_all: {} }],
+          ...(postFilter.length > 0 ? { filter: postFilter } : {}),
+        },
+      };
+
+      const postSortOrder =
+        sort === 'newest'
+          ? [{ publishedAt: 'desc' }]
+          : sort === 'oldest'
+            ? [{ publishedAt: 'asc' }]
+            : sort === 'most_liked'
+              ? [{ likeCount: 'desc' }]
+              : sort === 'most_discussed'
+                ? [{ commentCount: 'desc' }]
+                : undefined;
+
       const postResults = await esClient.search({
         index: KMS_POSTS_INDEX,
         body: {
           from,
           size,
-          query: {
-            multi_match: {
-              query: q,
-              fields: ['title^3', 'bodyText^2', 'tags'],
-              fuzziness: 'AUTO',
-            },
-          },
+          query: postQuery,
+          ...(postSortOrder ? { sort: postSortOrder } : {}),
           highlight: {
             fields: {
               title: {},
