@@ -1,5 +1,12 @@
 name: kms-frontend
 region: sgp1
+ingress:
+  rules:
+    - match:
+        path:
+          prefix: /
+      component:
+        name: web
 services:
   - name: web
     environment_slug: node-js
@@ -15,7 +22,7 @@ services:
         value: production
       - key: NEXT_PUBLIC_API_URL
         scope: RUN_AND_BUILD_TIME
-        value: https://your-backend-domain/api
+        value: https://uplbkain-backend-wygu3.ondigitalocean.app/api
       - key: NEXT_PUBLIC_GOOGLE_CLIENT_ID
         scope: RUN_AND_BUILD_TIME
-        value: your_google_client_id
+        value: 786829784177-pvntoed2n3g0t6u52j91v6n711k9cglc.apps.googleusercontent.com
