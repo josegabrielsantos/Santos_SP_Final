@@ -1,0 +1,53 @@
+name: kms-backend
+region: sgp1
+services:
+  - name: api
+    environment_slug: node-js
+    source_dir: .
+    build_command: npm ci
+    run_command: npm run start
+    http_port: 3001
+    health_check:
+      http_path: /api/health
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: FRONTEND_URL
+        value: https://your-frontend-domain
+      - key: MONGO_URI
+        type: SECRET
+        value: your_mongodb_connection_string
+      - key: JWT_SECRET
+        type: SECRET
+        value: your_jwt_secret
+      - key: GOOGLE_CLIENT_ID
+        value: your_google_oauth_client_id
+      - key: ELASTICSEARCH_URL
+        value: http://your-elasticsearch-host:9200
+      - key: ELASTICSEARCH_USERNAME
+        type: SECRET
+        value: your_elasticsearch_username
+      - key: ELASTICSEARCH_PASSWORD
+        type: SECRET
+        value: your_elasticsearch_password
+      - key: DO_SPACES_ENDPOINT
+        value: https://your-space-region.digitaloceanspaces.com
+      - key: DO_SPACES_REGION
+        value: your-space-region
+      - key: DO_SPACES_BUCKET
+        value: your-space-bucket
+      - key: DO_SPACES_CDN_ENDPOINT
+        value: https://your-space-cdn-endpoint
+      - key: DO_SPACES_KEY
+        type: SECRET
+        value: your_spaces_access_key
+      - key: DO_SPACES_SECRET
+        type: SECRET
+        value: your_spaces_secret_key
+      - key: GEMINI_API_KEY
+        type: SECRET
+        value: your_gemini_api_key
