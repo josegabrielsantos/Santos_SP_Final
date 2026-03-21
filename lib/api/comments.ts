@@ -4,36 +4,28 @@ import { useAppSelector } from '@/store/hooks';
 import { AxiosError } from 'axios';
 import type { Comment, CommentsResponse, RepliesResponse, Post } from '@/lib/types';
 
-// ─── Helper: patch a comment by id across all infinite-query pages ──
+// ─── Helpers: patch a comment by id across all infinite-query pages ──
 
-function patchCommentInPages(
+function patchCommentsPages(
   pages: CommentsResponse[],
   commentId: string,
   updater: (c: Comment) => Comment,
-): CommentsResponse[];
-function patchCommentInPages(
+): CommentsResponse[] {
+  return pages.map((page) => ({
+    ...page,
+    comments: page.comments.map((c) => (c._id === commentId ? updater(c) : c)),
+  }));
+}
+
+function patchRepliesPages(
   pages: RepliesResponse[],
   commentId: string,
   updater: (c: Comment) => Comment,
-): RepliesResponse[];
-function patchCommentInPages(
-  pages: Array<CommentsResponse | RepliesResponse>,
-  commentId: string,
-  updater: (c: Comment) => Comment,
-): Array<CommentsResponse | RepliesResponse> {
-  return pages.map((page) => {
-    if ('comments' in page) {
-      return {
-        ...page,
-        comments: page.comments.map((c) => (c._id === commentId ? updater(c) : c)),
-      };
-    }
-
-    return {
-      ...page,
-      replies: page.replies.map((c) => (c._id === commentId ? updater(c) : c)),
-    };
-  });
+): RepliesResponse[] {
+  return pages.map((page) => ({
+    ...page,
+    replies: page.replies.map((c) => (c._id === commentId ? updater(c) : c)),
+  }));
 }
 
 export type CommentSort = 'top' | 'new' | 'old';
@@ -139,11 +131,11 @@ export function useDeleteComment() {
 
       qc.setQueriesData<InfiniteData<CommentsResponse>>(
         { queryKey: ['comments', vars.postId] },
-        (old) => old ? { ...old, pages: patchCommentInPages(old.pages, vars.commentId, markDeleted) } : old,
+        (old) => old ? { ...old, pages: patchCommentsPages(old.pages, vars.commentId, markDeleted) } : old,
       );
       qc.setQueriesData<InfiniteData<RepliesResponse>>(
         { queryKey: ['replies'] },
-        (old) => old ? { ...old, pages: patchCommentInPages(old.pages, vars.commentId, markDeleted) } : old,
+        (old) => old ? { ...old, pages: patchRepliesPages(old.pages, vars.commentId, markDeleted) } : old,
       );
 
       // Also optimistically decrement post commentCount
@@ -201,11 +193,11 @@ export function useToggleCommentLike() {
 
         qc.setQueriesData<InfiniteData<CommentsResponse>>(
           { queryKey: ['comments', vars.postId] },
-          (old) => old ? { ...old, pages: patchCommentInPages(old.pages, vars.commentId, update) } : old,
+          (old) => old ? { ...old, pages: patchCommentsPages(old.pages, vars.commentId, update) } : old,
         );
         qc.setQueriesData<InfiniteData<RepliesResponse>>(
           { queryKey: ['replies'] },
-          (old) => old ? { ...old, pages: patchCommentInPages(old.pages, vars.commentId, update) } : old,
+          (old) => old ? { ...old, pages: patchRepliesPages(old.pages, vars.commentId, update) } : old,
         );
       }
       return { commentsSnap, repliesSnap };
@@ -254,11 +246,11 @@ export function useToggleCommentDislike() {
 
         qc.setQueriesData<InfiniteData<CommentsResponse>>(
           { queryKey: ['comments', vars.postId] },
-          (old) => old ? { ...old, pages: patchCommentInPages(old.pages, vars.commentId, update) } : old,
+          (old) => old ? { ...old, pages: patchCommentsPages(old.pages, vars.commentId, update) } : old,
         );
         qc.setQueriesData<InfiniteData<RepliesResponse>>(
           { queryKey: ['replies'] },
-          (old) => old ? { ...old, pages: patchCommentInPages(old.pages, vars.commentId, update) } : old,
+          (old) => old ? { ...old, pages: patchRepliesPages(old.pages, vars.commentId, update) } : old,
         );
       }
       return { commentsSnap, repliesSnap };
