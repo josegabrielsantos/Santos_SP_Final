@@ -20,7 +20,7 @@ services:
         value: "3001"
       - key: FRONTEND_URL
         scope: RUN_TIME
-        value: https://your-frontend-domain
+        value: https://uplbkain-client-b2nio.ondigitalocean.app
       - key: MONGO_URI
         scope: RUN_TIME
         type: SECRET
@@ -31,7 +31,7 @@ services:
         value: your_jwt_secret
       - key: GOOGLE_CLIENT_ID
         scope: RUN_TIME
-        value: your_google_oauth_client_id
+        value: 786829784177-pvntoed2n3g0t6u52j91v6n711k9cglc.apps.googleusercontent.com
       - key: ELASTICSEARCH_URL
         scope: RUN_TIME
         value: http://your-elasticsearch-host:9200
