@@ -6,18 +6,33 @@ import type { Comment, CommentsResponse, RepliesResponse, Post } from '@/lib/typ
 
 // ─── Helper: patch a comment by id across all infinite-query pages ──
 
-function patchCommentInPages<T extends CommentsResponse | RepliesResponse>(
-  pages: T[],
+function patchCommentInPages(
+  pages: CommentsResponse[],
   commentId: string,
   updater: (c: Comment) => Comment,
-): T[] {
+): CommentsResponse[];
+function patchCommentInPages(
+  pages: RepliesResponse[],
+  commentId: string,
+  updater: (c: Comment) => Comment,
+): RepliesResponse[];
+function patchCommentInPages(
+  pages: Array<CommentsResponse | RepliesResponse>,
+  commentId: string,
+  updater: (c: Comment) => Comment,
+): Array<CommentsResponse | RepliesResponse> {
   return pages.map((page) => {
-    const key = 'comments' in page ? 'comments' : 'replies';
-    const list = (page as unknown as Record<string, unknown>)[key] as Comment[];
+    if ('comments' in page) {
+      return {
+        ...page,
+        comments: page.comments.map((c) => (c._id === commentId ? updater(c) : c)),
+      };
+    }
+
     return {
       ...page,
-      [key]: list.map((c) => (c._id === commentId ? updater(c) : c)),
-    } as T;
+      replies: page.replies.map((c) => (c._id === commentId ? updater(c) : c)),
+    };
   });
 }
 
