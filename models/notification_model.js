@@ -15,7 +15,13 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['reply', 'comment', 'like', 'mention', 'join_request', 'join_approved', 'join_rejected', 'post_approved', 'post_rejected', 'announcement'],
+      enum: [
+        'reply', 'comment', 'like', 'mention',
+        'join_request', 'join_approved', 'join_rejected',
+        'post_approved', 'post_rejected', 'announcement',
+        'org_request_submitted', 'org_request_approved', 'org_request_rejected',
+        'org_request_followup', 'org_request_reply',
+      ],
       required: true,
     },
     postId: {
@@ -31,6 +37,11 @@ const notificationSchema = new mongoose.Schema(
     commentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Comment',
+      default: null,
+    },
+    orgRequestId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'OrgRequest',
       default: null,
     },
     message: {

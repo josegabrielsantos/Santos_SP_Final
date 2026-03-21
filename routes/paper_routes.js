@@ -27,5 +27,6 @@ router.get('/:id', getPaper);
 router.put('/:id', protectRoute, updatePaper);
 router.delete('/:id', protectRoute, deletePaper);
 router.post('/:id/download', downloadPaper);
+router.get('/:id/download', downloadPaper);
 
 export default router;

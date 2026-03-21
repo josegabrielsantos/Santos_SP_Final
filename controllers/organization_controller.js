@@ -93,7 +93,8 @@ const getOrganization = async (req, res) => {
     const org = await Organization.findOne(query)
       .populate('ownerId', 'displayName avatar')
       .populate('adminIds', 'displayName avatar')
-      .populate('memberIds', 'displayName avatar');
+      .populate('memberIds', 'displayName avatar')
+      .populate('pendingMemberIds', 'displayName avatar');
 
     if (!org) {
       return res.status(404).json({ error: 'Organization not found.' });
