@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useCallback, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
 import { Sidebar } from '@/components/layout/sidebar';
@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -40,12 +39,19 @@ import {
 } from 'lucide-react';
 import { usePapers, useSearchPapers, useDownloadPaper, useToggleSavePaper, useSavedPapers } from '@/lib/api/papers';
 import { useAppSelector } from '@/store/hooks';
-import { CitationButton } from '@/components/paper/citation-button';
 import { PaperCard } from '@/components/paper/paper-card';
 import { AbstractText } from '@/components/paper/abstract-text';
 import type { Paper, PaperSearchHit } from '@/lib/types';
 
 export default function PapersPage() {
+  return (
+    <Suspense>
+      <PapersPageContent />
+    </Suspense>
+  );
+}
+
+function PapersPageContent() {
   const currentUser = useAppSelector((s) => s.auth.user);
   const isLoggedIn = !!currentUser;
   const searchParams = useSearchParams();
