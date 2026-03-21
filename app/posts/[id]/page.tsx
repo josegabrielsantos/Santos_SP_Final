@@ -8,7 +8,7 @@ import { PostCard } from '@/components/post/post-card';
 import { CommentsSection } from '@/components/post/comments-section';
 import { usePost } from '@/lib/api/posts';
 import { useOrganization } from '@/lib/api/organizations';
-import { usePapersByIds } from '@/lib/api/papers';
+import { usePapersByIds, useDownloadPaper } from '@/lib/api/papers';
 import { useAppSelector } from '@/store/hooks';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -104,8 +104,18 @@ export default function PostDiscussionPage() {
 
 function RelatedPapers({ paperIds }: { paperIds: string[] }) {
   const { data: papers, isLoading } = usePapersByIds(paperIds);
+  const downloadMutation = useDownloadPaper();
   if (isLoading) return <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>;
   if (!papers?.length) return null;
+
+  const handleDownload = async (paper: Paper) => {
+    try {
+      await downloadMutation.mutateAsync(paper._id);
+    } catch {
+      // Ignore download errors silently
+    }
+  };
+
   return (
     <div>
       <h2 className="mb-3 text-[18px] font-bold text-foreground">Related Papers</h2>
@@ -129,18 +139,16 @@ function RelatedPapers({ paperIds }: { paperIds: string[] }) {
                   </div>
                 </div>
                 {paper.fileUrl && (
-                  <a
-                    href={paper.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0"
-                    onClick={(e) => e.stopPropagation()}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 gap-1.5 text-[13px]"
+                    onClick={() => handleDownload(paper)}
+                    disabled={downloadMutation.isPending}
                   >
-                    <Button variant="outline" size="sm" className="gap-1.5 text-[13px]">
-                      <Download className="h-3.5 w-3.5" />
-                      Download
-                    </Button>
-                  </a>
+                    <Download className="h-3.5 w-3.5" />
+                    {downloadMutation.isPending ? 'Downloading…' : 'Download'}
+                  </Button>
                 )}
               </div>
             </CardContent>

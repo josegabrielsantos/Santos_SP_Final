@@ -141,6 +141,41 @@ export interface OrgMembersResponse {
   followerCount: number;
 }
 
+// ─── Org Request ──────────────────────────────────────────────────
+
+export type OrgRequestStatus = 'pending' | 'needs_revision' | 'approved' | 'rejected';
+
+export interface OrgRequestMessage {
+  _id: string;
+  senderId: UserSummary;
+  senderRole: 'requester' | 'admin';
+  body: string;
+  createdAt: string;
+}
+
+export interface OrgRequest {
+  _id: string;
+  requesterId: UserSummary & { email?: string };
+  orgName: string;
+  orgDescription: string;
+  orgAvatar?: string | null;
+  orgBannerImage?: string | null;
+  status: OrgRequestStatus;
+  reviewedBy?: UserSummary | null;
+  rejectionReason?: string | null;
+  messages: OrgRequestMessage[];
+  organizationId?: OrgSummary | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgRequestsResponse {
+  requests: OrgRequest[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
 // ─── Comment ─────────────────────────────────────────────────────
 
 export interface Comment {
@@ -279,9 +314,10 @@ export interface Notification {
   _id: string;
   recipientId: string;
   senderId: NotificationSender;
-  type: 'reply' | 'comment' | 'like' | 'mention' | 'join_request' | 'join_approved' | 'join_rejected' | 'post_approved' | 'post_rejected' | 'announcement';
+  type: 'reply' | 'comment' | 'like' | 'mention' | 'join_request' | 'join_approved' | 'join_rejected' | 'post_approved' | 'post_rejected' | 'announcement' | 'org_request_submitted' | 'org_request_approved' | 'org_request_rejected' | 'org_request_followup' | 'org_request_reply';
   postId?: NotificationPost | null;
   commentId?: string | null;
+  orgRequestId?: string | null;
   organizationId?: { _id: string; name: string; slug: string } | null;
   message: string;
   isRead: boolean;

@@ -197,15 +197,7 @@ export default function PapersPage() {
     async (paper: Paper | PaperSearchHit) => {
       try {
         setDownloadError('');
-        const result = await downloadMutation.mutateAsync(paper._id);
-        const link = document.createElement('a');
-        const blobUrl = URL.createObjectURL(result.blob);
-        link.href = blobUrl;
-        link.download = result.filename || `${paper.title.replace(/[^a-zA-Z0-9 ]/g, '').slice(0, 60)}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
+        await downloadMutation.mutateAsync(paper._id);
       } catch {
         setDownloadError('Unable to download this file right now. Please try again.');
       }
@@ -804,10 +796,12 @@ function SearchPaperCard({
 
         <div className="mt-5 border-t border-border pt-4">
           <div className="flex flex-wrap items-center gap-2">
+            {hit.fileUrl && (
             <Button size="sm" className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-[13px]" onClick={onDownload}>
               <Download className="h-3.5 w-3.5" />
               Download PDF
             </Button>
+            )}
             {hit.fileUrl && (
               <Button
                 variant="outline"

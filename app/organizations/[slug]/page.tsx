@@ -223,7 +223,9 @@ export default function OrgDetailPage() {
   const isOwner = userId && org.ownerId?._id === userId;
   const isAdmin = org.adminIds.some((a) => a._id === userId);
   const isMember = org.memberIds.some((m) => m._id === userId);
-  const isPending = org.pendingMemberIds?.some((p) => p._id === userId);
+  const isPending = org.pendingMemberIds?.some((p) =>
+    typeof p === 'string' ? p === userId : p._id === userId
+  );
   const isFollower = org.followerIds?.includes(userId ?? '');
   const canPost = isOwner || isAdmin || isMember;
   const canManage = isOwner || isAdmin;

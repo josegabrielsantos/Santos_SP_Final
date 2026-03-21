@@ -10,8 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Users, FileText } from 'lucide-react';
+import { Search, Users, FileText, Plus } from 'lucide-react';
 import { useOrganizations } from '@/lib/api/organizations';
+import { useAppSelector } from '@/store/hooks';
+import { RequestOrgDialog } from '@/components/org-requests/request-org-dialog';
+import Link from 'next/link';
 
 function OrgCardSkeleton() {
   return (
@@ -36,8 +39,11 @@ function OrgCardSkeleton() {
 export default function OrganizationsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
   const { data, isLoading, isError } = useOrganizations({ page, limit: 20, search: search || undefined });
   const router = useRouter();
+  const user = useAppSelector((s) => s.auth.user);
+  const isAdmin = user?.role === 'website_admin';
 
   return (
     <div className="min-h-screen bg-page-bg">
@@ -63,17 +69,35 @@ export default function OrganizationsPage() {
                   Browse research organizations and groups on UPLB KAIN
                 </p>
               </div>
-              <div className="relative w-full max-w-xs">
-                <Search className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search organizations…"
-                  className="h-10 rounded-full pl-10 text-[16px]"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                />
+              <div className="flex items-center gap-3">
+                <div className="relative w-full max-w-xs">
+                  <Search className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search organizations…"
+                    className="h-10 rounded-full pl-10 text-[16px]"
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                  />
+                </div>
+                {user && !isAdmin && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      className="gap-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+                      onClick={() => setShowRequestDialog(true)}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Request Org
+                    </Button>
+                    <Link href="/org-requests">
+                      <Button variant="outline" size="default" className="text-[14px]">
+                        My Requests
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </motion.div>
 
@@ -191,6 +215,8 @@ export default function OrganizationsPage() {
           </div>
         </main>
       </div>
+
+      {showRequestDialog && <RequestOrgDialog onClose={() => setShowRequestDialog(false)} />}
     </div>
   );
 }

@@ -130,23 +130,43 @@ export function useSearchPapers(params?: {
   });
 }
 
-// ─── Download paper (increment count + get URL) ─────────────────
+// ─── Download paper (increment count + trigger browser download) ──
+
+/**
+ * Returns the backend GET URL that streams the paper file with
+ * Content-Disposition: attachment.  Opening this URL triggers a
+ * real browser download without any CORS or blob issues.
+ */
+export function getPaperDownloadUrl(paperId: string): string {
+  const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  return `${base}/papers/${paperId}/download`;
+}
 
 export function useDownloadPaper() {
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: async (paperId: string) => {
-      const response = await axiosInstance.post<Blob>(`/papers/${paperId}/download`, null, {
-        responseType: 'blob',
-        timeout: 120000,
-      });
+      // Primary approach: open the backend GET endpoint directly.
+      // The server returns Content-Disposition: attachment which
+      // makes the browser download instead of navigate.
+      const url = getPaperDownloadUrl(paperId);
 
-      const contentDisposition = response.headers['content-disposition'] as string | undefined;
-      const matched = contentDisposition?.match(/filename="?([^\"]+)"?/i);
-      const filename = matched?.[1] || 'paper.pdf';
+      // Use a hidden iframe to trigger the download without
+      // navigating away from the current page.
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = url;
+      document.body.appendChild(iframe);
 
-      return { blob: response.data, filename };
+      // Clean up the iframe after a reasonable delay
+      setTimeout(() => {
+        try { document.body.removeChild(iframe); } catch { /* already removed */ }
+      }, 60000);
+
+      // Also fire the POST to ensure query cache is invalidated
+      // (the GET above already incremented the count on the server)
+      return { paperId };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['papers'] });

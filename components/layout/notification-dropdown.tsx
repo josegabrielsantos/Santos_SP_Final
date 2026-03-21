@@ -6,8 +6,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Bell, MessageCircle, Reply, AtSign, ThumbsUp, UserPlus, Check, X, FileText, Megaphone, Loader2 } from 'lucide-react';
+import { Bell, MessageCircle, Reply, AtSign, ThumbsUp, UserPlus, Check, X, FileText, Megaphone, Loader2, Building2 } from 'lucide-react';
 import { useNotifications, useNotificationSummary, useMarkNotificationsRead } from '@/lib/api/notifications';
+import { useAppSelector } from '@/store/hooks';
 import { formatDistanceToNow } from 'date-fns';
 import type { Notification } from '@/lib/types';
 
@@ -42,6 +43,12 @@ function notifIcon(type: Notification['type']) {
       return <FileText className="h-4 w-4" />;
     case 'announcement':
       return <Megaphone className="h-4 w-4" />;
+    case 'org_request_submitted':
+    case 'org_request_approved':
+    case 'org_request_rejected':
+    case 'org_request_followup':
+    case 'org_request_reply':
+      return <Building2 className="h-4 w-4" />;
     default:
       return <Bell className="h-4 w-4" />;
   }
@@ -68,6 +75,15 @@ function notifIconBg(type: Notification['type']) {
       return 'bg-red-100 text-red-600';
     case 'announcement':
       return 'bg-amber-100 text-amber-600';
+    case 'org_request_submitted':
+    case 'org_request_reply':
+      return 'bg-indigo-100 text-indigo-600';
+    case 'org_request_approved':
+      return 'bg-emerald-100 text-emerald-600';
+    case 'org_request_rejected':
+      return 'bg-red-100 text-red-600';
+    case 'org_request_followup':
+      return 'bg-blue-100 text-blue-600';
     default:
       return 'bg-muted text-muted-foreground';
   }
@@ -77,6 +93,7 @@ export function NotificationDropdown() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const user = useAppSelector((s) => s.auth.user);
   const { data: summaryData } = useNotificationSummary();
   const {
     data: notifsPages,
@@ -118,7 +135,10 @@ export function NotificationDropdown() {
     }
 
     // Navigate
-    if (notif.postId) {
+    if (notif.type.startsWith('org_request_') && notif.orgRequestId) {
+      const isAdmin = user?.role === 'website_admin';
+      router.push(isAdmin ? `/admin/org-requests/${notif.orgRequestId}` : `/org-requests/${notif.orgRequestId}`);
+    } else if (notif.postId) {
       router.push(`/posts/${notif.postId._id}`);
     } else if (notif.organizationId) {
       router.push(`/organizations/${notif.organizationId.slug}`);

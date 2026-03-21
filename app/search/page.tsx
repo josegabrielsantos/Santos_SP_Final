@@ -255,15 +255,7 @@ export default function SearchPage() {
   const handleDownload = useCallback(
     async (hit: PaperSearchHit) => {
       try {
-        const result = await downloadMutation.mutateAsync(hit._id);
-        const link = document.createElement('a');
-        const blobUrl = URL.createObjectURL(result.blob);
-        link.href = blobUrl;
-        link.download = result.filename || `${hit.title.replace(/[^a-zA-Z0-9 ]/g, '').slice(0, 60)}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
+        await downloadMutation.mutateAsync(hit._id);
       } catch { /* ignore */ }
     },
     [downloadMutation],

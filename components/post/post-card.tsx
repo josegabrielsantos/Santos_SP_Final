@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToggleLike, useTogglePostDislike, useVotePoll, useReportPost, useClosePoll, useDeletePost } from '@/lib/api/posts';
+import { useDownloadPaper } from '@/lib/api/papers';
 import { useAppSelector } from '@/store/hooks';
 import { useViewTracking } from '@/hooks/useViewTracking';
 import type { Post } from '@/lib/types';
@@ -212,6 +213,7 @@ function AuthorsDisplay({ authors }: { authors: string[] }) {
 async function downloadFile(url: string, filename: string) {
   try {
     const res = await fetch(url);
+    if (!res.ok) throw new Error('Fetch failed');
     const blob = await res.blob();
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -222,7 +224,15 @@ async function downloadFile(url: string, filename: string) {
     document.body.removeChild(a);
     URL.revokeObjectURL(blobUrl);
   } catch {
-    window.open(url, '_blank');
+    // Use an anchor with download attribute as last resort
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 }
 
@@ -242,6 +252,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
   const reportPost = useReportPost();
   const closePoll = useClosePoll();
   const deletePost = useDeletePost();
+  const downloadPaperMutation = useDownloadPaper();
 
   const liked = userId ? post.likedBy.includes(userId) : false;
   const disliked = userId ? post.dislikedBy.includes(userId) : false;
@@ -322,9 +333,19 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
-  const handleDownload = (url: string) => (e: React.MouseEvent) => {
+  const handleDownload = (url: string) => async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    // Use backend download endpoint when a linked paper exists (avoids CORS issues with CDN)
+    const linkedPaperId = post.paperIds?.[0];
+    if (linkedPaperId) {
+      try {
+        await downloadPaperMutation.mutateAsync(linkedPaperId);
+        return;
+      } catch {
+        // Fall through to direct download attempt
+      }
+    }
     downloadFile(url, getFileName(url));
   };
 

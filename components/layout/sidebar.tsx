@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Building2, FileText, Home, TrendingUp, Megaphone, BarChart2 } from 'lucide-react';
+import { Building2, FileText, Home, TrendingUp, Megaphone, BarChart2, ClipboardList } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -98,6 +98,19 @@ export function Sidebar() {
               Browse organizations
             </Link>
           )}
+
+          <Link
+            href="/org-requests"
+            className={cn(
+              'flex items-center gap-2.5 rounded-lg px-3 py-2 transition-all border-l-[3px]',
+              pathname === '/org-requests' || pathname.startsWith('/org-requests/')
+                ? 'border-primary bg-primary/8 text-primary'
+                : 'border-transparent text-muted-foreground hover:bg-muted/70 hover:text-foreground'
+            )}
+          >
+            <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+            <span className="text-[13px] font-medium">My Requests</span>
+          </Link>
 
           <div className="flex flex-col gap-0.5">
             {userOrgs?.map((org) => {
