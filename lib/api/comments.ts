@@ -13,7 +13,7 @@ function patchCommentInPages<T extends CommentsResponse | RepliesResponse>(
 ): T[] {
   return pages.map((page) => {
     const key = 'comments' in page ? 'comments' : 'replies';
-    const list = (page as Record<string, unknown>)[key] as Comment[];
+    const list = (page as unknown as Record<string, unknown>)[key] as Comment[];
     return {
       ...page,
       [key]: list.map((c) => (c._id === commentId ? updater(c) : c)),
