@@ -1,0 +1,20 @@
+name: kms-frontend
+region: sgp1
+services:
+  - name: web
+    environment_slug: node-js
+    source_dir: .
+    build_command: npm ci ; npm run build
+    run_command: npm run start -- -p 8080
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        scope: RUN_AND_BUILD_TIME
+        value: https://your-backend-domain/api
+      - key: NEXT_PUBLIC_GOOGLE_CLIENT_ID
+        scope: RUN_AND_BUILD_TIME
+        value: your_google_client_id
