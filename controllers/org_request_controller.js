@@ -2,22 +2,23 @@ import OrgRequest from '../models/org_request_model.js';
 import Organization from '../models/organization_model.js';
 import User from '../models/user_model.js';
 import Notification from '../models/notification_model.js';
+import { emitNotification, emitNotificationBulk } from '../socket.js';
 
 /* ─── Helpers ───────────────────────────────────────────────────── */
 
 async function notifyAdmins(senderId, type, message, orgRequestId) {
   const admins = await User.find({ role: 'website_admin', isActive: true }).select('_id');
-  const notifications = admins
-    .filter((a) => a._id.toString() !== senderId.toString())
-    .map((a) => ({
-      recipientId: a._id,
-      senderId,
-      type,
-      message,
-      orgRequestId,
-    }));
+  const recipients = admins.filter((a) => a._id.toString() !== senderId.toString());
+  const notifications = recipients.map((a) => ({
+    recipientId: a._id,
+    senderId,
+    type,
+    message,
+    orgRequestId,
+  }));
   if (notifications.length > 0) {
     await Notification.insertMany(notifications);
+    emitNotificationBulk(recipients.map((a) => a._id));
   }
 }
 
@@ -311,6 +312,7 @@ const approveOrgRequest = async (req, res) => {
       orgRequestId: request._id,
       organizationId: org._id,
     });
+    await emitNotification(request.requesterId.toString());
 
     const populated = await OrgRequest.findById(request._id)
       .populate('requesterId', 'displayName avatar email')
@@ -361,6 +363,7 @@ const rejectOrgRequest = async (req, res) => {
       message: `Your request to create "${request.orgName}" has been declined`,
       orgRequestId: request._id,
     });
+    await emitNotification(request.requesterId.toString());
 
     const populated = await OrgRequest.findById(request._id)
       .populate('requesterId', 'displayName avatar email')
@@ -416,6 +419,7 @@ const addAdminMessage = async (req, res) => {
       message: `An admin sent a message about your org request "${request.orgName}"`,
       orgRequestId: request._id,
     });
+    await emitNotification(request.requesterId.toString());
 
     const populated = await OrgRequest.findById(request._id)
       .populate('requesterId', 'displayName avatar email')

@@ -5,6 +5,7 @@ import Notification from '../models/notification_model.js';
 import FeaturedPost from '../models/featured_post_model.js';
 import Organization from '../models/organization_model.js';
 import User from '../models/user_model.js';
+import { emitNotification, emitNotificationBulk, emitToPost, emitToHome } from '../socket.js';
 
 /**
  * Helper: check org-level access for a post interaction.
@@ -170,10 +171,16 @@ const createPost = async (req, res) => {
             await Notification.insertMany(notifications, { ordered: false });
           }
           console.log(`[Announcement] Notified ${notifications.length} users for post ${post._id}`);
+          emitNotificationBulk(activeUsers.map((u) => u._id));
         } catch (err) {
           console.error('[Announcement] Failed to send bulk notifications:', err.message);
         }
       })();
+    }
+
+    // Emit real-time event for home feed
+    if (post.status === 'published') {
+      emitToHome('post:new', { postId: post._id.toString() });
     }
 
     res.status(201).json(post);
@@ -330,6 +337,8 @@ const deletePost = async (req, res) => {
 
     await Post.findByIdAndDelete(post._id);
 
+    emitToHome('post:deleted', { postId: post._id.toString() });
+
     res.status(200).json({ message: 'Post deleted.' });
   } catch (error) {
     console.log('Error in deletePost:', error.message);
@@ -372,6 +381,9 @@ const toggleLike = async (req, res) => {
 
     post.likeCount = post.likedBy.length - post.dislikedBy.length;
     await post.save();
+
+    emitToPost(req.params.id, 'post:updated', { postId: req.params.id, authorId: req.user._id.toString() });
+
     res.status(200).json({
       liked: !alreadyLiked,
       disliked: false,
@@ -417,6 +429,9 @@ const togglePostDislike = async (req, res) => {
 
     post.likeCount = post.likedBy.length - post.dislikedBy.length;
     await post.save();
+
+    emitToPost(req.params.id, 'post:updated', { postId: req.params.id, authorId: req.user._id.toString() });
+
     res.status(200).json({
       liked: false,
       disliked: !alreadyDisliked,
@@ -567,6 +582,7 @@ const createComment = async (req, res) => {
           commentId: comment._id,
           message: `${senderName} replied to your comment`,
         });
+        await emitNotification(parentComment.authorId._id.toString());
       } catch (notifErr) {
         console.log('Error creating notification:', notifErr.message);
       }
@@ -584,6 +600,7 @@ const createComment = async (req, res) => {
           commentId: comment._id,
           message: `${senderName} commented on your post`,
         });
+        await emitNotification(post.authorId.toString());
       } catch (notifErr) {
         console.log('Error creating notification:', notifErr.message);
       }
@@ -614,10 +631,19 @@ const createComment = async (req, res) => {
           })
         );
         await Promise.allSettled(mentionNotifs);
+        emitNotificationBulk(mentionedUsers.map((mu) => mu._id));
       }
     } catch (mentionErr) {
       console.log('Error creating mention notifications:', mentionErr.message);
     }
+
+    // Broadcast comment creation to post room
+    emitToPost(post._id.toString(), 'comment:new', {
+      postId: post._id.toString(),
+      commentId: comment._id.toString(),
+      parentId: resolvedParentId?.toString() || null,
+      authorId: req.user._id.toString(),
+    });
 
     const populated = await comment.populate('authorId', 'displayName avatar');
     res.status(201).json(populated);
@@ -647,6 +673,11 @@ const deleteComment = async (req, res) => {
 
     // Decrement post commentCount
     await Post.findByIdAndUpdate(comment.postId, { $inc: { commentCount: -1 } });
+
+    emitToPost(comment.postId.toString(), 'comment:deleted', {
+      postId: comment.postId.toString(),
+      commentId: req.params.commentId,
+    });
 
     res.status(200).json({ message: 'Comment deleted.' });
   } catch (error) {
@@ -891,6 +922,13 @@ const toggleCommentLike = async (req, res) => {
     comment.likeCount = comment.likedBy.length - comment.dislikedBy.length;
 
     await comment.save();
+
+    emitToPost(req.params.id, 'comment:updated', {
+      postId: req.params.id,
+      commentId: req.params.commentId,
+      authorId: req.user._id.toString(),
+    });
+
     res.status(200).json({
       liked: !alreadyLiked,
       disliked: false,
@@ -943,6 +981,13 @@ const toggleCommentDislike = async (req, res) => {
     comment.likeCount = comment.likedBy.length - comment.dislikedBy.length;
 
     await comment.save();
+
+    emitToPost(req.params.id, 'comment:updated', {
+      postId: req.params.id,
+      commentId: req.params.commentId,
+      authorId: req.user._id.toString(),
+    });
+
     res.status(200).json({
       liked: false,
       disliked: !alreadyDisliked,

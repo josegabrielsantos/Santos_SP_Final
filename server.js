@@ -1,10 +1,12 @@
 import 'dotenv/config';
+import http from 'http';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import connectDB from './database/connectDB.js';
 import { ensureIndexes, syncExistingData } from './elastic/elastic_client.js';
+import { initializeSocket } from './socket.js';
 
 // Route imports
 import authRoutes from './routes/auth_routes.js';
@@ -74,7 +76,10 @@ app.use('/api/org-requests', orgRequestRoutes);
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
-app.listen(PORT, async () => {
+const server = http.createServer(app);
+initializeSocket(server);
+
+server.listen(PORT, async () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   await connectDB();
   await ensureIndexes();

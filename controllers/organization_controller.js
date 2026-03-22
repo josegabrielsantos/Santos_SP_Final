@@ -2,6 +2,7 @@ import Organization from '../models/organization_model.js';
 import Post from '../models/post_model.js';
 import User from '../models/user_model.js';
 import Notification from '../models/notification_model.js';
+import { emitNotification, emitNotificationBulk, emitToOrg, emitToHome } from '../socket.js';
 
 /*  CRUD  */
 
@@ -444,9 +445,12 @@ const requestJoin = async (req, res) => {
         })
       );
       await Promise.allSettled(notifPromises);
+      emitNotificationBulk(org.adminIds);
     } catch (notifErr) {
       console.log('Error creating join request notifications:', notifErr.message);
     }
+
+    emitToOrg(org._id.toString(), 'org:member-changed', { orgId: org._id.toString(), action: 'join-requested' });
 
     res.status(200).json({ message: 'Join request submitted.' });
   } catch (error) {
@@ -487,9 +491,12 @@ const approveJoin = async (req, res) => {
         organizationId: org._id,
         message: `Your request to join ${org.name} has been approved`,
       });
+      await emitNotification(targetId.toString());
     } catch (notifErr) {
       console.log('Error creating approval notification:', notifErr.message);
     }
+
+    emitToOrg(org._id.toString(), 'org:member-changed', { orgId: org._id.toString(), action: 'join-approved' });
 
     res.status(200).json({ message: 'Member approved.', memberCount: org.memberCount });
   } catch (error) {
@@ -525,9 +532,12 @@ const rejectJoin = async (req, res) => {
         organizationId: org._id,
         message: `Your request to join ${org.name} has been declined`,
       });
+      await emitNotification(targetId.toString());
     } catch (notifErr) {
       console.log('Error creating rejection notification:', notifErr.message);
     }
+
+    emitToOrg(org._id.toString(), 'org:member-changed', { orgId: org._id.toString(), action: 'join-rejected' });
 
     res.status(200).json({ message: 'Join request rejected.' });
   } catch (error) {
@@ -590,9 +600,12 @@ const leaveOrganization = async (req, res) => {
           })
         );
         await Promise.allSettled(notifPromises);
+        emitNotificationBulk(org.adminIds);
       } catch (notifErr) {
         console.log('Error creating cancel notifications:', notifErr.message);
       }
+
+      emitToOrg(org._id.toString(), 'org:member-changed', { orgId: org._id.toString(), action: 'member-left' });
 
       return res.status(200).json({ message: 'Join request withdrawn.' });
     }
@@ -650,9 +663,13 @@ const approveOrgPost = async (req, res) => {
         postId: post._id,
         message: `Your post "${post.title}" was approved in ${org.name}.`,
       });
+      await emitNotification(post.authorId.toString());
     } catch (notifErr) {
       console.log('Error creating approval notification:', notifErr.message);
     }
+
+    emitToOrg(org._id.toString(), 'org:post-moderated', { orgId: org._id.toString(), postId: post._id.toString(), action: 'approved' });
+    emitToHome('post:new', { postId: post._id.toString() });
 
     res.status(200).json({ message: 'Post approved.' });
   } catch (error) {
@@ -690,9 +707,12 @@ const rejectOrgPost = async (req, res) => {
         postId: post._id,
         message: msg,
       });
+      await emitNotification(post.authorId.toString());
     } catch (notifErr) {
       console.log('Error creating rejection notification:', notifErr.message);
     }
+
+    emitToOrg(org._id.toString(), 'org:post-moderated', { orgId: org._id.toString(), postId: post._id.toString(), action: 'rejected' });
 
     res.status(200).json({ message: 'Post rejected.' });
   } catch (error) {
