@@ -16,7 +16,6 @@ export function useNotifications() {
     },
     initialPageParam: 1 as number,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
-    refetchInterval: 30_000, // poll every 30 seconds
   });
 }
 
@@ -29,7 +28,7 @@ export function useUnreadNotificationCount() {
       const { data } = await axiosInstance.get<{ count: number }>('/notifications/unread-count');
       return data;
     },
-    refetchInterval: 15_000, // poll every 15 seconds
+    refetchInterval: 120_000, // fallback poll every 2 min (socket handles real-time)
   });
 }
 
@@ -42,7 +41,6 @@ export function useNotificationSummary() {
       const { data } = await axiosInstance.get('/notifications/summary');
       return data;
     },
-    refetchInterval: 30_000,
     staleTime: 15_000,
   });
 }

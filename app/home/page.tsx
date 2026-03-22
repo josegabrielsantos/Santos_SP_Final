@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ChevronLeft, ChevronRight, Clock, Sparkles, Wand2 } from 'lucide-react';
 import { useAppSelector } from '@/store/hooks';
+import { useJoinRoom, useSocketEvent } from '@/hooks/useSocket';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Post } from '@/lib/types';
 
 export default function HomePage() {
@@ -22,6 +24,27 @@ export default function HomePage() {
   const { data: featuredPosts } = useFeaturedPosts();
   const carouselRef = useRef<HTMLDivElement>(null);
   const user = useAppSelector((s) => s.auth.user);
+  const queryClient = useQueryClient();
+  const [newPostsAvailable, setNewPostsAvailable] = useState(false);
+
+  // Join home feed room for real-time post alerts
+  useJoinRoom('home');
+
+  useSocketEvent('post:new', () => {
+    setNewPostsAvailable(true);
+  });
+
+  useSocketEvent('post:deleted', () => {
+    queryClient.invalidateQueries({ queryKey: ['posts'] });
+  });
+
+  const handleRefreshFeed = () => {
+    setNewPostsAvailable(false);
+    queryClient.invalidateQueries({ queryKey: ['posts'] });
+    queryClient.invalidateQueries({ queryKey: ['posts', 'recommended'] });
+    setLatestPage(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const scrollCarousel = (dir: 'left' | 'right') => {
     if (!carouselRef.current) return;
@@ -92,6 +115,15 @@ export default function HomePage() {
                   Latest
                 </TabsTrigger>
               </TabsList>
+
+              {newPostsAvailable && (
+                <button
+                  onClick={handleRefreshFeed}
+                  className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-[14px] font-medium text-primary transition-colors hover:bg-primary/10"
+                >
+                  New posts available — click to refresh
+                </button>
+              )}
 
               {/* For You tab */}
               <TabsContent value="foryou" className="mt-3 flex flex-col gap-3">

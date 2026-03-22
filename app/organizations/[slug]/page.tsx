@@ -48,6 +48,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useAppSelector } from '@/store/hooks';
+import { useJoinRoom, useSocketEvent } from '@/hooks/useSocket';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -196,6 +198,27 @@ export default function OrgDetailPage() {
   const { data: pinnedPostsData } = useOrgPinnedPosts(orgId);
   const pinPost = usePinPost();
   const unpinPost = useUnpinPost();
+
+  const queryClient = useQueryClient();
+
+  // Join org room for real-time updates
+  useJoinRoom(orgId ? `org:${orgId}` : null);
+
+  // Membership changes (join/leave/approve/reject)
+  useSocketEvent<{ orgId: string }>('org:member-changed', () => {
+    queryClient.invalidateQueries({ queryKey: ['organizations', slug] });
+    if (orgId) {
+      queryClient.invalidateQueries({ queryKey: ['organizations', orgId, 'members'] });
+    }
+  });
+
+  // Post moderation (approved/rejected)
+  useSocketEvent<{ orgId: string; postId: string }>('org:post-moderated', () => {
+    if (orgId) {
+      queryClient.invalidateQueries({ queryKey: ['organizations', orgId, 'posts', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['organizations', orgId, 'posts'] });
+    }
+  });
 
   const [descExpanded, setDescExpanded] = useState(false);
   const [expandedComments, setExpandedComments] = useState<string | null>(null);

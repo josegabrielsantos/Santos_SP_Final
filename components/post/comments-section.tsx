@@ -22,6 +22,8 @@ import {
 } from '@/lib/api/comments';
 import type { CommentSort } from '@/lib/api/comments';
 import { useAppSelector } from '@/store/hooks';
+import { useJoinRoom, useSocketEvent } from '@/hooks/useSocket';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Comment } from '@/lib/types';
 import { formatDistanceToNow, format } from 'date-fns';
 import { CommentEditor } from './comment-editor';
@@ -55,6 +57,37 @@ export function CommentsSection({ postId, orgAccessRole = 'member', commentCount
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useComments(postId, sort);
   const createComment = useCreateComment();
   const user = useAppSelector((s) => s.auth.user);
+
+  const queryClient = useQueryClient();
+
+  // Join post room for real-time comment updates
+  useJoinRoom(postId ? `post:${postId}` : null);
+
+  // New comment by another user
+  useSocketEvent<{ postId: string; commentId: string; parentId: string | null; authorId: string }>(
+    'comment:new',
+    (ev) => {
+      if (ev.postId !== postId || ev.authorId === user?._id) return;
+      queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+      if (ev.parentId) queryClient.invalidateQueries({ queryKey: ['replies', postId, ev.parentId] });
+      queryClient.invalidateQueries({ queryKey: ['posts', postId] });
+    }
+  );
+
+  // Comment deleted
+  useSocketEvent<{ postId: string }>('comment:deleted', (ev) => {
+    if (ev.postId !== postId) return;
+    queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+    queryClient.invalidateQueries({ queryKey: ['replies', postId] });
+    queryClient.invalidateQueries({ queryKey: ['posts', postId] });
+  });
+
+  // Comment like/dislike updated
+  useSocketEvent<{ postId: string; authorId: string }>('comment:updated', (ev) => {
+    if (ev.postId !== postId || ev.authorId === user?._id) return;
+    queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+    queryClient.invalidateQueries({ queryKey: ['replies', postId] });
+  });
 
   const allComments = data?.pages.flatMap((p) => p.comments) ?? [];
 

@@ -8,6 +8,8 @@ import { PostCard } from '@/components/post/post-card';
 import { CommentsSection } from '@/components/post/comments-section';
 import { usePost } from '@/lib/api/posts';
 import { useOrganization } from '@/lib/api/organizations';
+import { useJoinRoom, useSocketEvent } from '@/hooks/useSocket';
+import { useQueryClient } from '@tanstack/react-query';
 import { usePapersByIds, useDownloadPaper } from '@/lib/api/papers';
 import { useAppSelector } from '@/store/hooks';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,6 +25,22 @@ export default function PostDiscussionPage() {
 
   const user = useAppSelector((s) => s.auth.user);
   const userId = user?._id;
+  const queryClient = useQueryClient();
+
+  // Join post room for real-time updates
+  useJoinRoom(postId ? `post:${postId}` : null);
+
+  // Live post like/save count updates from other users
+  useSocketEvent<{ postId: string; authorId: string }>('post:updated', (data) => {
+    if (data.postId !== postId || data.authorId === userId) return;
+    queryClient.invalidateQueries({ queryKey: ['posts', postId] });
+  });
+
+  // Live comment count updates
+  useSocketEvent<{ postId: string; authorId: string }>('comment:new', (data) => {
+    if (data.postId !== postId || data.authorId === userId) return;
+    queryClient.invalidateQueries({ queryKey: ['posts', postId] });
+  });
 
   // Fetch org data if this post belongs to an org (for access role computation)
   const orgSlug = typeof post?.organizationId === 'object' && post?.organizationId ? post.organizationId.slug : undefined;

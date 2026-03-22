@@ -9,6 +9,8 @@ import { Separator } from '@/components/ui/separator';
 import { Bell, MessageCircle, Reply, AtSign, ThumbsUp, UserPlus, Check, X, FileText, Megaphone, Loader2, Building2 } from 'lucide-react';
 import { useNotifications, useNotificationSummary, useMarkNotificationsRead } from '@/lib/api/notifications';
 import { useAppSelector } from '@/store/hooks';
+import { useSocketEvent } from '@/hooks/useSocket';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import type { Notification } from '@/lib/types';
 
@@ -103,6 +105,15 @@ export function NotificationDropdown() {
     fetchNextPage,
   } = useNotifications();
   const markRead = useMarkNotificationsRead();
+
+  const queryClient = useQueryClient();
+
+  // Real-time notification updates via socket
+  useSocketEvent<{ unreadCount: number }>('notification:new', (data) => {
+    queryClient.setQueryData(['notifications', 'unread-count'], { count: data.unreadCount });
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    queryClient.invalidateQueries({ queryKey: ['notifications', 'summary'] });
+  });
 
   const unreadCount = summaryData?.unreadCount ?? 0;
   const notifications = notifsPages?.pages.flatMap((p) => p.notifications) ?? summaryData?.notifications ?? [];
