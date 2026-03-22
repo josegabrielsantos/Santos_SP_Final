@@ -25,6 +25,9 @@ import orgRequestRoutes from './routes/org_request_routes.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust the DigitalOcean / reverse-proxy X-Forwarded-For header
+app.set('trust proxy', 1);
+
 // CORS
 const FRONTEND_ORIGIN = (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/+$/, '');
 app.use(
