@@ -20,7 +20,7 @@ services:
         value: "3001"
       - key: FRONTEND_URL
         scope: RUN_TIME
-        value: https://uplbkain-client-b2nio.ondigitalocean.app
+        value: https://king-prawn-app-apx6t.ondigitalocean.app
       - key: MONGO_URI
         scope: RUN_TIME
         type: SECRET
