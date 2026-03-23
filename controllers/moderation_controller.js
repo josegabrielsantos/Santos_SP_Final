@@ -117,12 +117,21 @@ const adminDeletePost = async (req, res) => {
 
 /**
  * PATCH /api/admin/comments/:id/hide
- * Toggle comment isHidden (website_admin only)
+ * Toggle comment isHidden (website_admin or org admin of the comment's post org)
  */
 const toggleHideComment = async (req, res) => {
   try {
     const comment = await Comment.findById(req.params.id).populate('authorId', 'displayName');
     if (!comment) return res.status(404).json({ error: 'Comment not found.' });
+
+    // Org admin authorization: verify the comment belongs to a post in their org
+    if (req.user.role !== 'website_admin') {
+      const post = await Post.findById(comment.postId).select('organizationId');
+      if (!post?.organizationId) return res.status(403).json({ error: 'Access denied.' });
+      const org = await Organization.findById(post.organizationId).select('adminIds');
+      const isOrgAdmin = org?.adminIds.some((aid) => aid.toString() === req.user._id.toString());
+      if (!isOrgAdmin) return res.status(403).json({ error: 'Access denied. Organization admin required.' });
+    }
 
     comment.isHidden = !comment.isHidden;
     await comment.save();
@@ -148,12 +157,21 @@ const toggleHideComment = async (req, res) => {
 
 /**
  * DELETE /api/admin/comments/:id
- * Hard delete a comment (website_admin only). Logs the action.
+ * Soft-delete a comment (website_admin or org admin of the comment's post org). Logs the action.
  */
 const adminDeleteComment = async (req, res) => {
   try {
     const comment = await Comment.findById(req.params.id).populate('authorId', 'displayName');
     if (!comment) return res.status(404).json({ error: 'Comment not found.' });
+
+    // Org admin authorization: verify the comment belongs to a post in their org
+    if (req.user.role !== 'website_admin') {
+      const post = await Post.findById(comment.postId).select('organizationId');
+      if (!post?.organizationId) return res.status(403).json({ error: 'Access denied.' });
+      const org = await Organization.findById(post.organizationId).select('adminIds');
+      const isOrgAdmin = org?.adminIds.some((aid) => aid.toString() === req.user._id.toString());
+      if (!isOrgAdmin) return res.status(403).json({ error: 'Access denied. Organization admin required.' });
+    }
 
     const postId = comment.postId.toString();
     const authorName = comment.authorId?.displayName || 'Unknown';

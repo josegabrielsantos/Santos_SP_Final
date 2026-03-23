@@ -28,9 +28,9 @@ router.delete('/organizations/:id', protectRoute, requireWebsiteAdmin, deleteOrg
 router.patch('/posts/:id/hide', protectRoute, requireWebsiteAdmin, toggleHidePost);
 router.delete('/posts/:id', protectRoute, requireWebsiteAdmin, adminDeletePost);
 
-// Comment moderation
-router.patch('/comments/:id/hide', protectRoute, requireWebsiteAdmin, toggleHideComment);
-router.delete('/comments/:id', protectRoute, requireWebsiteAdmin, adminDeleteComment);
+// Comment moderation (website_admin + org admins — controller checks org-level auth)
+router.patch('/comments/:id/hide', protectRoute, toggleHideComment);
+router.delete('/comments/:id', protectRoute, adminDeleteComment);
 
 // Moderation logs
 router.get('/moderation-logs', protectRoute, requireWebsiteAdmin, getModerationLogs);

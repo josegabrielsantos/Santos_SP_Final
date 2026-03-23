@@ -20,7 +20,7 @@ import {
   toggleCommentLike,
   toggleCommentDislike,
 } from '../controllers/post_controller.js';
-import { protectRoute, requireWebsiteAdmin } from '../middleware/protectRoute.js';
+import { protectRoute, requireWebsiteAdmin, optionalAuth } from '../middleware/protectRoute.js';
 
 const router = express.Router();
 
@@ -41,9 +41,9 @@ router.post('/:id/like', protectRoute, toggleLike);
 router.post('/:id/dislike', protectRoute, togglePostDislike);
 
 // Comments
-router.get('/:id/comments', getComments);
+router.get('/:id/comments', optionalAuth, getComments);
 router.post('/:id/comments', protectRoute, createComment);
-router.get('/:id/comments/:commentId/replies', getReplies);
+router.get('/:id/comments/:commentId/replies', optionalAuth, getReplies);
 router.delete('/:id/comments/:commentId', protectRoute, deleteComment);
 router.post('/:id/comments/:commentId/like', protectRoute, toggleCommentLike);
 router.post('/:id/comments/:commentId/dislike', protectRoute, toggleCommentDislike);

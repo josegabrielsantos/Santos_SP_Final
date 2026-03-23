@@ -467,6 +467,20 @@ const getComments = async (req, res) => {
 
     const filter = { postId: req.params.id, parentId: null, isDeleted: false };
 
+    // Hide hidden comments from non-admins
+    const isAdmin = req.user?.role === 'website_admin';
+    let isOrgAdmin = false;
+    if (!isAdmin && req.user) {
+      const post = await Post.findById(req.params.id).select('organizationId');
+      if (post?.organizationId) {
+        const org = await Organization.findById(post.organizationId).select('adminIds');
+        isOrgAdmin = org?.adminIds.some((aid) => aid.toString() === req.user._id.toString()) ?? false;
+      }
+    }
+    if (!isAdmin && !isOrgAdmin) {
+      filter.isHidden = false;
+    }
+
     const comments = await Comment.find(filter)
       .sort(sortOrder)
       .skip(skip)
@@ -502,6 +516,23 @@ const getReplies = async (req, res) => {
     const sortOrder = COMMENT_SORT_OPTIONS[sortKey];
 
     const filter = { parentId: req.params.commentId, isDeleted: false };
+
+    // Hide hidden comments from non-admins
+    const isAdmin = req.user?.role === 'website_admin';
+    let isOrgAdmin = false;
+    if (!isAdmin && req.user) {
+      const parentComment = await Comment.findById(req.params.commentId).select('postId');
+      if (parentComment) {
+        const post = await Post.findById(parentComment.postId).select('organizationId');
+        if (post?.organizationId) {
+          const org = await Organization.findById(post.organizationId).select('adminIds');
+          isOrgAdmin = org?.adminIds.some((aid) => aid.toString() === req.user._id.toString()) ?? false;
+        }
+      }
+    }
+    if (!isAdmin && !isOrgAdmin) {
+      filter.isHidden = false;
+    }
 
     const replies = await Comment.find(filter)
       .sort(sortOrder)
