@@ -27,6 +27,10 @@ export const protectRoute = async (req, res, next) => {
       return res.status(403).json({ error: 'Account is deactivated.' });
     }
 
+    if (user.isBanned) {
+      return res.status(403).json({ error: 'Account is banned.', banned: true, banReason: user.banReason });
+    }
+
     req.user = user;
     next();
   } catch (error) {

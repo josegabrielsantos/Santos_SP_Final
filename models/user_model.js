@@ -50,6 +50,14 @@ const userSchema = new mongoose.Schema(
       required: true,
       default: true,
     },
+    isBanned: {
+      type: Boolean,
+      default: false,
+    },
+    banReason: {
+      type: String,
+      default: null,
+    },
     lastLogin: {
       type: Date,
       default: null,

@@ -2,6 +2,7 @@ import User from '../models/user_model.js';
 import Organization from '../models/organization_model.js';
 import Post from '../models/post_model.js';
 import Paper from '../models/paper_model.js';
+import { logAction } from './moderation_controller.js';
 
 /**
  * GET /api/users/:id
@@ -152,6 +153,12 @@ const updateUserRole = async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
+    await logAction(req.user._id, 'user_role_changed', 'user', user._id, `Role changed to ${role}`, {
+      displayName: user.displayName,
+      email: user.email,
+      newRole: role,
+    });
+
     res.status(200).json(user);
   } catch (error) {
     console.log('Error in updateUserRole:', error.message);
@@ -172,6 +179,12 @@ const toggleUserActive = async (req, res) => {
 
     user.isActive = !user.isActive;
     await user.save();
+
+    const action = user.isActive ? 'user_reactivated' : 'user_deactivated';
+    await logAction(req.user._id, action, 'user', user._id, null, {
+      displayName: user.displayName,
+      email: user.email,
+    });
 
     res.status(200).json({ _id: user._id, isActive: user.isActive });
   } catch (error) {
