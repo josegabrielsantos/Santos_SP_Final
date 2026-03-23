@@ -11,7 +11,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import Link from 'next/link';
-import { ThumbsUp, ThumbsDown, Reply, Trash2, Loader2, ChevronDown, ArrowUpDown } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Reply, Trash2, Loader2, ChevronDown, ArrowUpDown, EyeOff, Eye, ShieldAlert } from 'lucide-react';
 import {
   useComments,
   useReplies,
@@ -20,6 +20,7 @@ import {
   useToggleCommentLike,
   useToggleCommentDislike,
 } from '@/lib/api/comments';
+import { useAdminToggleHideComment, useAdminDeleteComment } from '@/lib/api/admin';
 import type { CommentSort } from '@/lib/api/comments';
 import { useAppSelector } from '@/store/hooks';
 import { useJoinRoom, useSocketEvent } from '@/hooks/useSocket';
@@ -27,6 +28,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Comment } from '@/lib/types';
 import { formatDistanceToNow, format } from 'date-fns';
 import { CommentEditor } from './comment-editor';
+import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import DOMPurify from 'dompurify';
 
 /**
@@ -194,10 +206,14 @@ function CommentItem({
   const toggleDislike = useToggleCommentDislike();
   const deleteComment = useDeleteComment();
   const createComment = useCreateComment();
+  const adminHideComment = useAdminToggleHideComment();
+  const adminDeleteComment = useAdminDeleteComment();
+  const isWebsiteAdmin = user?.role === 'website_admin';
 
   const [showReplies, setShowReplies] = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [showAdminDeleteDialog, setShowAdminDeleteDialog] = useState(false);
 
   const COMMENT_COLLAPSE_THRESHOLD = 300;
 
@@ -290,6 +306,11 @@ function CommentItem({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              {comment.isHidden && isWebsiteAdmin && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-600 border border-orange-200/60">
+                  <EyeOff className="h-3 w-3" /> Hidden
+                </span>
+              )}
             </div>
             <div className="mt-0.5 text-[16px] leading-relaxed text-foreground/90 break-all [overflow-wrap:anywhere]">
               {comment.replyToUser && (
@@ -374,7 +395,36 @@ function CommentItem({
                 Delete
               </button>
             )}
+            {isWebsiteAdmin && !isAuthor && (
+              <>
+                <button
+                  onClick={() => adminHideComment.mutate({ commentId: comment._id })}
+                  className="flex items-center gap-1 text-[14px] font-medium text-orange-500/70 hover:text-orange-600"
+                  title={comment.isHidden ? 'Unhide this comment' : 'Hide this comment'}
+                >
+                  {comment.isHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                  {comment.isHidden ? 'Unhide' : 'Hide'}
+                </button>
+                <button
+                  onClick={() => setShowAdminDeleteDialog(true)}
+                  className="flex items-center gap-1 text-[14px] font-medium text-destructive/70 hover:text-destructive"
+                  title="Delete this comment (Admin)"
+                >
+                  <ShieldAlert className="h-3.5 w-3.5" />
+                  Delete
+                </button>
+              </>
+            )}
           </div>
+
+          {/* Admin delete comment dialog */}
+          <CommentDeleteDialog
+            open={showAdminDeleteDialog}
+            onOpenChange={setShowAdminDeleteDialog}
+            onConfirm={async (reason) => {
+              await adminDeleteComment.mutateAsync({ commentId: comment._id, reason });
+            }}
+          />
 
           {/* Reply form */}
           {showReplyForm && canComment && (
@@ -450,5 +500,70 @@ function RepliesList({
         </button>
       )}
     </div>
+  );
+}
+
+// ─── Admin delete comment confirmation dialog ────────────────────
+
+function CommentDeleteDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (reason?: string) => Promise<void>;
+}) {
+  const [reason, setReason] = useState('');
+  const [isPending, setIsPending] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsPending(true);
+    try {
+      await onConfirm(reason || undefined);
+      onOpenChange(false);
+      setReason('');
+    } catch {
+      // error handled by mutation
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={(v) => { if (!v) setReason(''); onOpenChange(v); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-orange-500" />
+            <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
+          </div>
+          <AlertDialogDescription>
+            This comment will be removed and replaced with &ldquo;[deleted by admin]&rdquo;. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="py-2">
+          <label className="mb-1.5 block text-[13px] font-medium text-foreground">
+            Reason (optional)
+          </label>
+          <Input
+            placeholder="Reason for deletion…"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="h-9 text-[14px] bg-white border-border/60"
+          />
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirm}
+            disabled={isPending}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isPending ? 'Deleting…' : 'Delete Comment'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

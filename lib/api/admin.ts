@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '@/lib/axios';
-import type { UserDetail } from '@/lib/types';
+import type { UserDetail, ModerationLogsResponse } from '@/lib/types';
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -141,6 +141,114 @@ export function useAdminDeleteOrg() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['organizations'] });
       qc.invalidateQueries({ queryKey: ['admin', 'stats'] });
+    },
+  });
+}
+
+// ─── Hide / unhide post (admin) ─────────────────────────────────
+
+export function useAdminToggleHidePost() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ postId, reason }: { postId: string; reason?: string }) => {
+      const { data } = await axiosInstance.patch(`/admin/posts/${postId}/hide`, { reason });
+      return data as { message: string; status: string };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['posts'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'moderation-logs'] });
+    },
+  });
+}
+
+// ─── Delete post (admin) ────────────────────────────────────────
+
+export function useAdminDeletePost() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ postId, reason }: { postId: string; reason?: string }) => {
+      const { data } = await axiosInstance.delete(`/admin/posts/${postId}`, { data: { reason } });
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['posts'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'moderation-logs'] });
+    },
+  });
+}
+
+// ─── Hide / unhide comment (admin) ──────────────────────────────
+
+export function useAdminToggleHideComment() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ commentId, reason }: { commentId: string; reason?: string }) => {
+      const { data } = await axiosInstance.patch(`/admin/comments/${commentId}/hide`, { reason });
+      return data as { message: string; isHidden: boolean };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['comments'] });
+      qc.invalidateQueries({ queryKey: ['replies'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'moderation-logs'] });
+    },
+  });
+}
+
+// ─── Delete comment (admin) ─────────────────────────────────────
+
+export function useAdminDeleteComment() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ commentId, reason }: { commentId: string; reason?: string }) => {
+      const { data } = await axiosInstance.delete(`/admin/comments/${commentId}`, { data: { reason } });
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['comments'] });
+      qc.invalidateQueries({ queryKey: ['replies'] });
+      qc.invalidateQueries({ queryKey: ['posts'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'moderation-logs'] });
+    },
+  });
+}
+
+// ─── Ban / unban user (admin) ───────────────────────────────────
+
+export function useAdminToggleBan() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, reason }: { userId: string; reason?: string }) => {
+      const { data } = await axiosInstance.patch(`/admin/users/${userId}/ban`, { reason });
+      return data as { _id: string; isBanned: boolean; banReason: string | null };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'moderation-logs'] });
+    },
+  });
+}
+
+// ─── Moderation logs ────────────────────────────────────────────
+
+export function useModerationLogs(params?: { page?: number; limit?: number; action?: string; targetType?: string }) {
+  const page = params?.page ?? 1;
+  const limit = params?.limit ?? 30;
+
+  return useQuery<ModerationLogsResponse>({
+    queryKey: ['admin', 'moderation-logs', { page, limit, action: params?.action, targetType: params?.targetType }],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<ModerationLogsResponse>('/admin/moderation-logs', {
+        params: { page, limit, action: params?.action, targetType: params?.targetType },
+      });
+      return data;
     },
   });
 }

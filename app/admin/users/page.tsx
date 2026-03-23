@@ -13,8 +13,25 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useAdminUsers, useUpdateUserRole, useToggleUserActive } from '@/lib/api/admin';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { useAdminUsers, useUpdateUserRole, useToggleUserActive, useAdminToggleBan } from '@/lib/api/admin';
 import { useAppSelector } from '@/store/hooks';
+import type { UserDetail } from '@/lib/types';
 import {
   Search,
   MoreHorizontal,
@@ -22,6 +39,8 @@ import {
   ShieldOff,
   UserX,
   UserCheck,
+  Ban,
+  ShieldAlert,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -50,14 +69,92 @@ function UserRowSkeleton() {
   );
 }
 
+/* ─── Ban confirmation dialog ──────────────────────────────────── */
+function BanUserDialog({
+  open,
+  onOpenChange,
+  user,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  user: UserDetail | null;
+  onConfirm: (userId: string, reason: string) => void;
+}) {
+  const [reason, setReason] = useState('');
+  const isBanned = user?.isBanned;
+
+  const handleConfirm = () => {
+    if (!user) return;
+    onConfirm(user._id, reason);
+    setReason('');
+    onOpenChange(false);
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={(v) => { if (!v) setReason(''); onOpenChange(v); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-orange-500" />
+            <AlertDialogTitle>
+              {isBanned ? 'Unban this user?' : 'Ban this user?'}
+            </AlertDialogTitle>
+          </div>
+          <AlertDialogDescription>
+            {isBanned ? (
+              <>
+                This will unban <strong className="text-foreground">{user?.displayName}</strong> and
+                restore their ability to use the platform.
+              </>
+            ) : (
+              <>
+                This will ban <strong className="text-foreground">{user?.displayName}</strong> from
+                the platform. They will be unable to log in or perform any actions until unbanned.
+              </>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {!isBanned && (
+          <div className="py-2">
+            <label className="mb-1.5 block text-[13px] font-medium text-foreground">
+              Ban reason <span className="text-destructive">*</span>
+            </label>
+            <Input
+              placeholder="Why is this user being banned?"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="h-9 text-[14px] bg-white border-border/60"
+            />
+          </div>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirm}
+            disabled={!isBanned && !reason.trim()}
+            className={isBanned
+              ? 'bg-kain-green text-white hover:bg-kain-green/90'
+              : 'bg-destructive text-destructive-foreground hover:bg-destructive/90'}
+          >
+            {isBanned ? 'Unban User' : 'Ban User'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [banTarget, setBanTarget] = useState<UserDetail | null>(null);
   const currentUser = useAppSelector((s) => s.auth.user);
 
   const { data, isLoading } = useAdminUsers({ page, limit: 20, search: search || undefined });
   const updateRole = useUpdateUserRole();
   const toggleActive = useToggleUserActive();
+  const toggleBan = useAdminToggleBan();
 
   return (
     <div className="bg-page-bg min-h-full">
@@ -74,7 +171,7 @@ export default function AdminUsersPage() {
           </p>
           <h1 className="text-[28px] text-foreground">User Management</h1>
           <p className="mt-1 text-[15px] text-muted-foreground">
-            Manage users, promote admins, and deactivate accounts
+            Manage users, promote admins, ban, and deactivate accounts
           </p>
         </div>
         <div className="relative w-full max-w-xs">
@@ -148,12 +245,31 @@ export default function AdminUsersPage() {
                   </Badge>
 
                   {/* Status */}
-                  <Badge
-                    variant={user.isActive ? 'secondary' : 'destructive'}
-                    className="w-fit text-[11px] rounded-full"
-                  >
-                    {user.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
+                  {user.isBanned ? (
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge
+                            className="w-fit text-[11px] rounded-full bg-red-100 text-red-700 border border-red-200/60 cursor-default"
+                          >
+                            Banned
+                          </Badge>
+                        </TooltipTrigger>
+                        {user.banReason && (
+                          <TooltipContent side="bottom" className="max-w-xs text-xs">
+                            <span className="font-medium">Reason:</span> {user.banReason}
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <Badge
+                      variant={user.isActive ? 'secondary' : 'destructive'}
+                      className="w-fit text-[11px] rounded-full"
+                    >
+                      {user.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
+                  )}
 
                   {/* Actions */}
                   <DropdownMenu>
@@ -200,6 +316,19 @@ export default function AdminUsersPage() {
                           </>
                         )}
                       </DropdownMenuItem>
+                      {user.role !== 'website_admin' && (
+                        <DropdownMenuItem
+                          className={`cursor-pointer gap-2 ${
+                            user.isBanned
+                              ? 'text-kain-green focus:text-kain-green'
+                              : 'text-destructive focus:text-destructive'
+                          }`}
+                          onClick={() => setBanTarget(user)}
+                        >
+                          <Ban className="h-4 w-4" />
+                          {user.isBanned ? 'Unban User' : 'Ban User'}
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -239,6 +368,14 @@ export default function AdminUsersPage() {
           </Button>
         </div>
       )}
+
+      {/* Ban confirmation dialog */}
+      <BanUserDialog
+        open={!!banTarget}
+        onOpenChange={(open) => { if (!open) setBanTarget(null); }}
+        user={banTarget}
+        onConfirm={(userId, reason) => toggleBan.mutate({ userId, reason })}
+      />
     </div>
   );
 }

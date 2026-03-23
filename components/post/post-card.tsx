@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToggleLike, useTogglePostDislike, useVotePoll, useReportPost, useClosePoll, useDeletePost } from '@/lib/api/posts';
+import { useAdminToggleHidePost, useAdminDeletePost } from '@/lib/api/admin';
 import { useDownloadPaper } from '@/lib/api/papers';
 import { useAppSelector } from '@/store/hooks';
 import { useViewTracking } from '@/hooks/useViewTracking';
@@ -46,6 +47,8 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { MediaGallery } from './media-gallery';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { ShieldAlert } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -253,17 +256,22 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
   const closePoll = useClosePoll();
   const deletePost = useDeletePost();
   const downloadPaperMutation = useDownloadPaper();
+  const adminHidePost = useAdminToggleHidePost();
+  const adminDeletePost = useAdminDeletePost();
 
   const liked = userId ? post.likedBy.includes(userId) : false;
   const disliked = userId ? post.dislikedBy.includes(userId) : false;
 
   const canLike = orgAccessRole === 'member' || orgAccessRole === 'follower';
   const canComment = orgAccessRole === 'member';
+  const isWebsiteAdmin = user?.role === 'website_admin';
 
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [linkCopied, setLinkCopied] = useState(false);
   const [bodyExpanded, setBodyExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAdminHideConfirm, setShowAdminHideConfirm] = useState(false);
+  const [showAdminDeleteConfirm, setShowAdminDeleteConfirm] = useState(false);
 
   const authorName =
     typeof post.authorId === 'object' ? post.authorId.displayName : 'Unknown';
@@ -424,13 +432,30 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
                     <Trash2 className="h-4 w-4" /> Delete post
                   </DropdownMenuItem>
                 )}
-                {!isPostAuthor && (
+                {!isPostAuthor && !isWebsiteAdmin && (
                   <DropdownMenuItem
                     className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
                     onClick={() => reportPost.mutate(post._id)}
                   >
                     <Flag className="h-4 w-4" /> Report post
                   </DropdownMenuItem>
+                )}
+                {isWebsiteAdmin && !isPostAuthor && (
+                  <>
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2 text-[13px] text-orange-600 focus:text-orange-600"
+                      onClick={() => setShowAdminHideConfirm(true)}
+                    >
+                      <EyeOff className="h-4 w-4" />
+                      {post.status === 'hidden' ? 'Unhide post' : 'Hide post'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
+                      onClick={() => setShowAdminDeleteConfirm(true)}
+                    >
+                      <ShieldAlert className="h-4 w-4" /> Delete post (Admin)
+                    </DropdownMenuItem>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -644,6 +669,28 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
         title={post.title}
         onConfirm={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
       />
+      <AdminModerationDialog
+        open={showAdminHideConfirm}
+        onOpenChange={setShowAdminHideConfirm}
+        title={post.status === 'hidden' ? 'Unhide this post?' : 'Hide this post?'}
+        description={post.status === 'hidden'
+          ? `This will make "${post.title}" visible to all users again.`
+          : `This will hide "${post.title}" from all users. You can unhide it later.`}
+        confirmLabel={post.status === 'hidden' ? 'Unhide Post' : 'Hide Post'}
+        variant={post.status === 'hidden' ? 'default' : 'warning'}
+        showReason={post.status !== 'hidden'}
+        onConfirm={async (reason) => { await adminHidePost.mutateAsync({ postId: post._id, reason }); }}
+      />
+      <AdminModerationDialog
+        open={showAdminDeleteConfirm}
+        onOpenChange={setShowAdminDeleteConfirm}
+        title="Permanently delete this post?"
+        description={`This will permanently delete "${post.title}" and all its comments. This action cannot be undone.`}
+        confirmLabel="Delete Post"
+        variant="destructive"
+        showReason
+        onConfirm={async (reason) => { await adminDeletePost.mutateAsync({ postId: post._id, reason }); router.push('/home'); }}
+      />
     </>
     );
   }
@@ -706,24 +753,38 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
             <DropdownMenuItem className="cursor-pointer gap-2 text-[13px]">
               <Bookmark className="h-4 w-4" /> Save post
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer gap-2 text-[13px]">
-              <EyeOff className="h-4 w-4" /> Hide post
-            </DropdownMenuItem>
             {isPostAuthor && (
               <DropdownMenuItem
                 className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
-                onClick={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
+                onClick={() => setShowDeleteConfirm(true)}
               >
                 <Trash2 className="h-4 w-4" /> Delete post
               </DropdownMenuItem>
             )}
-            {!isPostAuthor && (
+            {!isPostAuthor && !isWebsiteAdmin && (
               <DropdownMenuItem
                 className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
                 onClick={() => reportPost.mutate(post._id)}
               >
                 <Flag className="h-4 w-4" /> Report post
               </DropdownMenuItem>
+            )}
+            {isWebsiteAdmin && !isPostAuthor && (
+              <>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2 text-[13px] text-orange-600 focus:text-orange-600"
+                  onClick={() => setShowAdminHideConfirm(true)}
+                >
+                  <EyeOff className="h-4 w-4" />
+                  {post.status === 'hidden' ? 'Unhide post' : 'Hide post'}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
+                  onClick={() => setShowAdminDeleteConfirm(true)}
+                >
+                  <ShieldAlert className="h-4 w-4" /> Delete post (Admin)
+                </DropdownMenuItem>
+              </>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -985,7 +1046,111 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
       title={post.title}
       onConfirm={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
     />
+    <AdminModerationDialog
+      open={showAdminHideConfirm}
+      onOpenChange={setShowAdminHideConfirm}
+      title={post.status === 'hidden' ? 'Unhide this post?' : 'Hide this post?'}
+      description={post.status === 'hidden'
+        ? `This will make "${post.title}" visible to all users again.`
+        : `This will hide "${post.title}" from all users. You can unhide it later.`}
+      confirmLabel={post.status === 'hidden' ? 'Unhide Post' : 'Hide Post'}
+      variant={post.status === 'hidden' ? 'default' : 'warning'}
+      showReason={post.status !== 'hidden'}
+      onConfirm={async (reason) => { await adminHidePost.mutateAsync({ postId: post._id, reason }); }}
+    />
+    <AdminModerationDialog
+      open={showAdminDeleteConfirm}
+      onOpenChange={setShowAdminDeleteConfirm}
+      title="Permanently delete this post?"
+      description={`This will permanently delete "${post.title}" and all its comments. This action cannot be undone.`}
+      confirmLabel="Delete Post"
+      variant="destructive"
+      showReason
+      onConfirm={async (reason) => { await adminDeletePost.mutateAsync({ postId: post._id, reason }); router.push('/home'); }}
+    />
     </>
+  );
+}
+
+// ─── Admin moderation confirmation dialog ─────────────────────────
+
+function AdminModerationDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  confirmLabel,
+  variant = 'destructive',
+  showReason = false,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  variant?: 'destructive' | 'warning' | 'default';
+  showReason?: boolean;
+  onConfirm: (reason?: string) => Promise<void>;
+}) {
+  const [reason, setReason] = useState('');
+  const [isPending, setIsPending] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsPending(true);
+    try {
+      await onConfirm(reason || undefined);
+      onOpenChange(false);
+      setReason('');
+    } catch {
+      // error handled by mutation
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const buttonClass =
+    variant === 'destructive'
+      ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+      : variant === 'warning'
+        ? 'bg-orange-500 text-white hover:bg-orange-600'
+        : 'bg-primary text-primary-foreground hover:bg-primary/90';
+
+  return (
+    <AlertDialog open={open} onOpenChange={(v) => { if (!v) { setReason(''); } onOpenChange(v); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-orange-500" />
+            <AlertDialogTitle>{title}</AlertDialogTitle>
+          </div>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        {showReason && (
+          <div className="py-2">
+            <label className="mb-1.5 block text-[13px] font-medium text-foreground">
+              Reason (optional)
+            </label>
+            <Input
+              placeholder="Reason for this action…"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="h-9 text-[14px] bg-white border-border/60"
+            />
+          </div>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirm}
+            disabled={isPending}
+            className={buttonClass}
+          >
+            {isPending ? 'Processing…' : confirmLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

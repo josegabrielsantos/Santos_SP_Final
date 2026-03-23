@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAppSelector } from '@/store/hooks';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Users, Building2, ArrowLeft, ShieldCheck, BarChart2, MessageSquare, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, ArrowLeft, ShieldCheck, BarChart2, MessageSquare, ClipboardList, ScrollText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useOrgRequestPendingCount } from '@/lib/api/org-requests';
 import { useEffect } from 'react';
@@ -16,6 +16,7 @@ const adminNav = [
   { label: 'Users', href: '/admin/users', icon: Users },
   { label: 'Organizations', href: '/admin/organizations', icon: Building2 },
   { label: 'Org Requests', href: '/admin/org-requests', icon: ClipboardList },
+  { label: 'Moderation Logs', href: '/admin/moderation-logs', icon: ScrollText },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {

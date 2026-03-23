@@ -13,8 +13,43 @@ export interface UserDetail extends UserSummary {
   certifications?: string[];
   role: 'user' | 'website_admin';
   isActive: boolean;
+  isBanned?: boolean;
+  banReason?: string | null;
   lastLogin?: string;
   createdAt?: string;
+}
+
+// ─── Moderation Log ─────────────────────────────────────────────
+
+export type ModerationAction =
+  | 'post_hidden'
+  | 'post_unhidden'
+  | 'post_deleted'
+  | 'comment_hidden'
+  | 'comment_unhidden'
+  | 'comment_deleted'
+  | 'user_banned'
+  | 'user_unbanned'
+  | 'user_deactivated'
+  | 'user_reactivated'
+  | 'user_role_changed';
+
+export interface ModerationLog {
+  _id: string;
+  performedBy: UserSummary;
+  action: ModerationAction;
+  targetType: 'post' | 'comment' | 'user';
+  targetId: string;
+  details: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface ModerationLogsResponse {
+  logs: ModerationLog[];
+  total: number;
+  page: number;
+  pages: number;
 }
 
 // ─── Poll ────────────────────────────────────────────────────────
