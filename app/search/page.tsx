@@ -289,9 +289,10 @@ function SearchPageContent() {
     return (
       <div className="min-h-screen bg-page-bg">
         <AuthenticatedNavbar />
-        <div className="mx-auto max-w-[1200px] flex gap-6 px-4 pt-6">
+        <div className="flex">
           <Sidebar />
-          <main className="flex-1 min-w-0">
+          <main className="flex flex-1 justify-center">
+            <div className="w-full max-w-5xl px-5 py-6 lg:px-7">
             <div className="flex flex-col items-center gap-4 py-32 text-center">
               <Search className="h-14 w-14 text-muted-foreground/30" />
               <p className="text-[18px] font-medium text-muted-foreground">Search posts, papers, and organizations</p>
@@ -326,6 +327,7 @@ function SearchPageContent() {
                 </div>
               )}
             </div>
+            </div>
           </main>
         </div>
       </div>
@@ -336,10 +338,11 @@ function SearchPageContent() {
     <div className="min-h-screen bg-page-bg">
       <AuthenticatedNavbar />
 
-      <div className="mx-auto max-w-[1200px] flex gap-6 px-4 pt-6">
+      <div className="flex">
         <Sidebar />
 
-        <main className="flex-1 min-w-0">
+        <main className="flex flex-1 justify-center">
+          <div className="w-full max-w-5xl px-5 py-6 lg:px-7">
           {/* Header */}
           <div className="mb-4 flex items-center justify-between">
             <h1 className="font-heading text-[22px] font-bold text-foreground">
@@ -641,6 +644,7 @@ function SearchPageContent() {
               </AnimatePresence>
             </TabsContent>
           </Tabs>
+          </div>
         </main>
       </div>
     </div>
