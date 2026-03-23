@@ -1,5 +1,5 @@
 import User from '../models/user_model.js';
-import { generateTokenandSetCookie } from '../lib/util/generateToken.js';
+import { generateTokenandSetCookie, COOKIE_OPTIONS } from '../lib/util/generateToken.js';
 import { OAuth2Client } from 'google-auth-library';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -143,7 +143,7 @@ const getMe = async (req, res) => {
  */
 const logout = async (req, res) => {
   try {
-    res.cookie('jwt', '', { maxAge: 0 });
+    res.cookie('jwt', '', { ...COOKIE_OPTIONS, maxAge: 0 });
     res.status(200).json({ message: 'Logged out successfully.' });
   } catch (error) {
     console.log('Error in logout:', error.message);
