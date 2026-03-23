@@ -414,51 +414,53 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
                 <span>{timeAgo}</span>
               </div>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted/50">
-                  <MoreHorizontal className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-lg border border-border">
-                <DropdownMenuItem className="cursor-pointer gap-2 text-[13px]">
-                  <Bookmark className="h-4 w-4" /> Save post
-                </DropdownMenuItem>
-                {isPostAuthor && (
-                  <DropdownMenuItem
-                    className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
-                    onClick={() => setShowDeleteConfirm(true)}
-                  >
-                    <Trash2 className="h-4 w-4" /> Delete post
+            <div onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted/50">
+                    <MoreHorizontal className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 rounded-lg border border-border">
+                  <DropdownMenuItem className="cursor-pointer gap-2 text-[13px]">
+                    <Bookmark className="h-4 w-4" /> Save post
                   </DropdownMenuItem>
-                )}
-                {!isPostAuthor && !isWebsiteAdmin && (
-                  <DropdownMenuItem
-                    className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
-                    onClick={() => reportPost.mutate(post._id)}
-                  >
-                    <Flag className="h-4 w-4" /> Report post
-                  </DropdownMenuItem>
-                )}
-                {isWebsiteAdmin && !isPostAuthor && (
-                  <>
-                    <DropdownMenuItem
-                      className="cursor-pointer gap-2 text-[13px] text-orange-600 focus:text-orange-600"
-                      onClick={() => setShowAdminHideConfirm(true)}
-                    >
-                      <EyeOff className="h-4 w-4" />
-                      {post.status === 'hidden' ? 'Unhide post' : 'Hide post'}
-                    </DropdownMenuItem>
+                  {isPostAuthor && (
                     <DropdownMenuItem
                       className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
-                      onClick={() => setShowAdminDeleteConfirm(true)}
+                      onClick={() => setShowDeleteConfirm(true)}
                     >
-                      <ShieldAlert className="h-4 w-4" /> Delete post (Admin)
+                      <Trash2 className="h-4 w-4" /> Delete post
                     </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  )}
+                  {!isPostAuthor && !isWebsiteAdmin && (
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
+                      onClick={() => reportPost.mutate(post._id)}
+                    >
+                      <Flag className="h-4 w-4" /> Report post
+                    </DropdownMenuItem>
+                  )}
+                  {isWebsiteAdmin && !isPostAuthor && (
+                    <>
+                      <DropdownMenuItem
+                        className="cursor-pointer gap-2 text-[13px] text-orange-600 focus:text-orange-600"
+                        onClick={() => setShowAdminHideConfirm(true)}
+                      >
+                        <EyeOff className="h-4 w-4" />
+                        {post.status === 'hidden' ? 'Unhide post' : 'Hide post'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
+                        onClick={() => setShowAdminDeleteConfirm(true)}
+                      >
+                        <ShieldAlert className="h-4 w-4" /> Delete post (Admin)
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {/* Post badge */}
@@ -739,55 +741,57 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
           </div>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted/50"
-            >
-              <MoreHorizontal className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 rounded-lg border border-border">
-            <DropdownMenuItem className="cursor-pointer gap-2 text-[13px]">
-              <Bookmark className="h-4 w-4" /> Save post
-            </DropdownMenuItem>
-            {isPostAuthor && (
-              <DropdownMenuItem
-                className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
-                onClick={() => setShowDeleteConfirm(true)}
+        <div onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted/50"
               >
-                <Trash2 className="h-4 w-4" /> Delete post
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 rounded-lg border border-border">
+              <DropdownMenuItem className="cursor-pointer gap-2 text-[13px]">
+                <Bookmark className="h-4 w-4" /> Save post
               </DropdownMenuItem>
-            )}
-            {!isPostAuthor && !isWebsiteAdmin && (
-              <DropdownMenuItem
-                className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
-                onClick={() => reportPost.mutate(post._id)}
-              >
-                <Flag className="h-4 w-4" /> Report post
-              </DropdownMenuItem>
-            )}
-            {isWebsiteAdmin && !isPostAuthor && (
-              <>
-                <DropdownMenuItem
-                  className="cursor-pointer gap-2 text-[13px] text-orange-600 focus:text-orange-600"
-                  onClick={() => setShowAdminHideConfirm(true)}
-                >
-                  <EyeOff className="h-4 w-4" />
-                  {post.status === 'hidden' ? 'Unhide post' : 'Hide post'}
-                </DropdownMenuItem>
+              {isPostAuthor && (
                 <DropdownMenuItem
                   className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
-                  onClick={() => setShowAdminDeleteConfirm(true)}
+                  onClick={() => setShowDeleteConfirm(true)}
                 >
-                  <ShieldAlert className="h-4 w-4" /> Delete post (Admin)
+                  <Trash2 className="h-4 w-4" /> Delete post
                 </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              )}
+              {!isPostAuthor && !isWebsiteAdmin && (
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
+                  onClick={() => reportPost.mutate(post._id)}
+                >
+                  <Flag className="h-4 w-4" /> Report post
+                </DropdownMenuItem>
+              )}
+              {isWebsiteAdmin && !isPostAuthor && (
+                <>
+                  <DropdownMenuItem
+                    className="cursor-pointer gap-2 text-[13px] text-orange-600 focus:text-orange-600"
+                    onClick={() => setShowAdminHideConfirm(true)}
+                  >
+                    <EyeOff className="h-4 w-4" />
+                    {post.status === 'hidden' ? 'Unhide post' : 'Hide post'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
+                    onClick={() => setShowAdminDeleteConfirm(true)}
+                  >
+                    <ShieldAlert className="h-4 w-4" /> Delete post (Admin)
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Content */}

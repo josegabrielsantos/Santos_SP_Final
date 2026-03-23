@@ -11,7 +11,7 @@ import { CreatePostTrigger } from '@/components/post/create-post-trigger';
 import { usePosts, useFeaturedPosts, useRecommendedPosts } from '@/lib/api/posts';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ChevronLeft, ChevronRight, Clock, Sparkles, TrendingUp, Wand2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Sparkles, TrendingUp } from 'lucide-react';
 import { useAppSelector } from '@/store/hooks';
 import { useJoinRoom, useSocketEvent } from '@/hooks/useSocket';
 import { useQueryClient } from '@tanstack/react-query';
@@ -101,15 +101,8 @@ export default function HomePage() {
             <CreatePostTrigger />
 
             {/* Feed tabs */}
-            <Tabs defaultValue="foryou" onValueChange={() => setNewPostsAvailable(false)}>
+            <Tabs defaultValue="latest" onValueChange={() => setNewPostsAvailable(false)}>
               <TabsList className="w-full justify-start rounded-lg border border-border/60 bg-white p-0 h-auto">
-                <TabsTrigger
-                  value="foryou"
-                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-4 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
-                >
-                  <Wand2 className="h-4 w-4" />
-                  For You
-                </TabsTrigger>
                 <TabsTrigger
                   value="latest"
                   className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-4 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
@@ -134,47 +127,6 @@ export default function HomePage() {
                   New posts available — click to refresh
                 </button>
               )}
-
-              {/* For You tab */}
-              <TabsContent value="foryou" className="mt-3 flex flex-col gap-3">
-                {recLoading && (
-                  <div className="flex flex-col gap-3">
-                    {[1, 2, 3].map((i) => <PostCardSkeleton key={i} />)}
-                  </div>
-                )}
-
-                {!recLoading && recData && !recData.isPersonalized && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 rounded-lg border border-kain-amber/30 bg-kain-amber-light/30 px-4 py-3"
-                  >
-                    <Wand2 className="h-4 w-4 shrink-0 text-kain-amber" />
-                    <p className="text-[13px] text-foreground/70">
-                      Your personalized feed is building up. Like, comment, and save posts to improve your recommendations.
-                    </p>
-                  </motion.div>
-                )}
-
-                <AnimatePresence>
-                  {recData?.posts.map((post, i) => (
-                    <motion.div
-                      key={post._id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.03, duration: 0.15 }}
-                    >
-                      <PostCard post={post} />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-
-                {!recLoading && recData?.posts.length === 0 && (
-                  <p className="py-12 text-center text-[14px] text-muted-foreground">
-                    No posts yet. Be the first to create one!
-                  </p>
-                )}
-              </TabsContent>
 
               {/* Latest tab */}
               <TabsContent value="latest" className="mt-3 flex flex-col gap-3">
