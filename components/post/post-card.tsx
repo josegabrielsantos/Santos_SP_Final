@@ -634,8 +634,8 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false }:
               onClick={(e) => { e.stopPropagation(); userId && canLike && toggleLike.mutate(post._id); }}
               disabled={!userId || !canLike || toggleLike.isPending}
               title={!canLike ? 'You must be a member or follower of this organization' : undefined}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-colors ${
-                !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : liked ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
+                !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : liked ? 'text-primary hover:bg-primary/15 hover:shadow-sm' : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground hover:shadow-sm'
               }`}
             >
               <ThumbsUp className={`h-4 w-4 ${liked ? 'fill-primary' : ''}`} />
@@ -645,8 +645,8 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false }:
               onClick={(e) => { e.stopPropagation(); userId && canLike && toggleDislike.mutate(post._id); }}
               disabled={!userId || !canLike || toggleDislike.isPending}
               title={!canLike ? 'You must be a member or follower of this organization' : undefined}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-colors ${
-                !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : disliked ? 'text-destructive hover:bg-destructive/10' : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
+                !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : disliked ? 'text-destructive hover:bg-destructive/15 hover:shadow-sm' : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground hover:shadow-sm'
               }`}
             >
               <ThumbsDown className={`h-4 w-4 ${disliked ? 'fill-destructive' : ''}`} />
@@ -656,8 +656,8 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false }:
               onClick={(e) => { e.stopPropagation(); if (canComment) navigateToPost(); }}
               disabled={!canComment}
               title={!canComment ? (orgAccessRole === 'follower' ? 'Followers cannot comment — join the organization to comment' : 'You must be a member of this organization to comment') : undefined}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-colors ${
-                !canComment ? 'cursor-not-allowed opacity-50 text-muted-foreground' : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
+                !canComment ? 'cursor-not-allowed opacity-50 text-muted-foreground' : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground hover:shadow-sm'
               }`}
             >
               <MessageCircle className="h-4 w-4" />
@@ -1005,10 +1005,10 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false }:
             onClick={(e) => { e.stopPropagation(); userId && canLike && toggleLike.mutate(post._id); }}
             disabled={!userId || !canLike || toggleLike.isPending}
             title={!canLike ? 'You must be a member or follower of this organization' : undefined}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-colors ${
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
               !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : liked
-                ? 'text-primary hover:bg-primary/10'
-                : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                ? 'text-primary hover:bg-primary/15 hover:shadow-sm'
+                : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground hover:shadow-sm'
             }`}
           >
             <ThumbsUp
@@ -1020,10 +1020,10 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false }:
             onClick={(e) => { e.stopPropagation(); userId && canLike && toggleDislike.mutate(post._id); }}
             disabled={!userId || !canLike || toggleDislike.isPending}
             title={!canLike ? 'You must be a member or follower of this organization' : undefined}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-colors ${
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
               !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : disliked
-                ? 'text-destructive hover:bg-destructive/10'
-                : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                ? 'text-destructive hover:bg-destructive/15 hover:shadow-sm'
+                : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground hover:shadow-sm'
             }`}
           >
             <ThumbsDown
@@ -1035,8 +1035,8 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false }:
             onClick={(e) => { e.stopPropagation(); if (canComment) navigateToPost(); }}
             disabled={!canComment}
             title={!canComment ? (orgAccessRole === 'follower' ? 'Followers cannot comment — join the organization to comment' : 'You must be a member of this organization to comment') : undefined}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-colors ${
-              !canComment ? 'cursor-not-allowed opacity-50 text-muted-foreground' : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
+              !canComment ? 'cursor-not-allowed opacity-50 text-muted-foreground' : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground hover:shadow-sm'
             }`}
           >
             <MessageCircle className="h-4 w-4" />
