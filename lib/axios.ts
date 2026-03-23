@@ -14,8 +14,13 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Only redirect if not already on an auth page
+      const url = error.config?.url ?? '';
+
+      // Never redirect for the session-check endpoint — AuthHydrator handles it
+      const isSessionCheck = url.includes('/auth/me');
+
       if (
+        !isSessionCheck &&
         typeof window !== 'undefined' &&
         !window.location.pathname.startsWith('/login') &&
         !window.location.pathname.startsWith('/signup')

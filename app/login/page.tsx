@@ -21,7 +21,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/');
+      router.replace('/home');
     }
   }, [isAuthenticated, router]);
 
@@ -33,7 +33,7 @@ export default function LoginPage() {
         await googleAuthMutation.mutateAsync({
           credential: tokenResponse.access_token,
         });
-        router.push('/');
+        router.push('/home');
       } catch {
         setError('Authentication failed. Please try again.');
       }

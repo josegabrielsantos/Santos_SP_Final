@@ -27,7 +27,7 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/');
+      router.replace('/home');
     }
   }, [isAuthenticated, router]);
 
@@ -39,7 +39,7 @@ export default function SignupPage() {
         await googleAuthMutation.mutateAsync({
           credential: tokenResponse.access_token,
         });
-        router.push('/');
+        router.push('/home');
       } catch {
         setError('Sign-up failed. Please try again.');
       }
