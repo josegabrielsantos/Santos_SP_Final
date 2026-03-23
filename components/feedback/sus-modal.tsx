@@ -64,7 +64,7 @@ export function SusModal({ open, onClose }: Props) {
         {submitted ? (
           <div className="flex flex-col items-center gap-3 py-10 text-center">
             <p className="text-[17px] font-semibold text-foreground">Thank you for your feedback!</p>
-            <p className="text-[15px] text-muted-foreground">Your responses help us improve UPLB KAIN.</p>
+            <p className="text-[15px] text-muted-foreground">Your responses help us improve UPLB FaNS Knowledge Hub.</p>
             <Button onClick={handleClose} className="mt-2">Close</Button>
           </div>
         ) : (

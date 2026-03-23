@@ -78,7 +78,7 @@ export function AuthenticatedNavbar() {
           <Image src="/uplb_logo.png" alt="UPLB" width={34} height={34} className="rounded-full ring-2 ring-white/20" />
           <Image src="/FaNS_logo.png" alt="FaNS" width={34} height={34} className="rounded-full ring-2 ring-white/20" />
           <span className="hidden text-[19px] font-bold tracking-tight text-white lg:block font-heading">
-            UPLB KAIN
+            UPLB FaNS Knowledge Hub
           </span>
         </Link>
 

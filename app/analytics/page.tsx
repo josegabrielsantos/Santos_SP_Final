@@ -45,7 +45,7 @@ export default function AnalyticsPage() {
           <div className="mb-6">
             <h1 className="text-[26px] font-bold tracking-tight text-foreground">Research Trends</h1>
             <p className="mt-1 text-[14px] text-muted-foreground">
-              Aggregated insights from papers and knowledge shared on UPLB KAIN
+              Aggregated insights from papers and knowledge shared on UPLB FaNS Knowledge Hub
             </p>
           </div>
 

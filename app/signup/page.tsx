@@ -59,14 +59,14 @@ export default function SignupPage() {
             className="text-[20px] font-bold tracking-tight"
             style={{ fontFamily: 'var(--font-heading)' }}
           >
-            UPLB KAIN
+            UPLB FaNS Knowledge Hub
           </span>
         </div>
 
         <div className="flex flex-col gap-7">
           <div>
             <h2 className="text-[42px] leading-tight text-primary-foreground">
-              Join UPLB KAIN today
+              Join UPLB FaNS Knowledge Hub today
             </h2>
             <p className="mt-3 text-[18px] text-primary-foreground/80 leading-relaxed max-w-sm">
               The knowledge archive on food and nutrition security for the UPLB community.
@@ -87,7 +87,7 @@ export default function SignupPage() {
         </div>
 
         <p className="text-[13px] text-primary-foreground/50">
-          &copy; {new Date().getFullYear()} UPLB KAIN — Knowledge Archive on Integrated Nutrition
+          &copy; {new Date().getFullYear()} UPLB FaNS Knowledge Hub
         </p>
       </div>
 
@@ -138,13 +138,13 @@ export default function SignupPage() {
                       className="text-[13px] font-semibold tracking-widest uppercase text-kain-green mb-1"
                       style={{ fontFamily: 'var(--font-heading)' }}
                     >
-                      UPLB KAIN
+                      UPLB FaNS Knowledge Hub
                     </p>
                     <h1 className="text-[26px] text-foreground">
                       Create your account
                     </h1>
                     <p className="mt-1 text-[15px] text-muted-foreground">
-                      Join UPLB KAIN in one click
+                      Join UPLB FaNS Knowledge Hub in one click
                     </p>
                   </div>
                 </div>
@@ -222,7 +222,7 @@ export default function SignupPage() {
         {/* Bottom footer (mobile only) */}
         <footer className="flex justify-center pb-7 lg:hidden">
           <p className="text-[13px] text-muted-foreground">
-            &copy; {new Date().getFullYear()} UPLB KAIN — Knowledge Archive on Integrated Nutrition
+            &copy; {new Date().getFullYear()} UPLB FaNS Knowledge Hub
           </p>
         </footer>
       </div>

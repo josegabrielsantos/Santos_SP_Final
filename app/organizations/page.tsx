@@ -66,7 +66,7 @@ export default function OrganizationsPage() {
                   Organizations
                 </h1>
                 <p className="mt-1.5 text-[16px] text-muted-foreground">
-                  Browse research organizations and groups on UPLB KAIN
+                  Browse research organizations and groups on UPLB FaNS Knowledge Hub
                 </p>
               </div>
               <div className="flex items-center gap-3">

@@ -97,7 +97,7 @@ export default function AdminDashboardPage() {
           </p>
           <h1 className="text-[28px] text-foreground">Dashboard</h1>
           <p className="mt-1 text-[15px] text-muted-foreground">
-            Overview of the UPLB KAIN platform
+            Overview of the UPLB FaNS Knowledge Hub platform
           </p>
         </div>
         <CreateAnnouncementDialog>

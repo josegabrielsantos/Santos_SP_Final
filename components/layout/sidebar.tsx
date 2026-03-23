@@ -143,7 +143,7 @@ export function Sidebar() {
       {/* Footer */}
       <div className="border-t border-border/40 px-4 py-3">
         <p className="text-[11px] text-muted-foreground/50 text-center">
-          UPLB KAIN · ISC-FaNS
+          UPLB FaNS Knowledge Hub
         </p>
       </div>
     </aside>

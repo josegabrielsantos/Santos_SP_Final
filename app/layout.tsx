@@ -27,7 +27,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'UPLB KAIN — Knowledge Archive on Integrated Nutrition',
+  title: 'UPLB FaNS Knowledge Hub',
   description: 'A platform for curated research on food and nutrition security powered by UPLB.',
 };
 

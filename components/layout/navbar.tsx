@@ -39,10 +39,10 @@ export function Navbar() {
           />
           <div className="flex flex-col leading-tight">
             <span className="text-[21px] font-bold tracking-tight text-foreground">
-              UPLB KAIN
+              UPLB FaNS Knowledge Hub
             </span>
             <span className="hidden text-[12px] text-muted-foreground sm:block">
-              Knowledge Archive on Integrated Nutrition
+              Food and Nutrition Security Research Platform
             </span>
           </div>
         </Link>

@@ -76,7 +76,7 @@ export default function LandingPage() {
                 variants={fadeUp}
               >
                 UPLB{' '}
-                <span className="text-primary">KAIN</span>
+                <span className="text-primary">FaNS Knowledge Hub</span>
               </motion.h1>
 
               <motion.p
@@ -84,7 +84,7 @@ export default function LandingPage() {
                 style={{ fontFamily: 'var(--font-heading)' }}
                 variants={fadeUp}
               >
-                Knowledge Archive on Integrated Nutrition
+                Food and Nutrition Security Research Platform
               </motion.p>
 
               <motion.p
@@ -154,7 +154,7 @@ export default function LandingPage() {
           transition={{ duration: 0.4 }}
         >
           <h2 className="text-3xl tracking-tight text-foreground sm:text-4xl">
-            Why UPLB KAIN?
+            Why UPLB FaNS Knowledge Hub?
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-[17px] text-muted-foreground">
             Built to advance food and nutrition security research through accessible
@@ -230,7 +230,7 @@ export default function LandingPage() {
               Project Objectives
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-[17px] text-muted-foreground">
-              UPLB KAIN is designed with clear goals to serve the research community
+              UPLB FaNS Knowledge Hub is designed with clear goals to serve the research community
               and the public.
             </p>
           </motion.div>
@@ -291,7 +291,7 @@ export default function LandingPage() {
             </h2>
             <p className="max-w-md text-[16px] text-muted-foreground">
               Sign in with your Google account to start browsing curated research,
-              join discussions, and contribute to the UPLB KAIN community.
+              join discussions, and contribute to the UPLB FaNS Knowledge Hub community.
             </p>
             <div className="flex gap-3">
               <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl gap-2" asChild>
@@ -317,7 +317,7 @@ export default function LandingPage() {
               className="text-[15px] font-semibold text-foreground"
               style={{ fontFamily: 'var(--font-heading)' }}
             >
-              UPLB KAIN
+              UPLB FaNS Knowledge Hub
             </span>
           </div>
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[14px] text-muted-foreground sm:justify-start">
@@ -328,7 +328,7 @@ export default function LandingPage() {
           </div>
           <p className="text-[13px] text-muted-foreground">
             &copy; {new Date().getFullYear()} University of the Philippines Los Baños.
-            Knowledge Archive on Integrated Nutrition.
+            FaNS Knowledge Hub.
           </p>
         </div>
       </footer>
