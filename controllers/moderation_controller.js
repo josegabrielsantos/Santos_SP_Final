@@ -20,12 +20,20 @@ async function logAction(performedBy, action, targetType, targetId, details = nu
 
 /**
  * PATCH /api/admin/posts/:id/hide
- * Toggle post hidden status (website_admin only)
+ * Toggle post hidden status (website_admin or org admin of the post's org)
  */
 const toggleHidePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found.' });
+
+    // Org admin authorization: verify the post belongs to their org
+    if (req.user.role !== 'website_admin') {
+      if (!post.organizationId) return res.status(403).json({ error: 'Access denied.' });
+      const org = await Organization.findById(post.organizationId).select('adminIds');
+      const isOrgAdmin = org?.adminIds.some((aid) => aid.toString() === req.user._id.toString());
+      if (!isOrgAdmin) return res.status(403).json({ error: 'Access denied. Organization admin required.' });
+    }
 
     const wasPublished = post.status === 'published';
     const wasHidden = post.status === 'hidden';
@@ -74,12 +82,20 @@ const toggleHidePost = async (req, res) => {
 
 /**
  * DELETE /api/admin/posts/:id
- * Hard delete any post (website_admin only). Logs the action.
+ * Hard delete any post (website_admin or org admin of the post's org). Logs the action.
  */
 const adminDeletePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id).populate('authorId', 'displayName');
     if (!post) return res.status(404).json({ error: 'Post not found.' });
+
+    // Org admin authorization: verify the post belongs to their org
+    if (req.user.role !== 'website_admin') {
+      if (!post.organizationId) return res.status(403).json({ error: 'Access denied.' });
+      const org = await Organization.findById(post.organizationId).select('adminIds');
+      const isOrgAdmin = org?.adminIds.some((aid) => aid.toString() === req.user._id.toString());
+      if (!isOrgAdmin) return res.status(403).json({ error: 'Access denied. Organization admin required.' });
+    }
 
     const postTitle = post.title;
     const authorName = post.authorId?.displayName || 'Unknown';

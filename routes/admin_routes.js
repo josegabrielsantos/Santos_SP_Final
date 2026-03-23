@@ -24,9 +24,9 @@ router.patch('/users/:id/deactivate', protectRoute, requireWebsiteAdmin, toggleU
 router.patch('/users/:id/ban', protectRoute, requireWebsiteAdmin, toggleBanUser);
 router.delete('/organizations/:id', protectRoute, requireWebsiteAdmin, deleteOrganization);
 
-// Post moderation
-router.patch('/posts/:id/hide', protectRoute, requireWebsiteAdmin, toggleHidePost);
-router.delete('/posts/:id', protectRoute, requireWebsiteAdmin, adminDeletePost);
+// Post moderation (website_admin + org admins — controller checks org-level auth)
+router.patch('/posts/:id/hide', protectRoute, toggleHidePost);
+router.delete('/posts/:id', protectRoute, adminDeletePost);
 
 // Comment moderation (website_admin + org admins — controller checks org-level auth)
 router.patch('/comments/:id/hide', protectRoute, toggleHideComment);
