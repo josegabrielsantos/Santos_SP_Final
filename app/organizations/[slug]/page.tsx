@@ -592,7 +592,7 @@ export default function OrgDetailPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.04, duration: 0.22 }}
                     >
-                      <PostCard post={post} orgAccessRole={orgAccessRole} />
+                      <PostCard post={post} orgAccessRole={orgAccessRole} isOrgAdmin={canManage} />
                     </motion.div>
                   ))}
                 </AnimatePresence>

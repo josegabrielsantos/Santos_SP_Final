@@ -242,9 +242,10 @@ async function downloadFile(url: string, filename: string) {
 interface PostCardProps {
   post: Post;
   orgAccessRole?: 'member' | 'follower' | 'none';
+  isOrgAdmin?: boolean;
 }
 
-export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
+export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false }: PostCardProps) {
   const router = useRouter();
   const user = useAppSelector((s) => s.auth.user);
   const userId = user?._id;
@@ -265,6 +266,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
   const canLike = orgAccessRole === 'member' || orgAccessRole === 'follower';
   const canComment = orgAccessRole === 'member';
   const isWebsiteAdmin = user?.role === 'website_admin';
+  const canModeratePost = isWebsiteAdmin || isOrgAdmin;
 
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -433,7 +435,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
                       <Trash2 className="h-4 w-4" /> Delete post
                     </DropdownMenuItem>
                   )}
-                  {!isPostAuthor && !isWebsiteAdmin && (
+                  {!isPostAuthor && !canModeratePost && (
                     <DropdownMenuItem
                       className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
                       onClick={() => reportPost.mutate(post._id)}
@@ -441,7 +443,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
                       <Flag className="h-4 w-4" /> Report post
                     </DropdownMenuItem>
                   )}
-                  {isWebsiteAdmin && !isPostAuthor && (
+                  {canModeratePost && !isPostAuthor && (
                     <>
                       <DropdownMenuItem
                         className="cursor-pointer gap-2 text-[13px] text-orange-600 focus:text-orange-600"
@@ -764,7 +766,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
                   <Trash2 className="h-4 w-4" /> Delete post
                 </DropdownMenuItem>
               )}
-              {!isPostAuthor && !isWebsiteAdmin && (
+              {!isPostAuthor && !canModeratePost && (
                 <DropdownMenuItem
                   className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
                   onClick={() => reportPost.mutate(post._id)}
@@ -772,7 +774,7 @@ export function PostCard({ post, orgAccessRole = 'member' }: PostCardProps) {
                   <Flag className="h-4 w-4" /> Report post
                 </DropdownMenuItem>
               )}
-              {isWebsiteAdmin && !isPostAuthor && (
+              {canModeratePost && !isPostAuthor && (
                 <>
                   <DropdownMenuItem
                     className="cursor-pointer gap-2 text-[13px] text-orange-600 focus:text-orange-600"
