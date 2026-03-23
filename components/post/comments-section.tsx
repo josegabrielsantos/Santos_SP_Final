@@ -64,7 +64,7 @@ function initials(name: string) {
 
 // ─── Main comments section ──────────────────────────────────────
 
-export function CommentsSection({ postId, orgAccessRole = 'member', commentCount }: { postId: string; orgAccessRole?: 'member' | 'follower' | 'none'; commentCount?: number }) {
+export function CommentsSection({ postId, orgAccessRole = 'member', commentCount, isOrgAdmin = false }: { postId: string; orgAccessRole?: 'member' | 'follower' | 'none'; commentCount?: number; isOrgAdmin?: boolean }) {
   const [sort, setSort] = useState<CommentSort>('top');
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useComments(postId, sort);
   const createComment = useCreateComment();
@@ -161,7 +161,7 @@ export function CommentsSection({ postId, orgAccessRole = 'member', commentCount
 
       <div className="flex flex-col gap-4">
         {allComments.map((c) => (
-          <CommentItem key={c._id} comment={c} postId={postId} depth={0} canLike={canLike} canComment={canComment} />
+          <CommentItem key={c._id} comment={c} postId={postId} depth={0} canLike={canLike} canComment={canComment} isOrgAdmin={isOrgAdmin} />
         ))}
       </div>
 
@@ -193,12 +193,14 @@ function CommentItem({
   depth,
   canLike = true,
   canComment = true,
+  isOrgAdmin = false,
 }: {
   comment: Comment;
   postId: string;
   depth: number;
   canLike?: boolean;
   canComment?: boolean;
+  isOrgAdmin?: boolean;
 }) {
   const user = useAppSelector((s) => s.auth.user);
   const userId = user?._id;
@@ -209,6 +211,7 @@ function CommentItem({
   const adminHideComment = useAdminToggleHideComment();
   const adminDeleteComment = useAdminDeleteComment();
   const isWebsiteAdmin = user?.role === 'website_admin';
+  const canModerate = isWebsiteAdmin || isOrgAdmin;
 
   const [showReplies, setShowReplies] = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
@@ -271,7 +274,7 @@ function CommentItem({
         </button>
       )}
       {showReplies && (
-        <RepliesList postId={postId} commentId={comment._id} depth={depth} canLike={canLike} canComment={canComment} />
+        <RepliesList postId={postId} commentId={comment._id} depth={depth} canLike={canLike} canComment={canComment} isOrgAdmin={isOrgAdmin} />
       )}
     </>
   );
@@ -306,7 +309,7 @@ function CommentItem({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              {comment.isHidden && isWebsiteAdmin && (
+              {comment.isHidden && canModerate && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-600 border border-orange-200/60">
                   <EyeOff className="h-3 w-3" /> Hidden
                 </span>
@@ -395,7 +398,7 @@ function CommentItem({
                 Delete
               </button>
             )}
-            {isWebsiteAdmin && !isAuthor && (
+            {canModerate && !isAuthor && (
               <>
                 <button
                   onClick={() => adminHideComment.mutate({ commentId: comment._id })}
@@ -458,12 +461,14 @@ function RepliesList({
   depth,
   canLike = true,
   canComment = true,
+  isOrgAdmin = false,
 }: {
   postId: string;
   commentId: string;
   depth: number;
   canLike?: boolean;
   canComment?: boolean;
+  isOrgAdmin?: boolean;
 }) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useReplies(
     postId,
@@ -488,7 +493,7 @@ function RepliesList({
       }
     >
       {allReplies.map((r) => (
-        <CommentItem key={r._id} comment={r} postId={postId} depth={nextDepth} canLike={canLike} canComment={canComment} />
+        <CommentItem key={r._id} comment={r} postId={postId} depth={nextDepth} canLike={canLike} canComment={canComment} isOrgAdmin={isOrgAdmin} />
       ))}
       {hasNextPage && (
         <button

@@ -25,9 +25,6 @@ import {
   useOrgPendingPosts,
   useApprovePost,
   useRejectPost,
-  useOrgPinnedPosts,
-  usePinPost,
-  useUnpinPost,
 } from '@/lib/api/organizations';
 import { useOrgAnalytics } from '@/lib/api/analytics';
 import {
@@ -74,8 +71,6 @@ import {
   Inbox,
   BarChart2,
   Settings,
-  Pin,
-  PinOff,
   UploadCloud,
   BookOpen,
   Download,
@@ -195,10 +190,6 @@ export default function OrgDetailPage() {
   const { data: pendingPostsData } = useOrgPendingPosts(orgId);
   const pendingCount = pendingPostsData?.posts.length ?? 0;
   const { data: orgAnalytics } = useOrgAnalytics(orgId);
-  const { data: pinnedPostsData } = useOrgPinnedPosts(orgId);
-  const pinPost = usePinPost();
-  const unpinPost = useUnpinPost();
-
   const queryClient = useQueryClient();
 
   // Join org room for real-time updates
@@ -590,37 +581,6 @@ export default function OrgDetailPage() {
                   <CreatePostTrigger orgName={org.name} defaultOrgId={orgId} />
                 )}
 
-                {/* Pinned posts */}
-                {pinnedPostsData?.posts && pinnedPostsData.posts.length > 0 && (
-                  <div className="mb-4">
-                    <h3 className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      <Pin className="h-3.5 w-3.5" /> Pinned
-                    </h3>
-                    <div className="flex flex-col gap-3">
-                      {pinnedPostsData.posts.map((pinnedPost, index) => (
-                        <motion.div
-                          key={pinnedPost._id}
-                          className="relative"
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.04, duration: 0.22 }}
-                        >
-                          <PostCard post={pinnedPost} orgAccessRole={orgAccessRole} />
-                          {canManage && (
-                            <button
-                              className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                              onClick={() => orgId && unpinPost.mutate({ orgId, postId: pinnedPost._id })}
-                              title="Unpin post"
-                            >
-                              <PinOff className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Posts loading skeleton */}
                 {postsLoading && <PostsSkeleton />}
 
@@ -628,21 +588,11 @@ export default function OrgDetailPage() {
                   {!postsLoading && postsData?.posts.map((post, index) => (
                     <motion.div
                       key={post._id}
-                      className="relative"
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.04, duration: 0.22 }}
                     >
                       <PostCard post={post} orgAccessRole={orgAccessRole} />
-                      {canManage && (
-                        <button
-                          className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                          onClick={() => orgId && pinPost.mutate({ orgId, postId: post._id })}
-                          title="Pin post"
-                        >
-                          <Pin className="h-3.5 w-3.5" />
-                        </button>
-                      )}
                     </motion.div>
                   ))}
                 </AnimatePresence>

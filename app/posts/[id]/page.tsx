@@ -48,12 +48,14 @@ export default function PostDiscussionPage() {
 
   // Compute org access role
   let orgAccessRole: 'member' | 'follower' | 'none' = 'member';
+  let isOrgAdmin = false;
   if (org && userId) {
     const isOwner = org.ownerId?._id === userId;
     const isAdmin = org.adminIds.some((a) => a._id === userId);
     const isMember = org.memberIds.some((m) => m._id === userId);
     const isFollower = org.followerIds?.includes(userId);
     orgAccessRole = (isOwner || isAdmin || isMember) ? 'member' : isFollower ? 'follower' : 'none';
+    isOrgAdmin = isOwner || isAdmin;
   } else if (org && !userId) {
     orgAccessRole = 'none';
   }
@@ -104,7 +106,7 @@ export default function PostDiscussionPage() {
 
                 {/* Comments section */}
                 <Card className="overflow-hidden rounded-xl border-border/60 bg-white ">
-                  <CommentsSection postId={postId} orgAccessRole={orgAccessRole} commentCount={post.commentCount} />
+                  <CommentsSection postId={postId} orgAccessRole={orgAccessRole} commentCount={post.commentCount} isOrgAdmin={isOrgAdmin} />
                 </Card>
 
                 {/* Related Papers */}
