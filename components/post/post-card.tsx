@@ -243,9 +243,10 @@ interface PostCardProps {
   post: Post;
   orgAccessRole?: 'member' | 'follower' | 'none';
   isOrgAdmin?: boolean;
+  isDetailView?: boolean;
 }
 
-export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false }: PostCardProps) {
+export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, isDetailView = false }: PostCardProps) {
   const router = useRouter();
   const user = useAppSelector((s) => s.auth.user);
   const userId = user?._id;
@@ -271,9 +272,18 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false }:
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [linkCopied, setLinkCopied] = useState(false);
   const [bodyExpanded, setBodyExpanded] = useState(false);
+  const [bodyIsClamped, setBodyIsClamped] = useState(false);
+  const bodyRef = useRef<HTMLParagraphElement>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAdminHideConfirm, setShowAdminHideConfirm] = useState(false);
   const [showAdminDeleteConfirm, setShowAdminDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (el && !isDetailView) {
+      setBodyIsClamped(el.scrollHeight > el.clientHeight);
+    }
+  }, [post.bodyText, isDetailView]);
 
   const authorName =
     typeof post.authorId === 'object' ? post.authorId.displayName : 'Unknown';
@@ -806,9 +816,22 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false }:
         </div>
 
         {post.bodyText && (
-          <p className="mt-1.5 text-[15px] leading-relaxed text-foreground/80 line-clamp-3">
-            {post.bodyText}
-          </p>
+          <div className="mt-1.5">
+            <p
+              ref={bodyRef}
+              className={`text-[15px] leading-relaxed text-foreground/80 ${isDetailView || bodyExpanded ? '' : 'line-clamp-3'}`}
+            >
+              {post.bodyText}
+            </p>
+            {!isDetailView && (bodyIsClamped || bodyExpanded) && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setBodyExpanded((v) => !v); }}
+                className="mt-1 text-[13px] font-medium text-primary hover:underline"
+              >
+                {bodyExpanded ? 'Show less' : 'Read more'}
+              </button>
+            )}
+          </div>
         )}
       </div>
 

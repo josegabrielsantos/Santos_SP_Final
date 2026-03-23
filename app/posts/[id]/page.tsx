@@ -102,7 +102,7 @@ export default function PostDiscussionPage() {
             {/* Post card */}
             {post && (
               <>
-                <PostCard post={post} orgAccessRole={orgAccessRole} isOrgAdmin={isOrgAdmin} />
+                <PostCard post={post} orgAccessRole={orgAccessRole} isOrgAdmin={isOrgAdmin} isDetailView />
 
                 {/* Comments section */}
                 <Card className="overflow-hidden rounded-xl border-border/60 bg-white ">
