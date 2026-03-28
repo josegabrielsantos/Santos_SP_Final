@@ -4,8 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
-import { Sidebar } from '@/components/layout/sidebar';
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout';
 import { useSearch } from '@/lib/api/search';
 import { useDownloadPaper, useToggleSavePaper, useSavedPapers } from '@/lib/api/papers';
 import axiosInstance from '@/lib/axios';
@@ -287,12 +286,7 @@ function SearchPageContent() {
   // ── Empty state (no query at all) ──
   if (!q && !hasAnyCriteria) {
     return (
-      <div className="min-h-screen bg-page-bg">
-        <AuthenticatedNavbar />
-        <div className="flex">
-          <Sidebar />
-          <main className="flex flex-1 justify-center">
-            <div className="w-full max-w-5xl px-5 py-6 lg:px-7">
+      <AuthenticatedLayout>
             <div className="flex flex-col items-center gap-4 py-32 text-center">
               <Search className="h-14 w-14 text-muted-foreground/30" />
               <p className="text-[18px] font-medium text-muted-foreground">Search posts, papers, and organizations</p>
@@ -327,22 +321,12 @@ function SearchPageContent() {
                 </div>
               )}
             </div>
-            </div>
-          </main>
-        </div>
-      </div>
+      </AuthenticatedLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-page-bg">
-      <AuthenticatedNavbar />
-
-      <div className="flex">
-        <Sidebar />
-
-        <main className="flex flex-1 justify-center">
-          <div className="w-full max-w-5xl px-5 py-6 lg:px-7">
+    <AuthenticatedLayout>
           {/* Header */}
           <div className="mb-4 flex items-center justify-between">
             <h1 className="font-heading text-[22px] font-bold text-foreground">
@@ -644,10 +628,7 @@ function SearchPageContent() {
               </AnimatePresence>
             </TabsContent>
           </Tabs>
-          </div>
-        </main>
-      </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }
 

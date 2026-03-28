@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
-import { Sidebar } from '@/components/layout/sidebar';
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout';
 import { PostCard } from '@/components/post/post-card';
 import { CreatePostTrigger } from '@/components/post/create-post-trigger';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -94,12 +93,8 @@ function initials(name: string) {
 /* ── Loading skeleton for the full page ── */
 function OrgPageSkeleton() {
   return (
-    <div className="min-h-screen bg-page-bg">
-      <AuthenticatedNavbar />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex flex-1 justify-center">
-          <div className="w-full max-w-5xl px-5 py-7 lg:px-7 flex flex-col gap-5">
+    <AuthenticatedLayout>
+          <div className="flex flex-col gap-5">
             {/* Header card skeleton */}
             <div className="border border-border rounded-xl overflow-hidden bg-white">
               <Skeleton className="h-52 w-full rounded-none" />
@@ -132,9 +127,7 @@ function OrgPageSkeleton() {
               </div>
             ))}
           </div>
-        </main>
-      </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }
 
@@ -224,12 +217,11 @@ export default function OrgDetailPage() {
 
   if (!org) {
     return (
-      <div className="min-h-screen bg-page-bg">
-        <AuthenticatedNavbar />
+      <AuthenticatedLayout>
         <div className="flex justify-center py-20">
           <p className="text-muted-foreground">Organization not found.</p>
         </div>
-      </div>
+      </AuthenticatedLayout>
     );
   }
 
@@ -249,14 +241,7 @@ export default function OrgDetailPage() {
     canPost ? 'member' : isFollower ? 'follower' : 'none';
 
   return (
-    <div className="min-h-screen bg-page-bg">
-      <AuthenticatedNavbar />
-
-      <div className="flex">
-        <Sidebar />
-
-        <main className="flex flex-1 justify-center">
-          <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
+    <AuthenticatedLayout>
             {/* Org header with banner */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -1041,10 +1026,6 @@ export default function OrgDetailPage() {
                 )}
               </TabsContent>
             </Tabs>
-          </div>
-        </main>
-      </div>
-
       {canManage && orgId && (
         <BulkImportDialog
           open={showBulkImport}
@@ -1052,7 +1033,7 @@ export default function OrgDetailPage() {
           orgId={orgId}
         />
       )}
-    </div>
+    </AuthenticatedLayout>
   );
 }
 

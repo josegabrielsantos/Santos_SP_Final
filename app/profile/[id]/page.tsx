@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
-import { Sidebar } from '@/components/layout/sidebar';
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout';
 import { PostCard } from '@/components/post/post-card';
 import {
   useUser,
@@ -114,26 +113,19 @@ export default function ProfilePage() {
 
   if (userLoading) {
     return (
-      <div className="min-h-screen bg-page-bg">
-        <AuthenticatedNavbar />
-        <div className="flex">
-          <Sidebar />
-          <main className="flex flex-1 justify-center">
-            <ProfileSkeleton />
-          </main>
-        </div>
-      </div>
+      <AuthenticatedLayout>
+        <ProfileSkeleton />
+      </AuthenticatedLayout>
     );
   }
 
   if (isError || !user) {
     return (
-      <div className="min-h-screen bg-page-bg">
-        <AuthenticatedNavbar />
+      <AuthenticatedLayout>
         <div className="flex justify-center py-20">
           <p className="text-muted-foreground">User not found.</p>
         </div>
-      </div>
+      </AuthenticatedLayout>
     );
   }
 
@@ -141,14 +133,7 @@ export default function ProfilePage() {
   const orgCount = orgs?.length ?? 0;
 
   return (
-    <div className="min-h-screen bg-page-bg">
-      <AuthenticatedNavbar />
-
-      <div className="flex">
-        <Sidebar />
-
-        <main className="flex flex-1 justify-center">
-          <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
+    <AuthenticatedLayout>
             {/* Profile header */}
             <motion.div variants={fadeUp} initial="hidden" animate="visible">
               <Card className="rounded-xl border-border/60 bg-white border border-border overflow-hidden">
@@ -387,10 +372,7 @@ export default function ProfilePage() {
                 </TabsContent>
               </Tabs>
             </motion.div>
-          </div>
-        </main>
-      </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }
 

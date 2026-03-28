@@ -3,8 +3,7 @@
 import { useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
-import { Sidebar } from '@/components/layout/sidebar';
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -118,12 +117,7 @@ export default function OrgRequestDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-page-bg">
-      <AuthenticatedNavbar />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex flex-1 justify-center">
-          <div className="flex w-full max-w-3xl flex-col gap-6 px-5 py-7 lg:px-7">
+    <AuthenticatedLayout maxWidth="max-w-3xl">
             {/* Back */}
             <button
               onClick={() => router.back()}
@@ -375,9 +369,6 @@ export default function OrgRequestDetailPage() {
                 )}
               </>
             )}
-          </div>
-        </main>
-      </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }

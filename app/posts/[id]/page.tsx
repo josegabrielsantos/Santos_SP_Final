@@ -2,8 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
-import { Sidebar } from '@/components/layout/sidebar';
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout';
 import { PostCard } from '@/components/post/post-card';
 import { CommentsSection } from '@/components/post/comments-section';
 import { usePost } from '@/lib/api/posts';
@@ -69,14 +68,8 @@ export default function PostDiscussionPage() {
   }, [isLoading, isError, router]);
 
   return (
-    <div className="min-h-screen bg-page-bg">
-      <AuthenticatedNavbar />
-
-      <div className="flex">
-        <Sidebar />
-
-        <main className="flex flex-1 justify-center">
-          <div className="flex w-full max-w-5xl flex-col gap-6 px-5 py-7 lg:px-7">
+    <AuthenticatedLayout>
+          <div className="flex flex-col gap-6">
             {/* Back button */}
             <button
               onClick={() => router.back()}
@@ -116,9 +109,7 @@ export default function PostDiscussionPage() {
               </>
             )}
           </div>
-        </main>
-      </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }
 

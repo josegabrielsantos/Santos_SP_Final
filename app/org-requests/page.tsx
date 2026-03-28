@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
-import { Sidebar } from '@/components/layout/sidebar';
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,12 +32,8 @@ export default function MyOrgRequestsPage() {
   const requests = data?.requests ?? [];
 
   return (
-    <div className="min-h-screen bg-page-bg">
-      <AuthenticatedNavbar />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex flex-1 justify-center">
-          <div className="flex w-full max-w-3xl flex-col gap-6 px-5 py-7 lg:px-7">
+    <AuthenticatedLayout maxWidth="max-w-3xl">
+          <div className="flex flex-col gap-6">
             {/* Header */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
               <Link
@@ -133,8 +128,6 @@ export default function MyOrgRequestsPage() {
               ))}
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }

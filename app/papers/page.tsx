@@ -3,8 +3,7 @@
 import { useState, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
-import { Sidebar } from '@/components/layout/sidebar';
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -242,14 +241,7 @@ function PapersPageContent() {
     .join(' | ') || 'Advanced criteria';
 
   return (
-    <div className="min-h-screen bg-page-bg">
-      <AuthenticatedNavbar />
-
-      <div className="flex">
-        <Sidebar />
-
-        <main className="flex flex-1 justify-center">
-          <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
+    <AuthenticatedLayout>
             {/* Header */}
             <div className="mb-5">
               <h1 className="text-[28px] font-bold tracking-tight text-foreground">
@@ -646,10 +638,7 @@ function PapersPageContent() {
                 </Button>
               </div>
             )}
-          </div>
-        </main>
-      </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }
 

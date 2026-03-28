@@ -1,8 +1,7 @@
 'use client';
 
 import { usePublicTrends } from '@/lib/api/analytics';
-import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
-import { Sidebar } from '@/components/layout/sidebar';
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -35,13 +34,7 @@ export default function AnalyticsPage() {
   const { data, isLoading } = usePublicTrends();
 
   return (
-    <div className="min-h-screen bg-page-bg">
-      <AuthenticatedNavbar />
-      <div className="flex">
-        <Sidebar />
-
-        <main className="flex flex-1 justify-center">
-          <div className="w-full max-w-5xl px-5 py-6 lg:px-7">
+    <AuthenticatedLayout>
           <div className="mb-6">
             <h1 className="text-[26px] font-bold tracking-tight text-foreground">Research Trends</h1>
             <p className="mt-1 text-[14px] text-muted-foreground">
@@ -123,9 +116,6 @@ export default function AnalyticsPage() {
               </Card>
             </div>
           )}
-          </div>
-        </main>
-      </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }

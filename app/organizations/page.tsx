@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
-import { Sidebar } from '@/components/layout/sidebar';
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -46,14 +45,7 @@ export default function OrganizationsPage() {
   const isAdmin = user?.role === 'website_admin';
 
   return (
-    <div className="min-h-screen bg-page-bg">
-      <AuthenticatedNavbar />
-
-      <div className="flex">
-        <Sidebar />
-
-        <main className="flex flex-1 justify-center">
-          <div className="w-full max-w-5xl px-5 py-7 lg:px-7">
+    <AuthenticatedLayout>
             {/* Header */}
             <motion.div
               className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"
@@ -212,11 +204,7 @@ export default function OrganizationsPage() {
                 </Button>
               </div>
             )}
-          </div>
-        </main>
-      </div>
-
       {showRequestDialog && <RequestOrgDialog onClose={() => setShowRequestDialog(false)} />}
-    </div>
+    </AuthenticatedLayout>
   );
 }

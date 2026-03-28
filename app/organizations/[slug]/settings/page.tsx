@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { AuthenticatedNavbar } from '@/components/layout/authenticated-navbar';
-import { Sidebar } from '@/components/layout/sidebar';
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout';
 import { useOrganization, useUpdateOrg } from '@/lib/api/organizations';
 import { useUploadFile } from '@/lib/api/upload';
 import { useAppSelector } from '@/store/hooks';
@@ -102,35 +101,27 @@ export default function OrgSettingsPage() {
 
   if (orgLoading) {
     return (
-      <div className="min-h-screen bg-page-bg">
-        <AuthenticatedNavbar />
+      <AuthenticatedLayout>
         <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </div>
+      </AuthenticatedLayout>
     );
   }
 
   if (!org) {
     return (
-      <div className="min-h-screen bg-page-bg">
-        <AuthenticatedNavbar />
+      <AuthenticatedLayout>
         <div className="flex justify-center py-20">
           <p className="text-muted-foreground">Organization not found.</p>
         </div>
-      </div>
+      </AuthenticatedLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-page-bg">
-      <AuthenticatedNavbar />
-
-      <div className="flex">
-        <Sidebar />
-
-        <main className="flex flex-1 justify-center">
-          <div className="w-full max-w-2xl px-5 py-7 lg:px-7">
+    <AuthenticatedLayout>
+          <div className="w-full max-w-2xl px-5 py-7 lg:px-7 mx-auto">
             <div className="mb-6 flex items-center gap-2">
               <Settings className="h-5 w-5 text-muted-foreground" />
               <h1 className="text-[22px] font-bold text-foreground">Organization Settings</h1>
@@ -288,8 +279,6 @@ export default function OrgSettingsPage() {
               </div>
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+    </AuthenticatedLayout>
   );
 }
