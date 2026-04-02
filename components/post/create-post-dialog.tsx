@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -90,6 +90,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
   const [paperMetadataLoaded, setPaperMetadataLoaded] = useState(false);
   const [parseError, setParseError] = useState('');
   const [submitError, setSubmitError] = useState('');
+  const [parsedTopics, setParsedTopics] = useState<string[]>([]);
 
   const user = useAppSelector((s) => s.auth.user);
   const createPost = useCreatePost();
@@ -105,6 +106,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<PostFormValues>({
     defaultValues: {
@@ -127,6 +129,13 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
 
   const selectedType = watch('type');
   const skipTempCleanupOnCloseRef = useRef(false);
+
+  // Auto-select when user has exactly one org
+  useEffect(() => {
+    if (!defaultOrgId && userOrgs && userOrgs.length === 1) {
+      setValue('organizationId', userOrgs[0]._id);
+    }
+  }, [userOrgs, defaultOrgId, setValue]);
 
   const isTempUrl = useCallback((url: string) => /\/temp\//i.test(url), []);
 
@@ -228,6 +237,8 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
               if (metadata.journal) setPaperJournal(metadata.journal);
               if (metadata.doi) setPaperDoi(metadata.doi);
               if (metadata.year) setPaperDatePublished(`${metadata.year}-01-01`);
+              // Capture Gemini-classified topics
+              if (metadata.topics?.length) setParsedTopics(metadata.topics);
               // Auto-fill keywords into tags
               if (metadata.keywords?.length) {
                 setTags((prev) => {
@@ -390,6 +401,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
       body: bodyJson,
       bodyText,
       tags: cleanTags,
+      topics: selectedType === 'research_paper' ? parsedTopics : undefined,
       organizationId: isOrgPost ? values.organizationId : null,
       type: values.type,
       status: isOrgPost ? 'pending' : 'published',
@@ -416,6 +428,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
     setPaperPdfUrl(null);
     setParsingPdf(false);
     setPaperMetadataLoaded(false);
+    setParsedTopics([]);
     setParseError('');
     setSubmitError('');
     setOpen(false);
@@ -448,44 +461,36 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
       <DialogContent className={`max-h-[90vh] overflow-y-auto ${selectedType === 'research_paper' ? 'sm:max-w-4xl' : 'sm:max-w-3xl'}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
-            Create Post
+            Submit Post
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          {/* Post type + Org selector row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-[14px] font-medium text-muted-foreground">Post Type</Label>
-              <Controller
-                name="type"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="post">Post</SelectItem>
-                      <SelectItem value="poll">Poll</SelectItem>
-                      <SelectItem value="research_paper">Research Paper</SelectItem>
-                      <SelectItem value="update">Update</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+          {/* Zero orgs message */}
+          {userOrgs && userOrgs.length === 0 && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-[14px] text-amber-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <div>
+                <p className="font-medium">You need to join an organization to submit a post.</p>
+                <a href="/organizations" className="mt-0.5 text-[13px] text-primary hover:underline">
+                  Browse Organizations →
+                </a>
+              </div>
             </div>
+          )}
 
-          {/* Organization selector - enforce org for research papers */}
+          {/* Organization selector + Post type row */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Organization selector (first) */}
             <div className="flex flex-col gap-1.5">
-              <Label className="text-[14px] font-medium text-muted-foreground">Organization</Label>
+              <Label className="text-[14px] font-medium text-muted-foreground">Organization *</Label>
               <Controller
                 name="organizationId"
                 control={control}
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Personal" />
+                      <SelectValue placeholder="Select organization" />
                     </SelectTrigger>
                     <SelectContent>
                       {selectedType !== 'research_paper' && (
@@ -503,6 +508,28 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
               {selectedType === 'research_paper' && (
                 <p className="text-[12px] text-amber-600">Research papers must belong to an organization.</p>
               )}
+            </div>
+
+            {/* Post type (second) */}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-[14px] font-medium text-muted-foreground">Post Type *</Label>
+              <Controller
+                name="type"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="post">Article</SelectItem>
+                      <SelectItem value="poll">Poll</SelectItem>
+                      <SelectItem value="research_paper">Research Paper</SelectItem>
+                      <SelectItem value="update">Update</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
 
@@ -928,7 +955,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <Label className="text-[14px] font-medium text-muted-foreground">
-                Tags {tags.filter((t) => t.trim()).length > 0 && (
+                Keywords {tags.filter((t) => t.trim()).length > 0 && (
                   <span className="text-muted-foreground/60">({tags.filter((t) => t.trim()).length}/10)</span>
                 )}
               </Label>
@@ -941,7 +968,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
                   onClick={addTag}
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Add Tag
+                  Add Keyword
                 </Button>
               )}
             </div>
@@ -953,7 +980,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
                     <Input
                       value={tag}
                       onChange={(e) => updateTag(idx, e.target.value)}
-                      placeholder="tag name"
+                      placeholder="keyword"
                       className="h-9 w-40 pl-7 text-[14px]"
                     />
                   </div>
@@ -971,6 +998,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
                 </div>
               ))}
             </div>
+            <p className="text-[12px] text-muted-foreground/60">Research topics are auto-classified from your keywords and title.</p>
           </div>
 
           </div>{/* end Attachments & Tags grid */}

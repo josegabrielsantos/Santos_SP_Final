@@ -111,11 +111,10 @@ export function CommentsSection({ postId, orgAccessRole = 'member', commentCount
   };
 
   return (
-    <div className="flex flex-col gap-4 px-6 pb-5">
-      <Separator />
+    <div className="flex flex-col gap-4 px-6 py-5">
       <div className="flex items-center justify-between">
-        <h4 className="text-[18px] font-semibold text-foreground">
-          {commentCount !== undefined ? `${commentCount} Comment${commentCount !== 1 ? 's' : ''}` : 'Comments'}
+        <h4 className="font-heading text-[15px] font-semibold text-foreground">
+          Discussion{commentCount !== undefined ? ` (${commentCount})` : ''}
         </h4>
         <div className="flex items-center gap-1.5">
           <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
@@ -149,15 +148,15 @@ export function CommentsSection({ postId, orgAccessRole = 'member', commentCount
           </div>
         </div>
       ) : (
-        <p className="text-[16px] text-muted-foreground italic">
+        <p className="text-[13px] text-muted-foreground italic">
           {orgAccessRole === 'follower'
-            ? 'Followers cannot comment on organization posts. Join the organization to comment.'
+            ? 'Followers cannot comment. Join the organization to participate in discussions.'
             : 'You must be a member of this organization to comment.'}
         </p>
       )}
 
       {/* Comment list */}
-      {isLoading && <p className="text-[16px] text-muted-foreground">Loading comments…</p>}
+      {isLoading && <p className="text-[13px] text-muted-foreground">Loading comments…</p>}
 
       <div className="flex flex-col gap-4">
         {allComments.map((c) => (
@@ -169,7 +168,7 @@ export function CommentsSection({ postId, orgAccessRole = 'member', commentCount
         <Button
           variant="ghost"
           size="default"
-          className="mx-auto gap-1.5 text-[16px]"
+          className="mx-auto gap-1.5 text-[13px]"
           onClick={() => fetchNextPage()}
           disabled={isFetchingNextPage}
         >
@@ -282,25 +281,25 @@ function CommentItem({
   return (
     <div className="flex flex-col">
       <div className="flex gap-2.5">
-        <Avatar className="mt-0.5 h-9 w-9 shrink-0">
+        <Avatar className="mt-0.5 h-8 w-8 shrink-0">
           <AvatarImage src={authorAvatar} alt={authorName} />
-          <AvatarFallback className="text-[12px]">{initials(authorName)}</AvatarFallback>
+          <AvatarFallback className="text-[11px] bg-primary/10 text-primary font-semibold">{initials(authorName)}</AvatarFallback>
         </Avatar>
 
         <div className="min-w-0 flex-1 flex flex-col gap-1">
-          <div className="rounded-lg bg-muted/40 px-3.5 py-2.5 overflow-hidden">
+          <div className="overflow-hidden">
             <div className="flex items-center gap-2">
               {commentAuthorId ? (
-                <Link href={`/profile/${commentAuthorId}`} className="text-[15px] font-semibold text-foreground hover:underline">
+                <Link href={`/profile/${commentAuthorId}`} className="text-[13px] font-semibold text-foreground hover:underline">
                   {authorName}
                 </Link>
               ) : (
-                <span className="text-[15px] font-semibold text-foreground">{authorName}</span>
+                <span className="text-[13px] font-semibold text-foreground">{authorName}</span>
               )}
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="text-[13px] text-muted-foreground cursor-default">
+                    <span className="text-[12px] text-muted-foreground cursor-default">
                       {timeAgo}
                     </span>
                   </TooltipTrigger>
@@ -315,9 +314,9 @@ function CommentItem({
                 </span>
               )}
             </div>
-            <div className="mt-0.5 text-[16px] leading-relaxed text-foreground/90 break-all [overflow-wrap:anywhere]">
+            <div className="mt-1 text-[14px] leading-relaxed text-foreground/90 break-all [overflow-wrap:anywhere]">
               {comment.replyToUser && (
-                <span className="mr-1 inline-block rounded bg-primary/10 px-1.5 py-0.5 text-[14px] font-semibold text-primary">
+                <span className="mr-1 inline-block rounded bg-primary/10 px-1.5 py-0.5 text-[12px] font-semibold text-primary">
                   @{comment.replyToUser}
                 </span>
               )}
@@ -352,21 +351,21 @@ function CommentItem({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 pl-1">
+          <div className="flex items-center gap-3 pl-0.5">
             {/* Like button */}
             <button
               onClick={() => canLike && toggleLike.mutate({ postId, commentId: comment._id })}
               disabled={!userId || !canLike || toggleLike.isPending}
               title={!canLike ? 'You must be a member or follower of this organization' : undefined}
-              className={`flex items-center gap-1 text-[14px] font-medium transition-colors ${
+              className={`flex items-center gap-1 text-[12px] font-medium transition-colors ${
                 !canLike ? 'cursor-not-allowed opacity-50 text-gray-400' : liked ? 'text-green-600' : 'text-muted-foreground hover:text-green-600'
               }`}
             >
-              <ThumbsUp className={`h-4 w-4 ${liked ? 'fill-green-600' : ''}`} />
+              <ThumbsUp className={`h-3.5 w-3.5 ${liked ? 'fill-green-600' : ''}`} />
             </button>
 
             {/* Like count */}
-            <span className={`min-w-[18px] text-center text-[14px] font-semibold ${likeCountColor}`}>
+            <span className={`min-w-[14px] text-center text-[12px] font-semibold ${likeCountColor}`}>
               {comment.likeCount}
             </span>
 
@@ -375,17 +374,17 @@ function CommentItem({
               onClick={() => canLike && toggleDislike.mutate({ postId, commentId: comment._id })}
               disabled={!userId || !canLike || toggleDislike.isPending}
               title={!canLike ? 'You must be a member or follower of this organization' : undefined}
-              className={`flex items-center gap-1 text-[14px] font-medium transition-colors ${
+              className={`flex items-center gap-1 text-[12px] font-medium transition-colors ${
                 !canLike ? 'cursor-not-allowed opacity-50 text-gray-400' : disliked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
               }`}
             >
-              <ThumbsDown className={`h-4 w-4 ${disliked ? 'fill-red-500' : ''}`} />
+              <ThumbsDown className={`h-3.5 w-3.5 ${disliked ? 'fill-red-500' : ''}`} />
             </button>
 
             {canComment && (
               <button
                 onClick={() => setShowReplyForm(!showReplyForm)}
-                className="text-[14px] font-medium text-muted-foreground hover:text-foreground"
+                className="text-[12px] font-medium text-muted-foreground hover:text-foreground"
               >
                 Reply
               </button>
@@ -393,7 +392,7 @@ function CommentItem({
             {isAuthor && (
               <button
                 onClick={() => deleteComment.mutate({ postId, commentId: comment._id })}
-                className="text-[14px] font-medium text-destructive/70 hover:text-destructive"
+                className="text-[12px] font-medium text-destructive/70 hover:text-destructive"
               >
                 Delete
               </button>
@@ -402,18 +401,18 @@ function CommentItem({
               <>
                 <button
                   onClick={() => adminHideComment.mutate({ commentId: comment._id })}
-                  className="flex items-center gap-1 text-[14px] font-medium text-orange-500/70 hover:text-orange-600"
+                  className="flex items-center gap-1 text-[12px] font-medium text-orange-500/70 hover:text-orange-600"
                   title={comment.isHidden ? 'Unhide this comment' : 'Hide this comment'}
                 >
-                  {comment.isHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                  {comment.isHidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                   {comment.isHidden ? 'Unhide' : 'Hide'}
                 </button>
                 <button
                   onClick={() => setShowAdminDeleteDialog(true)}
-                  className="flex items-center gap-1 text-[14px] font-medium text-destructive/70 hover:text-destructive"
+                  className="flex items-center gap-1 text-[12px] font-medium text-destructive/70 hover:text-destructive"
                   title="Delete this comment (Admin)"
                 >
-                  <ShieldAlert className="h-3.5 w-3.5" />
+                  <ShieldAlert className="h-3 w-3" />
                   Delete
                 </button>
               </>

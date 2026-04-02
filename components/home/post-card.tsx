@@ -5,7 +5,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   ThumbsUp,
+  ThumbsDown,
   MessageCircle,
   Share2,
   MoreHorizontal,
@@ -127,29 +127,50 @@ export function PostCard({ post }: { post: PostData }) {
           </div>
         )}
 
-        <Separator className="my-3.5" />
+        {/* Engagement stats */}
+        {(likeCount !== 0 || post.commentCount > 0) && (
+          <div className="mt-3.5 flex items-center gap-3 text-[13px] text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <ThumbsUp className={`h-3.5 w-3.5 ${liked ? 'fill-primary text-primary' : ''}`} />
+              {likeCount} like{likeCount !== 1 ? 's' : ''}
+            </span>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="flex items-center gap-1.5">
+              <MessageCircle className="h-3.5 w-3.5" />
+              {post.commentCount} comment{post.commentCount !== 1 ? 's' : ''}
+            </span>
+          </div>
+        )}
 
-        {/* Actions */}
-        <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="default"
+        {/* Action buttons */}
+        <div className="mt-1.5 flex items-center border-t border-border pt-1.5">
+          <button
             onClick={handleLike}
-            className={`gap-2 text-[14px] ${liked ? 'text-primary' : 'text-muted-foreground'}`}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
+              liked ? 'text-primary hover:bg-primary/15' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+            }`}
           >
             <ThumbsUp className={`h-4 w-4 ${liked ? 'fill-primary' : ''}`} />
-            {likeCount > 0 && likeCount}
-          </Button>
-
-          <Button variant="ghost" size="default" className="gap-2 text-[14px] text-muted-foreground">
+            Like
+          </button>
+          <button
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium text-muted-foreground transition-all duration-150 hover:bg-muted/50 hover:text-foreground"
+          >
+            <ThumbsDown className="h-4 w-4" />
+            Dislike
+          </button>
+          <button
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium text-muted-foreground transition-all duration-150 hover:bg-muted/50 hover:text-foreground"
+          >
             <MessageCircle className="h-4 w-4" />
-            {post.commentCount > 0 && post.commentCount}
-          </Button>
-
-          <Button variant="ghost" size="default" className="gap-2 text-[14px] text-muted-foreground">
+            Comment
+          </button>
+          <button
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium text-muted-foreground transition-all duration-150 hover:bg-muted/50 hover:text-foreground"
+          >
             <Share2 className="h-4 w-4" />
             Share
-          </Button>
+          </button>
         </div>
       </CardContent>
     </Card>

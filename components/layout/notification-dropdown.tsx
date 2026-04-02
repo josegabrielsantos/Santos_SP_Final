@@ -163,7 +163,7 @@ export function NotificationDropdown() {
       {/* Bell button */}
       <button
         onClick={handleOpen}
-        className="relative rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+        className="relative rounded-full p-2 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
       >
         <Bell className="h-[22px] w-[22px]" />
         {unreadCount > 0 && (
@@ -175,14 +175,14 @@ export function NotificationDropdown() {
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-96 overflow-hidden rounded-xl border border-border/60 bg-white shadow-xl z-50">
+        <div className="absolute right-0 top-full mt-2 w-[360px] overflow-hidden rounded-xl border border-border/60 bg-white shadow-xl z-50">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3.5 border-b border-border/40">
-            <h3 className="text-[16px] font-semibold text-foreground">Notifications</h3>
+          <div className="flex items-center justify-between px-3.5 py-3 border-b border-border/40">
+            <h3 className="text-[14px] font-semibold text-foreground">Notifications</h3>
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="text-[14px] font-medium text-primary hover:underline"
+                className="text-[12px] font-medium text-primary hover:underline"
               >
                 Mark all as read
               </button>
@@ -208,52 +208,52 @@ export function NotificationDropdown() {
               <button
                 key={notif._id}
                 onClick={() => handleNotifClick(notif)}
-                className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40 ${
+                className={`flex w-full items-start gap-2.5 px-3.5 py-3 text-left transition-colors hover:bg-muted/40 overflow-hidden ${
                   !notif.isRead ? 'bg-primary/[0.03]' : ''
                 }`}
               >
                 {/* Sender avatar */}
                 <div className="relative shrink-0">
-                  <Avatar className="h-11 w-11">
+                  <Avatar className="h-9 w-9">
                     <AvatarImage
                       src={notif.senderId?.avatar ?? undefined}
                       alt={notif.senderId?.displayName ?? 'User'}
                     />
-                    <AvatarFallback className="text-[11px]">
+                    <AvatarFallback className="text-[10px]">
                       {initials(notif.senderId?.displayName ?? 'U')}
                     </AvatarFallback>
                   </Avatar>
                   {/* Type icon badge */}
                   <div
-                    className={`absolute -bottom-1 -right-1 flex h-[22px] w-[22px] items-center justify-center rounded-full ${notifIconBg(notif.type)}`}
+                    className={`absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full ${notifIconBg(notif.type)} [&_svg]:h-3 [&_svg]:w-3`}
                   >
                     {notifIcon(notif.type)}
                   </div>
                 </div>
 
                 {/* Content */}
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] leading-snug text-foreground">
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <p className="text-[13px] leading-snug text-foreground line-clamp-2">
                     {notif.message}
                   </p>
                   {notif.postId && (
-                    <p className="mt-0.5 truncate text-[14px] text-muted-foreground">
+                    <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
                       {notif.postId.title}
                     </p>
                   )}
                   {notif.organizationId && !notif.postId && (
-                    <p className="mt-0.5 truncate text-[14px] text-muted-foreground">
+                    <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
                       {notif.organizationId.name}
                     </p>
                   )}
-                  <p className="mt-1 text-[13px] text-muted-foreground/70">
+                  <p className="mt-0.5 text-[11px] text-muted-foreground/70">
                     {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
                   </p>
                 </div>
 
                 {/* Unread indicator */}
                 {!notif.isRead && (
-                  <div className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-primary" />
+                  <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
                 )}
               </button>
             ))}

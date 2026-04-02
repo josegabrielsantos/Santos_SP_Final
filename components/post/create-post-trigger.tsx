@@ -13,11 +13,10 @@ export function CreatePostTrigger({ orgName, defaultOrgId }: CreatePostTriggerPr
   return (
     <CreatePostDialog defaultOrgId={defaultOrgId}>
       <Button
-        variant="outline"
-        className="gap-2 text-[13px] font-medium border-border hover:bg-muted/50 hover:border-primary/30 hover:text-primary"
+        className="gap-2 text-[13px] font-semibold shadow-sm"
       >
         <Plus className="h-4 w-4" />
-        {orgName ? `Submit to ${orgName}` : 'Submit Publication'}
+        {orgName ? `Submit to ${orgName}` : 'Submit a Post'}
       </Button>
     </CreatePostDialog>
   );

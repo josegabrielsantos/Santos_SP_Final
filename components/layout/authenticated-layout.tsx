@@ -7,15 +7,21 @@ interface AuthenticatedLayoutProps {
   children: React.ReactNode;
   maxWidth?: string;
   noPadding?: boolean;
-  rightPanel?: React.ReactNode;
+  /** Scrollable top section of the right sidebar (e.g. announcements) */
+  rightSidebarTop?: React.ReactNode;
+  /** Fixed bottom section of the right sidebar (e.g. recommended, quick links) */
+  rightSidebarBottom?: React.ReactNode;
 }
 
 export function AuthenticatedLayout({
   children,
   maxWidth = 'max-w-6xl',
   noPadding = false,
-  rightPanel,
+  rightSidebarTop,
+  rightSidebarBottom,
 }: AuthenticatedLayoutProps) {
+  const hasRightSidebar = !!rightSidebarTop || !!rightSidebarBottom;
+
   return (
     <div className="min-h-screen bg-page-bg">
       <AuthenticatedNavbar />
@@ -23,20 +29,36 @@ export function AuthenticatedLayout({
       <div className="flex">
         <Sidebar />
 
-        <main className="flex flex-1 justify-center">
+        <main className="flex-1 min-w-0">
           <div
-            className={`w-full ${maxWidth} ${noPadding ? '' : 'px-5 py-7 lg:px-7'} ${rightPanel ? 'flex gap-6' : ''}`}
+            className={`mx-auto w-full ${maxWidth} ${noPadding ? '' : 'px-5 py-7 lg:px-7'}`}
           >
-            <div className={rightPanel ? 'flex-1 min-w-0' : 'w-full'}>
-              {children}
-            </div>
-            {rightPanel && (
-              <aside className="hidden xl:block w-[280px] shrink-0">
-                <div className="sticky top-[80px]">{rightPanel}</div>
-              </aside>
-            )}
+            {children}
           </div>
         </main>
+
+        {hasRightSidebar && (
+          <aside className="sticky top-[60px] hidden h-[calc(100vh-60px)] w-[320px] shrink-0 border-l border-border/50 bg-white xl:flex xl:flex-col">
+            {/* Top ~2/3 — scrollable (announcements) */}
+            {rightSidebarTop && (
+              <div className="flex-[2] min-h-0 overflow-y-auto px-4 py-4">
+                {rightSidebarTop}
+              </div>
+            )}
+
+            {/* Separator */}
+            {rightSidebarTop && rightSidebarBottom && (
+              <div className="mx-4 h-px bg-border/50 shrink-0" />
+            )}
+
+            {/* Bottom ~1/3 — fixed (recommended) */}
+            {rightSidebarBottom && (
+              <div className="flex-1 shrink-0 overflow-y-auto px-4 py-4">
+                {rightSidebarBottom}
+              </div>
+            )}
+          </aside>
+        )}
       </div>
     </div>
   );

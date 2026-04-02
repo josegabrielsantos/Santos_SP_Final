@@ -9,11 +9,10 @@ import { usePost } from '@/lib/api/posts';
 import { useOrganization } from '@/lib/api/organizations';
 import { useJoinRoom, useSocketEvent } from '@/hooks/useSocket';
 import { useQueryClient } from '@tanstack/react-query';
-import { usePapersByIds, useDownloadPaper } from '@/lib/api/papers';
+import { usePapersByIds, useRelatedPapers, useDownloadPaper } from '@/lib/api/papers';
 import { useAppSelector } from '@/store/hooks';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, BookOpen, Download } from 'lucide-react';
+import { Loader2, ArrowLeft, FileText, Download, BookOpen, Calendar, Hash, Eye } from 'lucide-react';
 import type { Paper } from '@/lib/types';
 
 export default function PostDiscussionPage() {
@@ -69,57 +68,50 @@ export default function PostDiscussionPage() {
 
   return (
     <AuthenticatedLayout>
-          <div className="flex flex-col gap-6">
-            {/* Back button */}
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-1.5 text-[14px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </button>
+      <div className="flex flex-col gap-5">
+        {/* Back button */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground w-fit"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to feed
+        </button>
 
-            {/* Loading / Error states */}
-            {isLoading && (
-              <div className="flex justify-center py-18">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            )}
-
-            {isError && (
-              <p className="py-12 text-center text-[17px] text-destructive">
-                Failed to load post.
-              </p>
-            )}
-
-            {/* Post card */}
-            {post && (
-              <>
-                <PostCard post={post} orgAccessRole={orgAccessRole} isOrgAdmin={isOrgAdmin} isDetailView />
-
-                {/* Comments section */}
-                <Card className="overflow-hidden rounded-xl border-border/60 bg-white ">
-                  <CommentsSection postId={postId} orgAccessRole={orgAccessRole} commentCount={post.commentCount} isOrgAdmin={isOrgAdmin} />
-                </Card>
-
-                {/* Related Papers */}
-                {post.paperIds?.length > 0 && (
-                  <RelatedPapers paperIds={post.paperIds} />
-                )}
-              </>
-            )}
+        {/* Loading / Error states */}
+        {isLoading && (
+          <div className="flex justify-center py-18">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
+        )}
+
+        {isError && (
+          <p className="py-12 text-center text-[14px] text-destructive">
+            Failed to load post.
+          </p>
+        )}
+
+        {/* Article content */}
+        {post && (
+          <>
+            <PostCard post={post} orgAccessRole={orgAccessRole} isOrgAdmin={isOrgAdmin} isDetailView />
+
+            {/* Related Papers */}
+            <RelatedPapers postId={post._id} paperIds={post.paperIds || []} />
+
+            {/* Discussion section */}
+            <div className="rounded-lg border border-border/50 bg-white">
+              <CommentsSection postId={postId} orgAccessRole={orgAccessRole} commentCount={post.commentCount} isOrgAdmin={isOrgAdmin} />
+            </div>
+          </>
+        )}
+      </div>
     </AuthenticatedLayout>
   );
 }
 
-function RelatedPapers({ paperIds }: { paperIds: string[] }) {
-  const { data: papers, isLoading } = usePapersByIds(paperIds);
-  const downloadMutation = useDownloadPaper();
-  if (isLoading) return <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>;
-  if (!papers?.length) return null;
-
-  const handleDownload = async (paper: Paper) => {
+function PaperItem({ paper, downloadMutation }: { paper: Paper; downloadMutation: ReturnType<typeof useDownloadPaper> }) {
+  const handleDownload = async () => {
     try {
       await downloadMutation.mutateAsync(paper._id);
     } catch {
@@ -128,44 +120,96 @@ function RelatedPapers({ paperIds }: { paperIds: string[] }) {
   };
 
   return (
-    <div>
-      <h2 className="mb-3 text-[18px] font-bold text-foreground">Related Papers</h2>
-      <div className="flex flex-col gap-3">
-        {papers.map((paper: Paper) => (
-          <Card key={paper._id} className="border-border/60 bg-white ">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 min-w-0">
-                  <BookOpen className="mt-0.5 h-5 w-5 shrink-0 text-primary/60" />
-                  <div className="min-w-0">
-                    <p className="text-[15px] font-semibold text-foreground leading-snug">{paper.title}</p>
-                    {paper.authors?.length > 0 && (
-                      <p className="mt-0.5 text-[13px] text-muted-foreground">{paper.authors.join(', ')}</p>
-                    )}
-                    {(paper.year || paper.journal) && (
-                      <p className="mt-0.5 text-[13px] text-muted-foreground">
-                        {[paper.year, paper.journal].filter(Boolean).join(' · ')}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {paper.fileUrl && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 gap-1.5 text-[13px]"
-                    onClick={() => handleDownload(paper)}
-                    disabled={downloadMutation.isPending}
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    {downloadMutation.isPending ? 'Downloading…' : 'Download'}
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+      <div className="flex items-start gap-3 min-w-0">
+        <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/50" />
+        <div className="min-w-0">
+          <p className="font-heading text-[14px] font-semibold text-foreground leading-snug">{paper.title}</p>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            {[
+              paper.authors?.length > 0 ? paper.authors.join(', ') : null,
+              paper.journal,
+              paper.year,
+              paper.doi ? `DOI: ${paper.doi}` : null,
+            ].filter(Boolean).join(' · ')}
+          </p>
+        </div>
       </div>
+      {paper.fileUrl && (
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-[12px] h-7"
+            onClick={() => window.open(paper.fileUrl!, '_blank')}
+          >
+            <Eye className="h-3 w-3" />
+            View
+          </Button>
+          <Button
+            size="sm"
+            className="gap-1.5 text-[12px] h-7 bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={() => handleDownload()}
+            disabled={downloadMutation.isPending}
+          >
+            <Download className="h-3 w-3" />
+            Download
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RelatedPapers({ postId, paperIds }: { postId: string; paperIds: string[] }) {
+  const { data: attachedPapers, isLoading: loadingAttached } = usePapersByIds(paperIds);
+  const { data: discoveredData, isLoading: loadingDiscovered } = useRelatedPapers(postId);
+  const downloadMutation = useDownloadPaper();
+
+  const discovered = discoveredData?.papers || [];
+  const attached = attachedPapers || [];
+  const isLoading = loadingAttached || loadingDiscovered;
+
+  // Nothing to show at all
+  if (!isLoading && attached.length === 0 && discovered.length === 0) return null;
+
+  // Still loading
+  if (isLoading && attached.length === 0 && discovered.length === 0) {
+    return <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>;
+  }
+
+  return (
+    <div className="rounded-lg border border-border/50 bg-white p-5">
+      {/* Attached papers section */}
+      {attached.length > 0 && (
+        <>
+          <div className="flex items-center gap-2 mb-4">
+            <BookOpen className="h-4 w-4 text-primary/60" />
+            <h2 className="font-heading text-[15px] font-semibold text-foreground">Attached Papers</h2>
+          </div>
+          <div className="flex flex-col divide-y divide-border/40">
+            {attached.map((paper: Paper) => (
+              <PaperItem key={paper._id} paper={paper} downloadMutation={downloadMutation} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Auto-discovered papers section */}
+      {discovered.length > 0 && (
+        <>
+          {attached.length > 0 && <div className="my-4 border-t border-border/30" />}
+          <div className="flex items-center gap-2 mb-4">
+            <Hash className="h-4 w-4 text-primary/60" />
+            <h2 className="font-heading text-[15px] font-semibold text-foreground">You Might Also Read</h2>
+          </div>
+          <div className="flex flex-col divide-y divide-border/40">
+            {discovered.map((paper: Paper) => (
+              <PaperItem key={paper._id} paper={paper} downloadMutation={downloadMutation} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

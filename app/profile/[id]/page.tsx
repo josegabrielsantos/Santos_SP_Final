@@ -185,26 +185,23 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  {/* Expertise & certifications */}
-                  {((user.expertise && user.expertise.length > 0) || (user.certifications && user.certifications.length > 0)) && (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {user.expertise?.map((e) => (
-                        <span
-                          key={e}
-                          className="inline-flex items-center rounded-full bg-kain-amber-light px-2.5 py-0.5 text-[12px] font-medium text-kain-amber"
-                        >
-                          {e}
-                        </span>
-                      ))}
-                      {user.certifications?.map((c) => (
-                        <span
-                          key={c}
-                          className="inline-flex items-center gap-1.5 rounded-full bg-kain-green-light px-2.5 py-0.5 text-[12px] font-medium text-kain-green"
-                        >
-                          <Award className="h-3 w-3" />
-                          {c}
-                        </span>
-                      ))}
+                  {/* Expertise */}
+                  {user.expertise && user.expertise.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground/70 mb-1">Expertise</h4>
+                      <p className="text-[13px] text-foreground">{user.expertise.join(' · ')}</p>
+                    </div>
+                  )}
+
+                  {/* Certifications */}
+                  {user.certifications && user.certifications.length > 0 && (
+                    <div className="mt-3">
+                      <h4 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground/70 mb-1">Certifications</h4>
+                      <ul className="list-disc list-inside text-[13px] text-foreground space-y-0.5">
+                        {user.certifications.map((c) => (
+                          <li key={c}>{c}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
 
@@ -281,7 +278,7 @@ export default function ProfilePage() {
                       ))}
 
                       {postsData && postsData.posts.length === 0 && (
-                        <p className="py-9 text-center text-[16px] text-muted-foreground">
+                        <p className="py-9 text-center text-[14px] text-muted-foreground">
                           No posts yet.
                         </p>
                       )}
@@ -334,7 +331,7 @@ export default function ProfilePage() {
                           ))}
                         </motion.div>
                       ) : (
-                        <p className="text-[16px] text-muted-foreground">
+                        <p className="text-[14px] text-muted-foreground">
                           Not a member of any organization yet.
                         </p>
                       )}
@@ -363,7 +360,7 @@ export default function ProfilePage() {
                           ))}
                         </motion.div>
                       ) : (
-                        <p className="text-[16px] text-muted-foreground">
+                        <p className="text-[14px] text-muted-foreground">
                           Not following any organizations yet.
                         </p>
                       )}
@@ -399,7 +396,7 @@ function OrgRow({
         </AvatarFallback>
       </Avatar>
       <div className="flex flex-col">
-        <span className="text-[16px] font-medium text-foreground hover:underline">{org.name}</span>
+        <span className="text-[14px] font-medium text-foreground hover:underline">{org.name}</span>
         <span className="text-[13px] text-muted-foreground">{org.memberCount} members</span>
       </div>
     </Link>

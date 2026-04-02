@@ -23,6 +23,8 @@ export function useOrganizations(params?: { page?: number; limit?: number; searc
       });
       return data;
     },
+    staleTime: 30_000,
+    refetchOnMount: 'always',
   });
 }
 
@@ -234,6 +236,7 @@ export function useApprovePost() {
     onSuccess: (_data, { orgId }) => {
       qc.invalidateQueries({ queryKey: ['organizations', orgId, 'posts', 'pending'] });
       qc.invalidateQueries({ queryKey: ['organizations', orgId, 'posts'] });
+      qc.invalidateQueries({ queryKey: ['organizations'] });
     },
   });
 }
@@ -250,6 +253,7 @@ export function useRejectPost() {
     },
     onSuccess: (_data, { orgId }) => {
       qc.invalidateQueries({ queryKey: ['organizations', orgId, 'posts', 'pending'] });
+      qc.invalidateQueries({ queryKey: ['organizations'] });
     },
   });
 }

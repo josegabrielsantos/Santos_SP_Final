@@ -41,16 +41,16 @@ function patchPostInCache(
 
 // ─── Get paginated posts (public feed) ──────────────────────────
 
-export function usePosts(params?: { page?: number; limit?: number; tag?: string; type?: string; sort?: 'hot' | 'new' | 'top' }) {
+export function usePosts(params?: { page?: number; limit?: number; tag?: string; type?: string; sort?: 'hot' | 'new' | 'top'; topic?: string }) {
   const page = params?.page ?? 1;
   const limit = params?.limit ?? 20;
   const sort = params?.sort ?? 'hot';
 
   return useQuery<PostsResponse>({
-    queryKey: ['posts', { page, limit, tag: params?.tag, type: params?.type, sort }],
+    queryKey: ['posts', { page, limit, tag: params?.tag, type: params?.type, sort, topic: params?.topic }],
     queryFn: async () => {
       const { data } = await axiosInstance.get<PostsResponse>('/posts', {
-        params: { page, limit, tag: params?.tag, type: params?.type, sort },
+        params: { page, limit, tag: params?.tag, type: params?.type, sort, topic: params?.topic || undefined },
       });
       return data;
     },
@@ -184,6 +184,7 @@ export function useDeletePost() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['posts'] });
+      qc.invalidateQueries({ queryKey: ['organizations'] });
     },
   });
 }

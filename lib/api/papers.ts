@@ -17,6 +17,7 @@ export function usePapers(params?: {
   yearTo?: number;
   sort?: 'newest' | 'oldest' | 'downloads';
   myOrgs?: boolean;
+  topic?: string;
   enabled?: boolean;
 }) {
   const page = params?.page ?? 1;
@@ -35,6 +36,7 @@ export function usePapers(params?: {
           yearTo: params?.yearTo || undefined,
           sort: params?.sort || undefined,
           myOrgs: params?.myOrgs ? 'true' : undefined,
+          topic: params?.topic || undefined,
         },
       });
       return data;
@@ -93,6 +95,7 @@ export function useSearchPapers(params?: {
   yearFrom?: number;
   yearTo?: number;
   sort?: 'relevance' | 'newest' | 'oldest' | 'downloads';
+  topic?: string;
   page?: number;
   limit?: number;
   enabled?: boolean;
@@ -120,6 +123,7 @@ export function useSearchPapers(params?: {
           yearFrom: params?.yearFrom || undefined,
           yearTo: params?.yearTo || undefined,
           sort: params?.sort || undefined,
+          topic: params?.topic || undefined,
           page: params?.page ?? 1,
           limit: params?.limit ?? 20,
         },
@@ -205,6 +209,22 @@ export function usePapersByIds(ids: string[]) {
     },
     enabled: ids.length > 0,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+// ─── Get related papers for a post (ES-based) ──────────────────
+
+export function useRelatedPapers(postId: string | undefined) {
+  return useQuery<{ papers: Paper[] }>({
+    queryKey: ['papers', 'related', postId],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<{ papers: Paper[] }>('/papers/related', {
+        params: { postId, limit: 5 },
+      });
+      return data;
+    },
+    enabled: !!postId,
+    staleTime: 10 * 60 * 1000,
   });
 }
 

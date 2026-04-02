@@ -3,22 +3,25 @@
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Download,
-  Calendar,
-  BookOpen,
-  User,
-  Tag,
   Bookmark,
   BookmarkCheck,
-  Hash,
   Eye,
   Link2,
 } from 'lucide-react';
+
+function formatAuthor(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length <= 1) return name;
+  const last = parts[parts.length - 1];
+  const initials = parts.slice(0, -1).map((p) => p[0]?.toUpperCase() + '.').join('');
+  return `${last}, ${initials}`;
+}
 import { CitationButton } from '@/components/paper/citation-button';
 import { AbstractText } from '@/components/paper/abstract-text';
+import { TopicBadge } from '@/components/ui/topic-badge';
 import { getInitials } from '@/lib/utils';
 import type { Paper } from '@/lib/types';
 
@@ -52,37 +55,26 @@ export function PaperCard({
       <CardContent className="p-6">
         <div className="flex-1 min-w-0">
           {/* Title */}
-          <h3 className="text-[20px] font-semibold leading-snug text-foreground">
+          <h3 className="font-heading text-[18px] font-semibold leading-snug text-foreground">
             {paper.title}
           </h3>
 
           {/* Authors */}
-          <div className="mt-4 flex items-center gap-2 text-[14px] text-muted-foreground">
-            <User className="h-4 w-4 shrink-0" />
-            <span className="font-medium text-muted-foreground/70">Authors:</span>
-            <span>{paper.authors.length > 0 ? paper.authors.join(', ') : 'Unknown'}</span>
-          </div>
+          <p className="mt-2.5 text-[14px] text-muted-foreground">
+            {paper.authors.length > 0
+              ? paper.authors.map((a) => formatAuthor(a)).join(' · ')
+              : 'Unknown'}
+          </p>
 
-          {/* Metadata row */}
-          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-muted-foreground/80">
-            {paper.journal && (
-              <span className="flex items-center gap-1.5">
-                <BookOpen className="h-3.5 w-3.5 shrink-0" />
-                <span className="font-medium text-muted-foreground/70">Journal:</span>
-                {paper.journal}
-              </span>
-            )}
-            {paper.year && (
-              <span className="flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 shrink-0" />
-                <span className="font-medium text-muted-foreground/70">Year:</span>
-                {paper.year}
-              </span>
-            )}
+          {/* Journal / Year / DOI line */}
+          <p className="mt-1.5 text-[13px] text-muted-foreground/80">
+            {paper.journal && <em>{paper.journal}</em>}
+            {paper.journal && paper.year && ' · '}
+            {paper.year && <span>{paper.year}</span>}
             {paper.doi && (
-              <span className="flex items-center gap-1.5">
-                <Hash className="h-3.5 w-3.5 shrink-0" />
-                <span className="font-medium text-muted-foreground/70">DOI:</span>
+              <>
+                {(paper.journal || paper.year) && ' · '}
+                DOI:{' '}
                 <a
                   href={`https://doi.org/${paper.doi}`}
                   target="_blank"
@@ -91,29 +83,31 @@ export function PaperCard({
                 >
                   {paper.doi}
                 </a>
-              </span>
+              </>
             )}
-            <span className="flex items-center gap-1.5">
-              <Download className="h-3.5 w-3.5 shrink-0" />
-              <span className="font-medium text-muted-foreground/70">Downloads:</span>
-              {paper.downloadCount}
-            </span>
-          </div>
+          </p>
 
           {/* Abstract */}
-          {paper.abstract && <AbstractText text={paper.abstract} />}
+          {paper.abstract && (
+            <div className="mt-4">
+              <h4 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground/70 mb-1.5">Abstract</h4>
+              <AbstractText text={paper.abstract} />
+            </div>
+          )}
 
-          {/* Tags */}
+          {/* Keywords */}
           {paper.keywords.length > 0 && (
-            <div className="mt-4 flex flex-wrap items-center gap-1.5">
-              <Tag className="h-3.5 w-3.5 shrink-0 text-kain-green/60" />
-              {paper.keywords.map((kw) => (
-                <Badge
-                  key={kw}
-                  className="bg-kain-green-light text-kain-green border border-kain-green/20 text-[12px] font-normal hover:bg-kain-green-light/80"
-                >
-                  {kw}
-                </Badge>
+            <p className="mt-4 text-[13px] text-muted-foreground">
+              <span className="font-medium text-muted-foreground/70">Keywords: </span>
+              {paper.keywords.join(' · ')}
+            </p>
+          )}
+
+          {/* Topics */}
+          {paper.topics && paper.topics.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {paper.topics.map((t) => (
+                <TopicBadge key={t} topicId={t} size="sm" />
               ))}
             </div>
           )}

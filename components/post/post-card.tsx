@@ -300,6 +300,15 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
     ? formatDistanceToNow(new Date(post.publishedAt), { addSuffix: true })
     : formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
 
+  const publishedDate = post.publishedAt
+    ? format(new Date(post.publishedAt), 'MMMM d, yyyy')
+    : format(new Date(post.createdAt), 'MMMM d, yyyy');
+
+  const orgSlug =
+    typeof post.organizationId === 'object' && post.organizationId
+      ? post.organizationId.slug
+      : undefined;
+
   const isPollClosed =
     post.poll?.isClosed ||
     (post.poll?.closesAt ? new Date() > new Date(post.poll.closesAt) : false);
@@ -390,25 +399,45 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
     return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 6 }}
+        initial={isDetailView ? false : { opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.15 }}
         ref={viewRef}
-        onClick={handleCardClick}
-        className="cursor-pointer overflow-hidden rounded-lg border border-border border-l-4 border-l-primary bg-card transition-colors hover:bg-muted/20"
+        onClick={isDetailView ? undefined : handleCardClick}
+        className={`overflow-hidden rounded-lg border border-border bg-card ${
+          isDetailView
+            ? 'border-t-2 border-t-primary'
+            : 'cursor-pointer border-l-4 border-l-primary transition-colors hover:bg-muted/20'
+        }`}
       >
         {/* ── Post Section: Author's contribution ── */}
-        <div className="px-4 pt-3 pb-3">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-7 w-7">
-                <AvatarImage src={authorAvatar} alt={authorName} />
-                <AvatarFallback className="bg-kain-green text-white text-[10px] font-bold">
-                  {initials(authorName)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+        <div className={isDetailView ? 'px-6 pt-5 pb-4' : 'px-4 pt-3 pb-3'}>
+          {/* Post badge */}
+          <div className="mb-3">
+            <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+              <FileText className="h-3 w-3" />
+              Research Paper
+            </span>
+          </div>
+
+          {/* Post title */}
+          <h3 className={isDetailView
+            ? 'font-heading text-[26px] font-bold leading-tight text-foreground'
+            : 'text-[18px] font-semibold leading-snug text-foreground'
+          }>
+            {post.title}
+          </h3>
+
+          {/* Author + Org + Date */}
+          <div className={`flex items-center gap-3 ${isDetailView ? 'mt-4' : 'mt-2'}`}>
+            <Avatar className={isDetailView ? 'h-10 w-10' : 'h-7 w-7'}>
+              <AvatarImage src={authorAvatar} alt={authorName} />
+              <AvatarFallback className="bg-kain-green text-white text-[10px] font-bold">
+                {initials(authorName)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 text-[13px]">
                 <Link
                   href={`/profile/${authorId}`}
                   onClick={(e) => e.stopPropagation()}
@@ -416,17 +445,24 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
                 >
                   {authorName}
                 </Link>
-                {orgName && (
+              </div>
+              <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                {orgName && orgSlug && (
                   <>
+                    <Link
+                      href={`/organizations/${orgSlug}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {orgName}
+                    </Link>
                     <span>·</span>
-                    <span className="font-medium text-primary">{orgName}</span>
                   </>
                 )}
-                <span>·</span>
-                <span>{timeAgo}</span>
+                <span>{isDetailView ? `Published ${publishedDate}` : timeAgo}</span>
               </div>
             </div>
-            <div onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+            <div className="ml-auto" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted/50">
@@ -475,26 +511,18 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
             </div>
           </div>
 
-          {/* Post badge */}
-          <div className="mt-2">
-            <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
-              <FileText className="h-3 w-3" />
-              Research Paper
-            </span>
-          </div>
-
-          {/* Post title */}
-          <h3 className="mt-2 text-[18px] font-semibold leading-snug text-foreground">
-            {post.title}
-          </h3>
+          {isDetailView && <div className="mt-4 h-px bg-border/50" />}
 
           {/* Post body (user's thoughts / discussion) */}
           {displayedBody && (
-            <div className="mt-2">
-              <p className="text-[15px] leading-relaxed text-foreground/80">
+            <div className={isDetailView ? 'mt-4' : 'mt-2'}>
+              <p className={isDetailView
+                ? 'text-[15px] leading-[1.8] text-foreground/80'
+                : 'text-[15px] leading-relaxed text-foreground/80'
+              }>
                 {displayedBody}
               </p>
-              {bodyIsLong && (
+              {bodyIsLong && !isDetailView && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setBodyExpanded((v) => !v); }}
                   className="mt-1 text-[13px] font-medium text-primary hover:underline"
@@ -507,21 +535,28 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
 
           {/* Tags */}
           {post.tags.length > 0 && (
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {post.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-medium ${getTagColor(tag)}`}
-                >
-                  {tag}
-                </span>
-              ))}
+            <div className={`flex flex-wrap gap-1.5 ${isDetailView ? 'mt-4' : 'mt-2.5'}`}>
+              {isDetailView ? (
+                <p className="text-[13px] text-muted-foreground">
+                  <span className="font-medium">Keywords: </span>
+                  {post.tags.join(' · ')}
+                </p>
+              ) : (
+                post.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-medium ${getTagColor(tag)}`}
+                  >
+                    {tag}
+                  </span>
+                ))
+              )}
             </div>
           )}
         </div>
 
         {/* ── Paper Section: Research paper details ── */}
-        <div className="mx-4 rounded-md border border-border bg-muted/15 p-4 mb-3">
+        <div className={`rounded-md border-l-4 border-l-primary/20 bg-muted/10 p-4 ${isDetailView ? 'mx-6 mb-4' : 'mx-4 mb-3'}`}>
           <div className="flex items-center gap-1.5 mb-3">
             <FileText className="h-3.5 w-3.5 text-primary/60" />
             <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Paper Details</span>
@@ -581,7 +616,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
         </div>
 
         {/* Action buttons: Download, View, Copy Link */}
-        <div className="mx-4 flex items-center gap-2 border-t border-border pt-3 pb-1">
+        <div className={`flex items-center gap-2 border-t border-border pt-3 pb-1 ${isDetailView ? 'mx-6' : 'mx-4'}`}>
           {pdfUrls.length > 0 && (
             <button
               onClick={handleDownload(pdfUrls[0])}
@@ -612,40 +647,28 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
           </button>
         </div>
 
-        {/* Engagement stats */}
-        {(post.likeCount !== 0 || post.commentCount > 0) && (
-          <div className="mx-4 mt-2 flex items-center justify-between border-t border-border pt-2 text-[13px] text-muted-foreground">
-            {post.likeCount !== 0 ? (
-              <div className="flex items-center gap-1.5">
-                {post.likeCount > 0 ? (
-                  <ThumbsUp className="h-3.5 w-3.5 text-primary" />
-                ) : (
-                  <ThumbsDown className="h-3.5 w-3.5 text-destructive" />
-                )}
-                <span className={post.likeCount < 0 ? 'text-destructive' : ''}>{post.likeCount}</span>
-              </div>
-            ) : (
-              <div />
-            )}
-            {post.commentCount > 0 ? (
-              <span className="hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); navigateToPost(); }}>
+        {/* Engagement + Actions */}
+        <div className={`border-t border-border ${isDetailView ? 'mx-6 mt-3 py-3' : 'mx-4 mt-2 py-1.5'}`}>
+          {(post.likeCount !== 0 || post.commentCount > 0) && (
+            <div className="flex items-center gap-3 text-[13px] text-muted-foreground pb-1.5">
+              <span className="flex items-center gap-1.5">
+                <ThumbsUp className={`h-3.5 w-3.5 ${liked ? 'fill-primary text-primary' : ''}`} />
+                {post.likeCount} like{post.likeCount !== 1 ? 's' : ''}
+              </span>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="flex items-center gap-1.5">
+                <MessageCircle className="h-3.5 w-3.5" />
                 {post.commentCount} comment{post.commentCount !== 1 ? 's' : ''}
               </span>
-            ) : (
-              <div />
-            )}
-          </div>
-        )}
-
-        {/* Action bar */}
-        <div className="mx-4 mt-1 border-t border-border py-1.5">
-          <div className="flex items-center">
+            </div>
+          )}
+          <div className={`flex items-center ${post.likeCount !== 0 || post.commentCount > 0 ? 'border-t border-border pt-1.5' : ''}`}>
             <button
               onClick={(e) => { e.stopPropagation(); userId && canLike && toggleLike.mutate(post._id); }}
               disabled={!userId || !canLike || toggleLike.isPending}
               title={!canLike ? 'You must be a member or follower of this organization' : undefined}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
-                !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : liked ? 'text-primary hover:bg-primary/15 hover:shadow-sm' : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground hover:shadow-sm'
+                !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : liked ? 'text-primary hover:bg-primary/15' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
               }`}
             >
               <ThumbsUp className={`h-4 w-4 ${liked ? 'fill-primary' : ''}`} />
@@ -656,7 +679,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
               disabled={!userId || !canLike || toggleDislike.isPending}
               title={!canLike ? 'You must be a member or follower of this organization' : undefined}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
-                !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : disliked ? 'text-destructive hover:bg-destructive/15 hover:shadow-sm' : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground hover:shadow-sm'
+                !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : disliked ? 'text-destructive hover:bg-destructive/15' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
               }`}
             >
               <ThumbsDown className={`h-4 w-4 ${disliked ? 'fill-destructive' : ''}`} />
@@ -665,13 +688,19 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
             <button
               onClick={(e) => { e.stopPropagation(); if (canComment) navigateToPost(); }}
               disabled={!canComment}
-              title={!canComment ? (orgAccessRole === 'follower' ? 'Followers cannot comment — join the organization to comment' : 'You must be a member of this organization to comment') : undefined}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
-                !canComment ? 'cursor-not-allowed opacity-50 text-muted-foreground' : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground hover:shadow-sm'
+                !canComment ? 'cursor-not-allowed opacity-50 text-muted-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
               }`}
             >
               <MessageCircle className="h-4 w-4" />
               Comment
+            </button>
+            <button
+              onClick={handleCopyLink}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium text-muted-foreground transition-all duration-150 hover:bg-muted/50 hover:text-foreground"
+            >
+              <Share2 className="h-4 w-4" />
+              {linkCopied ? 'Copied!' : 'Share'}
             </button>
           </div>
         </div>
@@ -715,19 +744,21 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
   return (
     <>
     <motion.div
-      initial={{ opacity: 0, y: 6 }}
+      initial={isDetailView ? false : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15 }}
       ref={viewRef}
-      onClick={handleCardClick}
-      className={`cursor-pointer overflow-hidden rounded-lg border border-border bg-card transition-colors hover:bg-muted/20 ${
-        isAnnouncement ? 'border-l-4 border-l-amber-500' : ''
+      onClick={isDetailView ? undefined : handleCardClick}
+      className={`overflow-hidden rounded-lg border border-border bg-card ${
+        isDetailView
+          ? (isAnnouncement ? 'border-t-2 border-t-amber-500' : 'border-t-2 border-t-primary')
+          : `cursor-pointer transition-colors hover:bg-muted/20 ${isAnnouncement ? 'border-l-4 border-l-amber-500' : ''}`
       }`}
     >
       {/* Header */}
-      <div className="flex items-start justify-between px-4 pt-3">
-        <div className="flex items-center gap-2">
-          <Avatar className="h-8 w-8">
+      <div className={`flex items-start justify-between ${isDetailView ? 'px-6 pt-5' : 'px-4 pt-3'}`}>
+        <div className="flex items-center gap-3">
+          <Avatar className={isDetailView ? 'h-10 w-10' : 'h-8 w-8'}>
             <AvatarImage src={authorAvatar} alt={authorName} />
             <AvatarFallback className="bg-primary text-primary-foreground text-[11px] font-bold">
               {initials(authorName)}
@@ -742,13 +773,27 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
               >
                 {authorName}
               </Link>
-              {orgName && (
+            </div>
+            <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+              {orgName && orgSlug && (
                 <>
-                  <span className="text-[12px] text-muted-foreground">in</span>
-                  <span className="text-[13px] font-medium text-primary">{orgName}</span>
+                  <Link
+                    href={`/organizations/${orgSlug}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {orgName}
+                  </Link>
+                  <span>·</span>
                 </>
               )}
-              <span className="text-[12px] text-muted-foreground">· {timeAgo}</span>
+              {orgName && !orgSlug && (
+                <>
+                  <span className="font-medium text-primary">{orgName}</span>
+                  <span>·</span>
+                </>
+              )}
+              <span>{isDetailView ? `Published ${publishedDate}` : timeAgo}</span>
             </div>
           </div>
         </div>
@@ -807,19 +852,27 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
       </div>
 
       {/* Content */}
-      <div className="px-4 pb-1 pt-2">
+      <div className={isDetailView ? 'px-6 pb-1 pt-3' : 'px-4 pb-1 pt-2'}>
         <div className="flex items-start gap-2 flex-wrap">
-          <h3 className="text-[18px] font-semibold leading-snug text-foreground">
-            {post.title}
-          </h3>
           <PostTypeBadge type={post.type} />
         </div>
 
+        <h3 className={isDetailView
+          ? 'font-heading text-[26px] font-bold leading-tight text-foreground mt-1'
+          : 'text-[18px] font-semibold leading-snug text-foreground'
+        }>
+          {post.title}
+        </h3>
+
+        {isDetailView && <div className="mt-4 h-px bg-border/50" />}
+
         {post.bodyText && (
-          <div className="mt-1.5">
+          <div className={isDetailView ? 'mt-4' : 'mt-1.5'}>
             <p
               ref={bodyRef}
-              className={`text-[15px] leading-relaxed text-foreground/80 ${isDetailView || bodyExpanded ? '' : 'line-clamp-3'}`}
+              className={`leading-relaxed text-foreground/80 ${
+                isDetailView ? 'text-[15px] leading-[1.8]' : 'text-[15px]'
+              } ${isDetailView || bodyExpanded ? '' : 'line-clamp-3'}`}
             >
               {post.bodyText}
             </p>
@@ -837,14 +890,14 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
 
       {/* Media Gallery */}
       {visualUrls.length > 0 && (
-        <div className="media-gallery mx-4 mt-1.5" data-interactive>
+        <div className={`media-gallery mt-1.5 ${isDetailView ? 'mx-6' : 'mx-4'}`} data-interactive>
           <MediaGallery urls={visualUrls} />
         </div>
       )}
 
       {/* PDFs */}
       {pdfUrls.length > 0 && (
-        <div className="mx-4 mt-2.5 flex flex-col gap-2">
+        <div className={`mt-2.5 flex flex-col gap-2 ${isDetailView ? 'mx-6' : 'mx-4'}`}>
           {pdfUrls.map((url) => (
             <div
               key={url}
@@ -885,21 +938,28 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
 
       {/* Tags */}
       {post.tags.length > 0 && (
-        <div className="mx-4 mt-2.5 flex flex-wrap gap-1.5">
-          {post.tags.map((tag) => (
-            <span
-              key={tag}
-              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-medium ${getTagColor(tag)}`}
-            >
-              {tag}
-            </span>
-          ))}
+        <div className={`mt-2.5 flex flex-wrap gap-1.5 ${isDetailView ? 'mx-6' : 'mx-4'}`}>
+          {isDetailView ? (
+            <p className="text-[13px] text-muted-foreground">
+              <span className="font-medium">Keywords: </span>
+              {post.tags.join(' · ')}
+            </p>
+          ) : (
+            post.tags.map((tag) => (
+              <span
+                key={tag}
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-medium ${getTagColor(tag)}`}
+              >
+                {tag}
+              </span>
+            ))
+          )}
         </div>
       )}
 
       {/* Poll */}
       {post.poll && (
-        <div className="mx-4 mt-2.5 rounded-md border border-border bg-muted/10 p-4">
+        <div className={`mt-2.5 rounded-md border border-border bg-muted/10 p-4 ${isDetailView ? 'mx-6' : 'mx-4'}`}>
           <div className="mb-2.5 flex items-center justify-between">
             <div className="flex items-center gap-2 text-[15px] font-semibold text-foreground">
               <BarChart3 className="h-5 w-5 text-primary" />
@@ -992,51 +1052,31 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
         </div>
       )}
 
-      {/* Engagement stats */}
-      {(post.likeCount !== 0 || post.commentCount > 0) && (
-        <div className="mx-4 mt-2 flex items-center justify-between border-t border-border pt-2 text-[13px] text-muted-foreground">
-          {post.likeCount !== 0 ? (
-            <div className="flex items-center gap-1.5">
-              {post.likeCount > 0 ? (
-                <ThumbsUp className="h-3.5 w-3.5 text-primary" />
-              ) : (
-                <ThumbsDown className="h-3.5 w-3.5 text-destructive" />
-              )}
-              <span className={post.likeCount < 0 ? 'text-destructive' : ''}>{post.likeCount}</span>
-            </div>
-          ) : (
-            <div />
-          )}
-          {post.commentCount > 0 ? (
-            <span
-              onClick={(e) => { e.stopPropagation(); navigateToPost(); }}
-              className="cursor-pointer hover:underline"
-            >
-              {post.commentCount} comment
-              {post.commentCount !== 1 ? 's' : ''}
+      {/* Engagement + Actions */}
+      <div className={`border-t border-border ${isDetailView ? 'mx-6 mt-3 py-3' : 'mx-4 mt-2 py-1.5'}`}>
+        {(post.likeCount !== 0 || post.commentCount > 0) && (
+          <div className="flex items-center gap-3 text-[13px] text-muted-foreground pb-1.5">
+            <span className="flex items-center gap-1.5">
+              <ThumbsUp className={`h-3.5 w-3.5 ${liked ? 'fill-primary text-primary' : ''}`} />
+              {post.likeCount} like{post.likeCount !== 1 ? 's' : ''}
             </span>
-          ) : (
-            <div />
-          )}
-        </div>
-      )}
-
-      {/* Action bar */}
-      <div className="mx-4 mt-1 border-t border-border py-1.5">
-        <div className="flex items-center">
+            <span className="text-muted-foreground/40">·</span>
+            <span className="flex items-center gap-1.5">
+              <MessageCircle className="h-3.5 w-3.5" />
+              {post.commentCount} comment{post.commentCount !== 1 ? 's' : ''}
+            </span>
+          </div>
+        )}
+        <div className={`flex items-center ${post.likeCount !== 0 || post.commentCount > 0 ? 'border-t border-border pt-1.5' : ''}`}>
           <button
             onClick={(e) => { e.stopPropagation(); userId && canLike && toggleLike.mutate(post._id); }}
             disabled={!userId || !canLike || toggleLike.isPending}
             title={!canLike ? 'You must be a member or follower of this organization' : undefined}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
-              !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : liked
-                ? 'text-primary hover:bg-primary/15 hover:shadow-sm'
-                : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground hover:shadow-sm'
+              !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : liked ? 'text-primary hover:bg-primary/15' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
             }`}
           >
-            <ThumbsUp
-              className={`h-4 w-4 ${liked ? 'fill-primary' : ''}`}
-            />
+            <ThumbsUp className={`h-4 w-4 ${liked ? 'fill-primary' : ''}`} />
             Like
           </button>
           <button
@@ -1044,26 +1084,28 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
             disabled={!userId || !canLike || toggleDislike.isPending}
             title={!canLike ? 'You must be a member or follower of this organization' : undefined}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
-              !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : disliked
-                ? 'text-destructive hover:bg-destructive/15 hover:shadow-sm'
-                : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground hover:shadow-sm'
+              !canLike ? 'cursor-not-allowed opacity-50 text-muted-foreground' : disliked ? 'text-destructive hover:bg-destructive/15' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
             }`}
           >
-            <ThumbsDown
-              className={`h-4 w-4 ${disliked ? 'fill-destructive' : ''}`}
-            />
+            <ThumbsDown className={`h-4 w-4 ${disliked ? 'fill-destructive' : ''}`} />
             Dislike
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); if (canComment) navigateToPost(); }}
             disabled={!canComment}
-            title={!canComment ? (orgAccessRole === 'follower' ? 'Followers cannot comment — join the organization to comment' : 'You must be a member of this organization to comment') : undefined}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium transition-all duration-150 ${
-              !canComment ? 'cursor-not-allowed opacity-50 text-muted-foreground' : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground hover:shadow-sm'
+              !canComment ? 'cursor-not-allowed opacity-50 text-muted-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
             }`}
           >
             <MessageCircle className="h-4 w-4" />
             Comment
+          </button>
+          <button
+            onClick={handleCopyLink}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[13px] font-medium text-muted-foreground transition-all duration-150 hover:bg-muted/50 hover:text-foreground"
+          >
+            <Share2 className="h-4 w-4" />
+            {linkCopied ? 'Copied!' : 'Share'}
           </button>
         </div>
       </div>

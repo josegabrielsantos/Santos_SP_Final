@@ -49,8 +49,18 @@ export default function LandingPage() {
 
       {/* ───────── Hero ───────── */}
       <section className="relative overflow-hidden">
+        {/* Background image */}
+        <Image
+          src="/landingpage_background.png"
+          alt=""
+          fill
+          className="object-cover"
+          priority
+        />
+        {/* Dark overlay for readability */}
+        <div className="pointer-events-none absolute inset-0 bg-black/50" />
         {/* Gradient wash */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/6 via-transparent to-kain-amber/5" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-kain-amber/10" />
 
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
           <div className="flex flex-col items-center gap-12 lg:flex-row lg:items-center lg:gap-16">
@@ -64,7 +74,7 @@ export default function LandingPage() {
               <motion.div variants={fadeUp}>
                 <Badge
                   variant="secondary"
-                  className="mb-6 gap-1.5 px-3 py-1 text-[13px] font-medium text-kain-green bg-kain-green/8 border-kain-green/20"
+                  className="mb-6 gap-1.5 px-3 py-1 text-[13px] font-medium text-white bg-white/15 border-white/25"
                 >
                   <Globe className="h-3.5 w-3.5" />
                   UPLB Research Platform
@@ -72,15 +82,15 @@ export default function LandingPage() {
               </motion.div>
 
               <motion.h1
-                className="text-4xl leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl"
+                className="text-4xl leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl"
                 variants={fadeUp}
               >
                 UPLB{' '}
-                <span className="text-primary">FaNS Knowledge Hub</span>
+                <span className="text-white">FaNS Knowledge Hub</span>
               </motion.h1>
 
               <motion.p
-                className="mt-2 text-[20px] font-medium text-muted-foreground sm:text-[22px]"
+                className="mt-2 text-[20px] font-medium text-white/80 sm:text-[22px]"
                 style={{ fontFamily: 'var(--font-heading)' }}
                 variants={fadeUp}
               >
@@ -88,7 +98,7 @@ export default function LandingPage() {
               </motion.p>
 
               <motion.p
-                className="mt-6 max-w-lg text-[17px] leading-relaxed text-muted-foreground"
+                className="mt-6 max-w-lg text-[17px] leading-relaxed text-white/70"
                 variants={fadeUp}
               >
                 A community-driven platform for curated research on food and nutrition
@@ -106,7 +116,7 @@ export default function LandingPage() {
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline" className="rounded-xl" asChild>
+                <Button size="lg" variant="outline" className="rounded-xl border-white/30 text-white hover:bg-white/10 hover:text-white" asChild>
                   <Link href="/login">Log in to your account</Link>
                 </Button>
               </motion.div>
@@ -119,7 +129,7 @@ export default function LandingPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: 0.2, ease: [0, 0, 0.2, 1] as const }}
             >
-              <div className="relative h-40 w-40 overflow-hidden rounded-3xl border border-border bg-white p-4 border border-border sm:h-48 sm:w-48">
+              <div className="relative h-40 w-40 overflow-hidden rounded-3xl border border-white/20 bg-white/90 backdrop-blur-sm p-4 sm:h-48 sm:w-48">
                 <Image
                   src="/uplb_logo.png"
                   alt="UPLB Logo"
@@ -128,7 +138,7 @@ export default function LandingPage() {
                   priority
                 />
               </div>
-              <div className="relative h-40 w-40 overflow-hidden rounded-3xl border border-border bg-white p-4 border border-border sm:h-48 sm:w-48">
+              <div className="relative h-40 w-40 overflow-hidden rounded-3xl border border-white/20 bg-white/90 backdrop-blur-sm p-4 sm:h-48 sm:w-48">
                 <Image
                   src="/FaNS_logo.png"
                   alt="FaNS Logo"

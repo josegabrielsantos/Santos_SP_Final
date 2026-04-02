@@ -36,7 +36,7 @@ import {
   Search,
   MoreHorizontal,
   ShieldCheck,
-  ShieldOff,
+  ShieldMinus,
   UserX,
   UserCheck,
   Ban,
@@ -296,7 +296,7 @@ export default function AdminUsersPage() {
                             updateRole.mutate({ userId: user._id, role: 'user' })
                           }
                         >
-                          <ShieldOff className="h-4 w-4 text-orange-500" />
+                          <ShieldMinus className="h-4 w-4 text-orange-500" />
                           Demote to User
                         </DropdownMenuItem>
                       )}

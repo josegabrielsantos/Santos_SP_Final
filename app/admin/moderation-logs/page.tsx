@@ -23,9 +23,9 @@ import {
   ShieldCheck,
   UserX,
   UserCheck,
-  ShieldOff,
+  ShieldMinus,
   FileText,
-  MessageSquare,
+  MessageCircle,
   User,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -99,14 +99,14 @@ const ACTION_CONFIG: Record<ModerationAction, { label: string; icon: React.React
   },
   user_role_changed: {
     label: 'Role Changed',
-    icon: <ShieldOff className="h-3.5 w-3.5" />,
+    icon: <ShieldMinus className="h-3.5 w-3.5" />,
     color: 'bg-blue-50 text-blue-700 border-blue-200/60',
   },
 };
 
 const TARGET_ICONS: Record<string, React.ReactNode> = {
   post: <FileText className="h-4 w-4 text-primary" />,
-  comment: <MessageSquare className="h-4 w-4 text-violet-500" />,
+  comment: <MessageCircle className="h-4 w-4 text-violet-500" />,
   user: <User className="h-4 w-4 text-amber-600" />,
 };
 

@@ -72,16 +72,13 @@ export function AuthenticatedNavbar() {
 
   return (
     <>
-      {/* Maroon accent stripe */}
-      <div className="h-[3px] bg-primary w-full" />
-
-      <header className="sticky top-0 z-50 w-full bg-white border-b border-border">
+      <header className="sticky top-0 z-50 w-full bg-primary border-b border-primary/80">
         <div className="mx-auto flex h-[60px] max-w-[1400px] items-center gap-4 px-4 lg:px-6">
           {/* Left – Logos + Brand */}
           <Link href="/home" className="flex shrink-0 items-center gap-2.5 group">
-            <Image src="/uplb_logo.png" alt="UPLB" width={32} height={32} className="rounded-full ring-1 ring-border" />
-            <Image src="/FaNS_logo.png" alt="FaNS" width={32} height={32} className="rounded-full ring-1 ring-border" />
-            <span className="hidden text-[17px] font-bold tracking-tight text-primary lg:block font-heading">
+            <Image src="/uplb_logo.png" alt="UPLB" width={32} height={32} className="rounded-full ring-1 ring-white/30" />
+            <Image src="/FaNS_logo.png" alt="FaNS" width={32} height={32} className="rounded-full ring-1 ring-white/30" />
+            <span className="hidden text-[17px] font-bold tracking-tight text-white lg:block font-heading">
               UPLB FaNS Knowledge Hub
             </span>
           </Link>
@@ -92,8 +89,8 @@ export function AuthenticatedNavbar() {
               <Search className="absolute left-3.5 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-muted-foreground/60 pointer-events-none" />
               <input
                 type="search"
-                placeholder="Search publications, papers, research groups…"
-                className="h-9 w-full rounded-lg border border-border bg-muted/40 pl-10 pr-10 text-[14px] text-foreground placeholder:text-muted-foreground/60 outline-none transition-all focus:bg-white focus:border-primary/30 focus:ring-2 focus:ring-primary/10"
+                placeholder="Search posts, papers, organizations…"
+                className="h-9 w-full rounded-lg border border-white/20 bg-white pl-10 pr-10 text-[14px] text-foreground placeholder:text-muted-foreground/60 outline-none transition-all focus:border-white/40 focus:ring-2 focus:ring-white/20"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -161,10 +158,10 @@ export function AuthenticatedNavbar() {
             {/* Avatar dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-full p-1 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-primary/20">
-                  <Avatar className="h-8 w-8 ring-1 ring-border transition-all hover:ring-primary/30">
+                <button className="flex items-center gap-2 rounded-full p-1 outline-none transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/20">
+                  <Avatar className="h-8 w-8 ring-2 ring-white/30 transition-all hover:ring-white/50">
                     <AvatarImage src={user?.avatar ?? undefined} alt={user?.displayName ?? 'User'} />
-                    <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
+                    <AvatarFallback className="bg-white/20 text-[11px] font-bold text-white">
                       {initials}
                     </AvatarFallback>
                   </Avatar>

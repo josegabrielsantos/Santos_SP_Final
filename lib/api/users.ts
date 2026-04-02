@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '@/lib/axios';
 import type { UserDetail, PostsResponse, OrgListItem } from '@/lib/types';
 
@@ -61,5 +61,30 @@ export function useUserPosts(userId: string | undefined, params?: { page?: numbe
       return data;
     },
     enabled: !!userId,
+  });
+}
+
+// ─── Update own profile ────────────────────────────────────────
+
+export interface UpdateProfilePayload {
+  displayName?: string;
+  avatar?: string | null;
+  bio?: string | null;
+  dateOfBirth?: string | null;
+  expertise?: string[];
+  certifications?: string[];
+}
+
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: UpdateProfilePayload) => {
+      const { data } = await axiosInstance.put<UserDetail>('/users/profile', payload);
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['users', data._id] });
+    },
   });
 }

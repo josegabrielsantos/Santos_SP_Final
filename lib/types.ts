@@ -94,6 +94,7 @@ export interface Post {
   paperMetadata?: PaperMetadataInput | null;
   hotScore?: number;
   type: PostType;
+  topics?: string[];
   publishedAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -111,6 +112,7 @@ export interface CreatePostPayload {
   body?: unknown;
   bodyText?: string;
   tags?: string[];
+  topics?: string[];
   organizationId?: string | null;
   type?: PostType;
   status?: PostStatus;
@@ -146,6 +148,8 @@ export interface Organization extends OrgSummary {
   isActive: boolean;
   postCount: number;
   memberCount: number;
+  category?: string | null;
+  topics?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -158,6 +162,8 @@ export interface OrgListItem {
   description?: string | null;
   memberCount: number;
   postCount: number;
+  category?: string | null;
+  topics?: string[];
 }
 
 export interface OrgsResponse {
@@ -260,6 +266,7 @@ export interface PaperMetadata {
   authors: string[];
   abstract: string | null;
   keywords: string[];
+  topics?: string[];
   year: number | null;
   journal: string | null;
   doi: string | null;
@@ -298,6 +305,7 @@ export interface Paper {
   sourcePostId?: string | null;
   isPublished: boolean;
   downloadCount: number;
+  topics?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -321,6 +329,7 @@ export interface PaperSearchHit {
   doi?: string;
   fileUrl?: string;
   downloadCount?: number;
+  topics?: string[];
   createdAt?: string;
   highlight: Record<string, string[]>;
 }

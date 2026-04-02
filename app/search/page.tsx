@@ -16,7 +16,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
 import {
   Select,
   SelectContent,
@@ -32,7 +31,6 @@ import {
   Calendar,
   ChevronRight,
   ChevronLeft,
-  SlidersHorizontal,
   X,
   Tag,
   Hash,
@@ -124,7 +122,6 @@ function SearchPageContent() {
   const pageParam = parseInt(searchParams.get('page') ?? '1', 10);
 
   // ── Local input states (synced to URL on apply) ──
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [qInput, setQInput] = useState(q);
   const [authorInput, setAuthorInput] = useState(author);
   const [yearFromInput, setYearFromInput] = useState(yearFrom);
@@ -164,13 +161,6 @@ function SearchPageContent() {
     setDateToInput(dateTo);
     setSortInput(sort);
   }, [q, author, yearFrom, yearTo, tags, tagMode, titleFilter, postType, postTags, dateFrom, dateTo, sort]);
-
-  // Auto-open advanced panel if filters are present
-  useEffect(() => {
-    if (author || yearFrom || yearTo || tags || titleFilter || postType || postTags || dateFrom || dateTo) {
-      setShowAdvanced(true);
-    }
-  }, [author, yearFrom, yearTo, tags, titleFilter, postType, postTags, dateFrom, dateTo]);
 
   // ── URL update helper ──
   const updateParams = useCallback(
@@ -283,44 +273,33 @@ function SearchPageContent() {
   const totalForCurrentTab = type === 'posts' ? postsTotal : type === 'papers' ? papersTotal : 0;
   const totalPages = Math.ceil(totalForCurrentTab / 20);
 
-  // ── Empty state (no query at all) ──
+  // ── Empty state (no query at all) — show search panel prominently ──
   if (!q && !hasAnyCriteria) {
     return (
       <AuthenticatedLayout>
-            <div className="flex flex-col items-center gap-4 py-32 text-center">
-              <Search className="h-14 w-14 text-muted-foreground/30" />
-              <p className="text-[18px] font-medium text-muted-foreground">Search posts, papers, and organizations</p>
-              <p className="text-[14px] text-muted-foreground/70">Use the search bar above or open advanced search below</p>
-              <Button
-                variant="outline"
-                className="mt-2 gap-2"
-                onClick={() => setShowAdvanced(true)}
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                Advanced Search
-              </Button>
-
-              {showAdvanced && (
-                <div className="mt-4 w-full max-w-3xl text-left">
-                  <AdvancedSearchPanel
-                    qInput={qInput} setQInput={setQInput}
-                    titleInput={titleInput} setTitleInput={setTitleInput}
-                    authorInput={authorInput} setAuthorInput={setAuthorInput}
-                    tagsInput={tagsInput} setTagsInput={setTagsInput}
-                    tagModeInput={tagModeInput} setTagModeInput={setTagModeInput}
-                    yearFromInput={yearFromInput} setYearFromInput={setYearFromInput}
-                    yearToInput={yearToInput} setYearToInput={setYearToInput}
-                    postTypeInput={postTypeInput} setPostTypeInput={setPostTypeInput}
-                    postTagsInput={postTagsInput} setPostTagsInput={setPostTagsInput}
-                    dateFromInput={dateFromInput} setDateFromInput={setDateFromInput}
-                    dateToInput={dateToInput} setDateToInput={setDateToInput}
-                    sortInput={sortInput} setSortInput={setSortInput}
-                    onApply={handleApplySearch}
-                    onClear={handleClearFilters}
-                  />
-                </div>
-              )}
-            </div>
+        <div className="mb-6 text-center">
+          <Search className="mx-auto h-10 w-10 text-muted-foreground/30" />
+          <h1 className="mt-3 font-heading text-[22px] font-bold text-foreground">Search</h1>
+          <p className="mt-1 text-[14px] text-muted-foreground/70">
+            Search posts, papers, and organizations using the filters below.
+          </p>
+        </div>
+        <AdvancedSearchPanel
+          qInput={qInput} setQInput={setQInput}
+          titleInput={titleInput} setTitleInput={setTitleInput}
+          authorInput={authorInput} setAuthorInput={setAuthorInput}
+          tagsInput={tagsInput} setTagsInput={setTagsInput}
+          tagModeInput={tagModeInput} setTagModeInput={setTagModeInput}
+          yearFromInput={yearFromInput} setYearFromInput={setYearFromInput}
+          yearToInput={yearToInput} setYearToInput={setYearToInput}
+          postTypeInput={postTypeInput} setPostTypeInput={setPostTypeInput}
+          postTagsInput={postTagsInput} setPostTagsInput={setPostTagsInput}
+          dateFromInput={dateFromInput} setDateFromInput={setDateFromInput}
+          dateToInput={dateToInput} setDateToInput={setDateToInput}
+          sortInput={sortInput} setSortInput={setSortInput}
+          onApply={handleApplySearch}
+          onClear={handleClearFilters}
+        />
       </AuthenticatedLayout>
     );
   }
@@ -328,49 +307,29 @@ function SearchPageContent() {
   return (
     <AuthenticatedLayout>
           {/* Header */}
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4">
             <h1 className="font-heading text-[22px] font-bold text-foreground">
               {q ? <>Search results for &ldquo;{q}&rdquo;</> : 'Search'}
             </h1>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 text-[13px]"
-              onClick={() => setShowAdvanced((v) => !v)}
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              {showAdvanced ? 'Hide Filters' : 'Advanced Search'}
-            </Button>
           </div>
 
-          {/* Advanced Search Panel */}
-          <AnimatePresence>
-            {showAdvanced && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-              >
-                <AdvancedSearchPanel
-                  qInput={qInput} setQInput={setQInput}
-                  titleInput={titleInput} setTitleInput={setTitleInput}
-                  authorInput={authorInput} setAuthorInput={setAuthorInput}
-                  tagsInput={tagsInput} setTagsInput={setTagsInput}
-                  tagModeInput={tagModeInput} setTagModeInput={setTagModeInput}
-                  yearFromInput={yearFromInput} setYearFromInput={setYearFromInput}
-                  yearToInput={yearToInput} setYearToInput={setYearToInput}
-                  postTypeInput={postTypeInput} setPostTypeInput={setPostTypeInput}
-                  postTagsInput={postTagsInput} setPostTagsInput={setPostTagsInput}
-                  dateFromInput={dateFromInput} setDateFromInput={setDateFromInput}
-                  dateToInput={dateToInput} setDateToInput={setDateToInput}
-                  sortInput={sortInput} setSortInput={setSortInput}
-                  onApply={handleApplySearch}
-                  onClear={handleClearFilters}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Advanced Search Panel — always visible */}
+          <AdvancedSearchPanel
+            qInput={qInput} setQInput={setQInput}
+            titleInput={titleInput} setTitleInput={setTitleInput}
+            authorInput={authorInput} setAuthorInput={setAuthorInput}
+            tagsInput={tagsInput} setTagsInput={setTagsInput}
+            tagModeInput={tagModeInput} setTagModeInput={setTagModeInput}
+            yearFromInput={yearFromInput} setYearFromInput={setYearFromInput}
+            yearToInput={yearToInput} setYearToInput={setYearToInput}
+            postTypeInput={postTypeInput} setPostTypeInput={setPostTypeInput}
+            postTagsInput={postTagsInput} setPostTagsInput={setPostTagsInput}
+            dateFromInput={dateFromInput} setDateFromInput={setDateFromInput}
+            dateToInput={dateToInput} setDateToInput={setDateToInput}
+            sortInput={sortInput} setSortInput={setSortInput}
+            onApply={handleApplySearch}
+            onClear={handleClearFilters}
+          />
 
           {/* Tabs */}
           <Tabs
@@ -671,108 +630,97 @@ function AdvancedSearchPanel({
 
   return (
     <Card className="mb-4 rounded-xl border border-border">
-      <CardContent className="p-4">
-        {/* General query */}
-        <div className="mb-3">
-          <label className="text-[13px] font-medium text-muted-foreground">General Search Query</label>
+      <CardContent className="p-5">
+        {/* Search query — prominent */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50 pointer-events-none" />
           <Input
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search across all content..."
-            className="mt-1 h-10 text-[14px]"
+            className="h-11 pl-10 text-[15px]"
           />
         </div>
 
-        <Separator className="my-3" />
-
-        {/* Paper-specific filters */}
-        <p className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Paper Filters
-        </p>
-        <div className="flex flex-wrap items-end gap-3">
+        {/* Filters grid */}
+        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Paper filters */}
           <div className="flex flex-col gap-1">
-            <label className="text-[13px] font-medium text-muted-foreground">Title</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Title</label>
             <Input
               value={titleInput}
               onChange={(e) => setTitleInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Exact topic or phrase"
-              className="h-9 w-56 text-[14px]"
+              className="h-9 text-[13px]"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[13px] font-medium text-muted-foreground">Author</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Author</label>
             <Input
               value={authorInput}
               onChange={(e) => setAuthorInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Author name"
-              className="h-9 w-48 text-[14px]"
+              className="h-9 text-[13px]"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[13px] font-medium text-muted-foreground">Keywords (comma-separated)</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Keywords</label>
             <Input
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="nutrition, food security"
-              className="h-9 w-64 text-[14px]"
+              placeholder="e.g. nutrition, food security"
+              className="h-9 text-[13px]"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[13px] font-medium text-muted-foreground">Match</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Keyword Match</label>
             <Select value={tagModeInput} onValueChange={setTagModeInput}>
-              <SelectTrigger className="h-9 w-28 text-[14px]">
+              <SelectTrigger className="h-9 text-[13px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="any">Any</SelectItem>
-                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="any">Any keyword</SelectItem>
+                <SelectItem value="all">All keywords</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {/* Year range + Post type */}
           <div className="flex flex-col gap-1">
-            <label className="text-[13px] font-medium text-muted-foreground">Year from</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Year From</label>
             <Input
               type="number"
               value={yearFromInput}
               onChange={(e) => setYearFromInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="e.g. 2020"
-              className="h-9 w-28 text-[14px]"
+              className="h-9 text-[13px]"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[13px] font-medium text-muted-foreground">Year to</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Year To</label>
             <Input
               type="number"
               value={yearToInput}
               onChange={(e) => setYearToInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="e.g. 2026"
-              className="h-9 w-28 text-[14px]"
+              className="h-9 text-[13px]"
             />
           </div>
-        </div>
-
-        <Separator className="my-3" />
-
-        {/* Post-specific filters */}
-        <p className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Post Filters
-        </p>
-        <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-[13px] font-medium text-muted-foreground">Post Type</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Post Type</label>
             <Select value={postTypeInput || '_all'} onValueChange={(v) => setPostTypeInput(v === '_all' ? '' : v)}>
-              <SelectTrigger className="h-9 w-44 text-[14px]">
+              <SelectTrigger className="h-9 text-[13px]">
                 <SelectValue placeholder="All types" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_all">All types</SelectItem>
-                <SelectItem value="post">Post</SelectItem>
+                <SelectItem value="post">Article</SelectItem>
                 <SelectItem value="research_paper">Research Paper</SelectItem>
                 <SelectItem value="poll">Poll</SelectItem>
                 <SelectItem value="update">Update</SelectItem>
@@ -780,43 +728,39 @@ function AdvancedSearchPanel({
             </Select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[13px] font-medium text-muted-foreground">Post Tags (comma-separated)</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Post Tags</label>
             <Input
               value={postTagsInput}
               onChange={(e) => setPostTagsInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="e.g. nutrition, FNRI"
-              className="h-9 w-56 text-[14px]"
+              className="h-9 text-[13px]"
             />
           </div>
+
+          {/* Date range + Sort */}
           <div className="flex flex-col gap-1">
-            <label className="text-[13px] font-medium text-muted-foreground">Date from</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Date From</label>
             <Input
               type="date"
               value={dateFromInput}
               onChange={(e) => setDateFromInput(e.target.value)}
-              className="h-9 w-40 text-[14px]"
+              className="h-9 text-[13px]"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[13px] font-medium text-muted-foreground">Date to</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Date To</label>
             <Input
               type="date"
               value={dateToInput}
               onChange={(e) => setDateToInput(e.target.value)}
-              className="h-9 w-40 text-[14px]"
+              className="h-9 text-[13px]"
             />
           </div>
-        </div>
-
-        <Separator className="my-3" />
-
-        {/* Sort + Actions */}
-        <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-[13px] font-medium text-muted-foreground">Sort by</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Sort By</label>
             <Select value={sortInput} onValueChange={setSortInput}>
-              <SelectTrigger className="h-9 w-44 text-[14px]">
+              <SelectTrigger className="h-9 text-[13px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -829,11 +773,15 @@ function AdvancedSearchPanel({
               </SelectContent>
             </Select>
           </div>
-          <Button size="default" className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 text-[14px]" onClick={onApply}>
+        </div>
+
+        {/* Actions */}
+        <div className="mt-4 flex items-center gap-2">
+          <Button size="default" className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 text-[13px]" onClick={onApply}>
             <Search className="mr-1.5 h-3.5 w-3.5" />
             Search
           </Button>
-          <Button variant="ghost" size="default" className="h-9 text-[14px]" onClick={onClear}>
+          <Button variant="ghost" size="default" className="h-9 text-[13px] text-muted-foreground" onClick={onClear}>
             <X className="mr-1.5 h-3.5 w-3.5" />
             Clear Filters
           </Button>

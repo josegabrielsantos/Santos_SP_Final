@@ -36,3 +36,19 @@ export function usePublicTrends() {
     staleTime: 5 * 60 * 1000,
   });
 }
+
+export interface TopicCount {
+  topic: string;
+  count: number;
+}
+
+export function useTopicCounts() {
+  return useQuery<TopicCount[]>({
+    queryKey: ['analytics', 'topics'],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<TopicCount[]>('/analytics/topics');
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
