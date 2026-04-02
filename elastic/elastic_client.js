@@ -56,6 +56,7 @@ const kmsPostsMapping = {
       publishedAt:      { type: 'date' },
       type:             { type: 'keyword' },
       paperIds:         { type: 'keyword' },
+      topics:           { type: 'keyword' },
     },
   },
 };
@@ -91,6 +92,7 @@ const kmsPapersMapping = {
       sourcePostId:     { type: 'keyword' },
       createdAt:        { type: 'date' },
       downloadCount:    { type: 'integer' },
+      topics:           { type: 'keyword' },
     },
   },
 };
@@ -102,14 +104,19 @@ async function createIndex(name, body) {
     const exists = await esClient.indices.exists({ index: name });
     if (exists) {
       // Keep existing indexes forward-compatible when new fields are added.
+      // Forward-compatible: add new fields to existing indexes
+      const newFields = {};
       if (name === 'kms_papers') {
+        newFields.fileUrl = { type: 'keyword' };
+        newFields.topics = { type: 'keyword' };
+      }
+      if (name === 'kms_posts') {
+        newFields.topics = { type: 'keyword' };
+      }
+      if (Object.keys(newFields).length > 0) {
         await esClient.indices.putMapping({
           index: name,
-          body: {
-            properties: {
-              fileUrl: { type: 'keyword' },
-            },
-          },
+          body: { properties: newFields },
         });
       }
       console.log(`[ES] Index "${name}" already exists - skipping.`);
@@ -165,6 +172,7 @@ export async function syncExistingData() {
           createdAt:        post.createdAt,
           publishedAt:      post.publishedAt,
           paperIds:         (post.paperIds ?? []).map((id) => id.toString()),
+          topics:           post.topics ?? [],
         },
       ]);
 
@@ -200,6 +208,7 @@ export async function syncExistingData() {
           sourcePostId:     paper.sourcePostId?._id?.toString() ?? paper.sourcePostId?.toString() ?? null,
           createdAt:        paper.createdAt,
           downloadCount:    paper.downloadCount,
+          topics:           paper.topics ?? [],
         },
       ]);
 

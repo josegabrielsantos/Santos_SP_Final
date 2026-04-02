@@ -81,6 +81,16 @@ const organizationSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
+    category: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    topics: {
+      type: [String],
+      default: [],
+      index: true,
+    },
   },
   { timestamps: true }
 );

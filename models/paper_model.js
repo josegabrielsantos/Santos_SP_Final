@@ -77,9 +77,26 @@ const paperSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
+    topics: {
+      type: [String],
+      default: [],
+      index: true,
+    },
   },
   { timestamps: true }
 );
+
+// -- Auto-classify topics from keywords/title/abstract --
+
+import { classifyTopics } from '../utils/topic-classifier.js';
+
+paperSchema.pre('save', function (next) {
+  // Keyword fallback — only runs when no topics are set (Gemini classification takes priority).
+  if (this.topics.length === 0 && (this.isNew || this.isModified('keywords'))) {
+    this.topics = classifyTopics(this.keywords, this.title, this.abstract);
+  }
+  next();
+});
 
 // -- Post-save ES sync hook --
 

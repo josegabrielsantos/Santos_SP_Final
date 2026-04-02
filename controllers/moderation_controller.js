@@ -4,7 +4,7 @@ import User from '../models/user_model.js';
 import Organization from '../models/organization_model.js';
 import FeaturedPost from '../models/featured_post_model.js';
 import ModerationLog from '../models/moderation_log_model.js';
-import { emitToHome, emitToPost } from '../socket.js';
+import { emitToHome, emitToPost, disconnectUser } from '../socket.js';
 
 // ─── Helper: create a moderation log entry ───────────────────────
 
@@ -244,6 +244,11 @@ const toggleBanUser = async (req, res) => {
     user.isBanned = !wasBanned;
     user.banReason = wasBanned ? null : (req.body.reason || 'No reason provided.');
     await user.save();
+
+    // Force-disconnect banned user so they can't receive real-time updates
+    if (user.isBanned) {
+      disconnectUser(user._id.toString());
+    }
 
     const action = user.isBanned ? 'user_banned' : 'user_unbanned';
     await logAction(req.user._id, action, 'user', user._id, user.banReason, {

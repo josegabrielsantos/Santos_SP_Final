@@ -42,6 +42,7 @@ export async function indexPost(post) {
       createdAt:        populatedPost.createdAt,
       publishedAt:      populatedPost.publishedAt,
       paperIds:         (populatedPost.paperIds ?? []).map((id) => id.toString()),
+      topics:           populatedPost.topics ?? [],
     };
 
     await esClient.index({
@@ -100,6 +101,7 @@ export async function indexPaper(paper) {
       sourcePostId:     populatedPaper.sourcePostId?._id?.toString() ?? populatedPaper.sourcePostId?.toString() ?? null,
       createdAt:        populatedPaper.createdAt,
       downloadCount:    populatedPaper.downloadCount,
+      topics:           populatedPaper.topics ?? [],
     };
 
     await esClient.index({

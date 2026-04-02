@@ -228,4 +228,49 @@ const getPublicTrends = async (req, res) => {
   }
 };
 
-export { getAdminCharts, getOrgAnalytics, getPublicTrends };
+/**
+ * GET /api/analytics/topics
+ * Returns topic distribution across posts and papers.
+ */
+const getTopicCounts = async (req, res) => {
+  try {
+    const cached = getCached('topic_counts');
+    if (cached) return res.status(200).json(cached);
+
+    const [postTopics, paperTopics] = await Promise.all([
+      Post.aggregate([
+        { $match: { status: 'published', topics: { $exists: true, $ne: [] } } },
+        { $unwind: '$topics' },
+        { $group: { _id: '$topics', count: { $sum: 1 } } },
+        { $project: { topic: '$_id', count: 1, _id: 0 } },
+      ]),
+      Paper.aggregate([
+        { $match: { topics: { $exists: true, $ne: [] } } },
+        { $unwind: '$topics' },
+        { $group: { _id: '$topics', count: { $sum: 1 } } },
+        { $project: { topic: '$_id', count: 1, _id: 0 } },
+      ]),
+    ]);
+
+    // Merge counts
+    const merged = {};
+    for (const { topic, count } of postTopics) {
+      merged[topic] = (merged[topic] || 0) + count;
+    }
+    for (const { topic, count } of paperTopics) {
+      merged[topic] = (merged[topic] || 0) + count;
+    }
+
+    const result = Object.entries(merged)
+      .map(([topic, count]) => ({ topic, count }))
+      .sort((a, b) => b.count - a.count);
+
+    setCached('topic_counts', result);
+    res.status(200).json(result);
+  } catch (error) {
+    console.log('Error in getTopicCounts:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+export { getAdminCharts, getOrgAnalytics, getPublicTrends, getTopicCounts };

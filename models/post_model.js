@@ -141,6 +141,11 @@ const postSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    topics: {
+      type: [String],
+      default: [],
+      index: true,
+    },
   },
   { timestamps: true }
 );
@@ -165,6 +170,10 @@ function computeHotScore(likeCount, commentCount, publishedAt) {
   return engagement / Math.pow(ageInHours + 2, 1.8);
 }
 
+// -- Auto-classify topics --
+
+import { classifyTopics } from '../utils/topic-classifier.js';
+
 // -- Pre-save hooks --
 
 postSchema.pre('save', function (next) {
@@ -187,6 +196,13 @@ postSchema.pre('save', function (next) {
 
   // Recalculate hot score whenever likes or comments change
   this.hotScore = computeHotScore(this.likeCount, this.commentCount, this.publishedAt);
+
+  // Auto-classify topics from tags/title/bodyText (keyword fallback).
+  // Only runs when no topics are set — Gemini classification takes priority.
+  // Announcements don't need topic classification.
+  if (this.type !== 'announcement' && this.topics.length === 0 && (this.isNew || this.isModified('tags'))) {
+    this.topics = classifyTopics(this.tags, this.title, this.bodyText);
+  }
 
   next();
 });

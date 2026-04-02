@@ -3,6 +3,7 @@ import Organization from '../models/organization_model.js';
 import Post from '../models/post_model.js';
 import Paper from '../models/paper_model.js';
 import { logAction } from './moderation_controller.js';
+import { disconnectUser } from '../socket.js';
 
 /**
  * GET /api/users/:id
@@ -179,6 +180,11 @@ const toggleUserActive = async (req, res) => {
 
     user.isActive = !user.isActive;
     await user.save();
+
+    // Force-disconnect deactivated user so they can't receive real-time updates
+    if (!user.isActive) {
+      disconnectUser(user._id.toString());
+    }
 
     const action = user.isActive ? 'user_reactivated' : 'user_deactivated';
     await logAction(req.user._id, action, 'user', user._id, null, {

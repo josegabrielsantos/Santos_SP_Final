@@ -11,6 +11,7 @@ import {
   parsePdf,
   enrichDoi,
   bulkImportCsv,
+  getRelatedPapers,
 } from '../controllers/paper_controller.js';
 import { protectRoute, optionalAuth } from '../middleware/protectRoute.js';
 
@@ -22,6 +23,7 @@ router.post('/parse-pdf', protectRoute, parsePdf);
 router.post('/enrich-doi', protectRoute, enrichDoi);
 router.post('/bulk-csv', protectRoute, upload.single('file'), bulkImportCsv);
 router.post('/', protectRoute, createPaper);
+router.get('/related', optionalAuth, getRelatedPapers);
 router.get('/', optionalAuth, getPapers);
 router.get('/:id', getPaper);
 router.put('/:id', protectRoute, updatePaper);

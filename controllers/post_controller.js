@@ -6,6 +6,7 @@ import FeaturedPost from '../models/featured_post_model.js';
 import Organization from '../models/organization_model.js';
 import User from '../models/user_model.js';
 import { emitNotification, emitNotificationBulk, emitToPost, emitToHome } from '../socket.js';
+import { classifyTopicsWithGemini } from '../lib/util/gemini_topic_classifier.js';
 
 /**
  * Helper: check org-level access for a post interaction.
@@ -42,7 +43,7 @@ async function checkOrgAccess(post, userId) {
  */
 const createPost = async (req, res) => {
   try {
-    const { title, body, bodyText, tags, organizationId, type, status, mediaUrls, paperIds, poll, paperMetadata } = req.body;
+    const { title, body, bodyText, tags, organizationId, type, status, mediaUrls, paperIds, poll, paperMetadata, topics: clientTopics } = req.body;
     const normalizedType = type === 'paper_share' ? 'research_paper' : (type || 'post');
 
     if (!title) return res.status(400).json({ error: 'Title is required.' });
@@ -91,11 +92,15 @@ const createPost = async (req, res) => {
     // Announcements always publish immediately.
     const resolvedStatus = isAnnouncement ? 'published' : organizationId ? 'pending' : (status || 'published');
 
+    // Use Gemini-classified topics if provided (from PDF extraction), otherwise let pre-save hook handle it.
+    const resolvedTopics = Array.isArray(clientTopics) && clientTopics.length > 0 ? clientTopics : [];
+
     const post = new Post({
       title,
       body: body || null,
       bodyText: bodyText || '',
       tags: isAnnouncement ? [] : (tags || []),
+      topics: resolvedTopics,
       authorId: req.user._id,
       organizationId: isAnnouncement ? null : (organizationId || null),
       type: normalizedType,
@@ -127,6 +132,7 @@ const createPost = async (req, res) => {
         authors: post.paperMetadata.authors,
         abstract: post.paperMetadata.abstract,
         keywords: tags || [],
+        topics: resolvedTopics,
         doi: post.paperMetadata.doi || null,
         isbn: post.paperMetadata.isbn || null,
         publicationDate: Number.isNaN(publicationDate.getTime()) ? null : publicationDate,
@@ -183,6 +189,24 @@ const createPost = async (req, res) => {
       emitToHome('post:new', { postId: post._id.toString() });
     }
 
+    // ── Async Gemini topic classification for non-research posts (fire-and-forget) ──
+    // Research papers already have Gemini topics from PDF extraction.
+    // For all other post types, run a lightweight Gemini call in the background.
+    if (normalizedType !== 'research_paper' && normalizedType !== 'announcement' && resolvedTopics.length === 0) {
+      (async () => {
+        try {
+          const geminiTopics = await classifyTopicsWithGemini(title, bodyText, tags || []);
+          if (geminiTopics.length > 0) {
+            await Post.findByIdAndUpdate(post._id, { topics: geminiTopics });
+            console.log(`[Gemini][post-classify] Post ${post._id} classified: [${geminiTopics.join(', ')}]`);
+          }
+        } catch (err) {
+          console.error(`[Gemini][post-classify] Failed for post ${post._id}:`, err.message);
+          // Keyword classifier fallback already ran in pre-save hook, so post still has topics.
+        }
+      })();
+    }
+
     res.status(201).json(post);
   } catch (error) {
     console.log('Error in createPost:', error.message);
@@ -203,9 +227,12 @@ const getPosts = async (req, res) => {
     const type = req.query.type;
     const sort = req.query.sort || 'hot'; // 'hot' | 'new' | 'top'
 
+    const topic = req.query.topic;
+
     const filter = { status: 'published' };
     if (tag) filter.tags = tag;
     if (type) filter.type = type;
+    if (topic) filter.topics = topic;
 
     // Determine sort order
     let sortOrder;
@@ -301,6 +328,17 @@ const updatePost = async (req, res) => {
     // Update org postCount if just published
     if (wasDraft && post.status === 'published' && post.organizationId) {
       await Organization.findByIdAndUpdate(post.organizationId, { $inc: { postCount: 1 } });
+    }
+
+    // Notify viewers of content change
+    emitToPost(req.params.id, 'post:updated', {
+      postId: req.params.id,
+      authorId: req.user._id.toString(),
+    });
+
+    // If just published (draft → published), notify home feed
+    if (wasDraft && post.status === 'published') {
+      emitToHome('post:new', { postId: post._id.toString() });
     }
 
     res.status(200).json(post);
@@ -877,6 +915,12 @@ const votePoll = async (req, res) => {
     post.markModified('poll');
     await post.save();
 
+    // Notify poll viewers of vote count change
+    emitToPost(req.params.id, 'post:updated', {
+      postId: req.params.id,
+      authorId: req.user._id.toString(),
+    });
+
     res.status(200).json({ poll: post.poll });
   } catch (error) {
     console.log('Error in votePoll:', error.message);
@@ -904,6 +948,12 @@ const closePoll = async (req, res) => {
     post.poll.isClosed = true;
     post.markModified('poll');
     await post.save();
+
+    // Notify poll viewers that poll is now closed
+    emitToPost(req.params.id, 'post:updated', {
+      postId: req.params.id,
+      authorId: req.user._id.toString(),
+    });
 
     res.status(200).json({ poll: post.poll });
   } catch (error) {

@@ -1,7 +1,9 @@
 import Paper from '../models/paper_model.js';
+import Post from '../models/post_model.js';
 import Organization from '../models/organization_model.js';
 import { uploadToSpaces } from '../lib/spaces.js';
 import { extractPdfMetadataWithGemini } from '../lib/util/gemini_pdf_metadata.js';
+import esClient from '../elastic/elastic_client.js';
 import { randomUUID } from 'crypto';
 
 /**
@@ -70,6 +72,10 @@ const getPapers = async (req, res) => {
       filter.year = {};
       if (req.query.yearFrom) filter.year.$gte = parseInt(req.query.yearFrom);
       if (req.query.yearTo) filter.year.$lte = parseInt(req.query.yearTo);
+    }
+    // Filter by topic
+    if (req.query.topic) {
+      filter.topics = req.query.topic;
     }
     // Filter by specific organization
     if (req.query.organizationId) {
@@ -326,13 +332,14 @@ const parsePdf = async (req, res) => {
     }
 
     console.log(
-      `[parsePdf][${requestId}] SUCCESS title=${ai.title || 'null'} authors=${ai.authors?.length || 0} keywords=${ai.keywords?.length || 0}`
+      `[parsePdf][${requestId}] SUCCESS title=${ai.title || 'null'} authors=${ai.authors?.length || 0} keywords=${ai.keywords?.length || 0} topics=${ai.topics?.length || 0}`
     );
     return res.status(200).json({
       title: ai.title,
       authors: ai.authors,
       abstract: ai.abstract,
       keywords: ai.keywords,
+      topics: ai.topics || [],
       year: ai.year,
       journal: ai.journal,
       doi: ai.doi,
@@ -525,6 +532,112 @@ const enrichDoi = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/papers/related?postId=xxx&limit=5
+ * Returns papers from Elasticsearch that match the post's topics and keywords.
+ */
+const getRelatedPapers = async (req, res) => {
+  try {
+    const { postId, limit: limitParam } = req.query;
+    if (!postId) return res.status(400).json({ error: 'postId is required.' });
+
+    const limit = Math.min(parseInt(limitParam) || 5, 10);
+
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ error: 'Post not found.' });
+
+    const topics = post.topics || [];
+    const tags = post.tags || [];
+
+    // Build keyword text from tags + paperMetadata research title
+    const metaKeywords = [];
+    if (post.paperMetadata?.researchTitle) {
+      metaKeywords.push(post.paperMetadata.researchTitle);
+    }
+    const keywordText = [...tags, ...metaKeywords].filter(Boolean).join(' ');
+
+    // If no topics and no keyword text, we have nothing to match on
+    if (topics.length === 0 && !keywordText.trim()) {
+      return res.status(200).json({ papers: [] });
+    }
+
+    // IDs to exclude: already-attached papers + the paper created by this post
+    const excludeIds = (post.paperIds || []).map((id) => id.toString());
+
+    // Build Elasticsearch bool query
+    const must = [];
+    const should = [];
+    const mustNot = [];
+
+    // Must match at least one topic (if topics exist)
+    if (topics.length > 0) {
+      must.push({ terms: { topics } });
+    }
+
+    // Boost keyword/tag matches
+    if (keywordText.trim()) {
+      should.push({ match: { keywords: { query: keywordText, boost: 2 } } });
+      should.push({ match: { title: { query: keywordText, boost: 1.5 } } });
+      should.push({ match: { abstract: { query: keywordText, boost: 1 } } });
+    }
+
+    // Also boost by post title
+    if (post.title) {
+      should.push({ match: { title: { query: post.title, boost: 1.5 } } });
+      should.push({ match: { abstract: { query: post.title, boost: 0.5 } } });
+    }
+
+    // Exclude already-attached papers
+    if (excludeIds.length > 0) {
+      mustNot.push({ ids: { values: excludeIds } });
+    }
+
+    // Exclude the paper created BY this post
+    mustNot.push({ term: { sourcePostId: postId } });
+
+    // If no must clauses (no topics), use should as must with minimum_should_match
+    const query = { bool: {} };
+    if (must.length > 0) {
+      query.bool.must = must;
+    }
+    if (should.length > 0) {
+      query.bool.should = should;
+      if (must.length === 0) {
+        query.bool.minimum_should_match = 1;
+      }
+    }
+    if (mustNot.length > 0) {
+      query.bool.must_not = mustNot;
+    }
+
+    const esResult = await esClient.search({
+      index: 'kms_papers',
+      body: { query, size: limit },
+    });
+
+    const hits = esResult.hits?.hits || [];
+
+    // Fetch full paper documents from MongoDB for the matched IDs
+    const paperIds = hits.map((h) => h._id);
+    if (paperIds.length === 0) {
+      return res.status(200).json({ papers: [] });
+    }
+
+    const papers = await Paper.find({ _id: { $in: paperIds }, isPublished: true })
+      .populate('uploadedBy', 'displayName avatar')
+      .populate('organizationId', 'name slug avatar');
+
+    // Sort papers by ES relevance score order
+    const idOrder = new Map(paperIds.map((id, i) => [id, i]));
+    papers.sort((a, b) => (idOrder.get(a._id.toString()) ?? 0) - (idOrder.get(b._id.toString()) ?? 0));
+
+    res.status(200).json({ papers });
+  } catch (error) {
+    console.log('Error in getRelatedPapers:', error.message);
+    res.status(200).json({ papers: [] });
+  }
+};
+
 export {
   createPaper,
   getPapers,
@@ -536,4 +649,5 @@ export {
   parsePdf,
   enrichDoi,
   bulkImportCsv,
+  getRelatedPapers,
 };

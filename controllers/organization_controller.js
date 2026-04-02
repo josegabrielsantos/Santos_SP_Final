@@ -185,6 +185,12 @@ const addMember = async (req, res) => {
       org.followerIds.push(userId);
     }
     await org.save();           // pre-save hook syncs memberCount
+
+    emitToOrg(org._id.toString(), 'org:member-changed', {
+      orgId: org._id.toString(),
+      action: 'member-added',
+    });
+
     res.status(200).json({ message: 'Member added.', memberCount: org.memberCount });
   } catch (error) {
     console.log('Error in addMember:', error.message);
@@ -208,6 +214,12 @@ const removeMember = async (req, res) => {
 
     org.memberIds.splice(idx, 1);
     await org.save();
+
+    emitToOrg(org._id.toString(), 'org:member-changed', {
+      orgId: org._id.toString(),
+      action: 'member-removed',
+    });
+
     res.status(200).json({ message: 'Member removed.', memberCount: org.memberCount });
   } catch (error) {
     console.log('Error in removeMember:', error.message);

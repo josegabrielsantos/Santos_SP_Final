@@ -18,8 +18,8 @@ export function initializeSocket(httpServer) {
     pingTimeout: 20000,
   });
 
-  // Auth middleware — verify JWT from httpOnly cookie
-  io.use((socket, next) => {
+  // Auth middleware — verify JWT from httpOnly cookie + check ban/active status
+  io.use(async (socket, next) => {
     try {
       const rawCookie = socket.handshake.headers.cookie;
       if (!rawCookie) return next(new Error('No cookie'));
@@ -29,6 +29,14 @@ export function initializeSocket(httpServer) {
       if (!token) return next(new Error('No JWT cookie'));
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      // Reject banned or deactivated users on (re)connection
+      const User = (await import('./models/user_model.js')).default;
+      const user = await User.findById(decoded.userId).select('isBanned isActive').lean();
+      if (!user || user.isBanned || !user.isActive) {
+        return next(new Error('Account not accessible'));
+      }
+
       socket.userId = decoded.userId;
       next();
     } catch (err) {
@@ -103,4 +111,10 @@ export function emitToHome(event, data) {
 export function emitToOrg(orgId, event, data) {
   if (!io) return;
   io.to(`org:${orgId}`).emit(event, data);
+}
+
+// Force-disconnect a user's socket connections (used on ban/deactivation)
+export function disconnectUser(userId) {
+  if (!io) return;
+  io.to(`user:${userId}`).disconnectSockets(true);
 }

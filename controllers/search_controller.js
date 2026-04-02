@@ -30,6 +30,7 @@ const search = async (req, res) => {
       postTags,
       dateFrom,
       dateTo,
+      topic,
     } = req.query;
 
     const hasGeneralQuery = q.trim().length > 0;
@@ -87,6 +88,10 @@ const search = async (req, res) => {
         if (tagList.length > 0) {
           postFilter.push({ terms: { tags: tagList } });
         }
+      }
+
+      if (topic?.trim()) {
+        postFilter.push({ term: { topics: topic.trim() } });
       }
 
       if (dateFrom?.trim() || dateTo?.trim()) {
@@ -191,6 +196,10 @@ const search = async (req, res) => {
             filter.push({ terms: { keywords: tagList } });
           }
         }
+      }
+
+      if (topic?.trim()) {
+        filter.push({ term: { topics: topic.trim() } });
       }
 
       if (yearFrom !== undefined || yearTo !== undefined) {
