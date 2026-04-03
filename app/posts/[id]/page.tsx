@@ -9,11 +9,9 @@ import { usePost } from '@/lib/api/posts';
 import { useOrganization } from '@/lib/api/organizations';
 import { useJoinRoom, useSocketEvent } from '@/hooks/useSocket';
 import { useQueryClient } from '@tanstack/react-query';
-import { usePapersByIds, useRelatedPapers, useDownloadPaper } from '@/lib/api/papers';
 import { useAppSelector } from '@/store/hooks';
-import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, FileText, Download, BookOpen, Calendar, Hash, Eye } from 'lucide-react';
-import type { Paper } from '@/lib/types';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import { RelatedInsights } from './components/RelatedInsights';
 
 export default function PostDiscussionPage() {
   const params = useParams();
@@ -96,8 +94,8 @@ export default function PostDiscussionPage() {
           <>
             <PostCard post={post} orgAccessRole={orgAccessRole} isOrgAdmin={isOrgAdmin} isDetailView />
 
-            {/* Related Papers */}
-            <RelatedPapers postId={post._id} paperIds={post.paperIds || []} />
+            {/* Related Insights (AI summary, attached papers, related posts & papers) */}
+            <RelatedInsights post={post} />
 
             {/* Discussion section */}
             <div className="rounded-lg border border-border/50 bg-white">
@@ -110,106 +108,3 @@ export default function PostDiscussionPage() {
   );
 }
 
-function PaperItem({ paper, downloadMutation }: { paper: Paper; downloadMutation: ReturnType<typeof useDownloadPaper> }) {
-  const handleDownload = async () => {
-    try {
-      await downloadMutation.mutateAsync(paper._id);
-    } catch {
-      // Ignore download errors silently
-    }
-  };
-
-  return (
-    <div className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
-      <div className="flex items-start gap-3 min-w-0">
-        <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/50" />
-        <div className="min-w-0">
-          <p className="font-heading text-[14px] font-semibold text-foreground leading-snug">{paper.title}</p>
-          <p className="mt-0.5 text-[12px] text-muted-foreground">
-            {[
-              paper.authors?.length > 0 ? paper.authors.join(', ') : null,
-              paper.journal,
-              paper.year,
-              paper.doi ? `DOI: ${paper.doi}` : null,
-            ].filter(Boolean).join(' · ')}
-          </p>
-        </div>
-      </div>
-      {paper.fileUrl && (
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-[12px] h-7"
-            onClick={() => window.open(paper.fileUrl!, '_blank')}
-          >
-            <Eye className="h-3 w-3" />
-            View
-          </Button>
-          <Button
-            size="sm"
-            className="gap-1.5 text-[12px] h-7 bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => handleDownload()}
-            disabled={downloadMutation.isPending}
-          >
-            <Download className="h-3 w-3" />
-            Download
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RelatedPapers({ postId, paperIds }: { postId: string; paperIds: string[] }) {
-  const { data: attachedPapers, isLoading: loadingAttached } = usePapersByIds(paperIds);
-  const { data: discoveredData, isLoading: loadingDiscovered } = useRelatedPapers(postId);
-  const downloadMutation = useDownloadPaper();
-
-  const discovered = discoveredData?.papers || [];
-  const attached = attachedPapers || [];
-  const isLoading = loadingAttached || loadingDiscovered;
-
-  // Nothing to show at all
-  if (!isLoading && attached.length === 0 && discovered.length === 0) return null;
-
-  // Still loading
-  if (isLoading && attached.length === 0 && discovered.length === 0) {
-    return <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>;
-  }
-
-  return (
-    <div className="rounded-lg border border-border/50 bg-white p-5">
-      {/* Attached papers section */}
-      {attached.length > 0 && (
-        <>
-          <div className="flex items-center gap-2 mb-4">
-            <BookOpen className="h-4 w-4 text-primary/60" />
-            <h2 className="font-heading text-[15px] font-semibold text-foreground">Attached Papers</h2>
-          </div>
-          <div className="flex flex-col divide-y divide-border/40">
-            {attached.map((paper: Paper) => (
-              <PaperItem key={paper._id} paper={paper} downloadMutation={downloadMutation} />
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Auto-discovered papers section */}
-      {discovered.length > 0 && (
-        <>
-          {attached.length > 0 && <div className="my-4 border-t border-border/30" />}
-          <div className="flex items-center gap-2 mb-4">
-            <Hash className="h-4 w-4 text-primary/60" />
-            <h2 className="font-heading text-[15px] font-semibold text-foreground">You Might Also Read</h2>
-          </div>
-          <div className="flex flex-col divide-y divide-border/40">
-            {discovered.map((paper: Paper) => (
-              <PaperItem key={paper._id} paper={paper} downloadMutation={downloadMutation} />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}

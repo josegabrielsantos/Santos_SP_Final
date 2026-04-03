@@ -1,6 +1,8 @@
 'use client';
 
 import { useAdminCharts } from '@/lib/api/admin';
+import { useTopicCounts } from '@/lib/api/analytics';
+import { RESEARCH_TOPICS } from '@/lib/constants/research-topics';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import {
@@ -29,8 +31,13 @@ const TYPE_LABELS: Record<string, string> = {
   update: 'Update',
 };
 
+const TOPIC_LOOKUP = Object.fromEntries(
+  RESEARCH_TOPICS.map((t) => [t.id, { label: t.label, color: t.color }]),
+);
+
 export default function AdminAnalyticsPage() {
   const { data, isLoading } = useAdminCharts();
+  const { data: topicCounts } = useTopicCounts();
 
   if (isLoading) {
     return (
@@ -151,6 +158,38 @@ export default function AdminAnalyticsPage() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+
+        {/* Publications by Research Topic */}
+        {topicCounts && topicCounts.length > 0 && (
+          <Card className="border-border/60 bg-white lg:col-span-2">
+            <CardContent className="p-6">
+              <h2 className="mb-1 text-[16px] font-semibold text-foreground">Publications by Research Topic</h2>
+              <p className="mb-4 text-[13px] text-muted-foreground">
+                Distribution of papers and posts across FaNS research areas
+              </p>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart
+                  data={topicCounts.map((d) => ({
+                    name: TOPIC_LOOKUP[d.topic]?.label ?? d.topic,
+                    count: d.count,
+                    fill: TOPIC_LOOKUP[d.topic]?.color ?? '#6366f1',
+                  }))}
+                  layout="vertical"
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" radius={[0, 3, 3, 0]} name="Publications">
+                    {topicCounts.map((d, i) => (
+                      <Cell key={i} fill={TOPIC_LOOKUP[d.topic]?.color ?? COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
