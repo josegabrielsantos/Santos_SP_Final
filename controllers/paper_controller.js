@@ -623,15 +623,35 @@ const getRelatedPapers = async (req, res) => {
       return res.status(200).json({ papers: [] });
     }
 
+    // Build a map of ES scores and matched topics per paper
+    const postTopics = topics;
+    const esMetaMap = new Map(
+      hits.map((h) => [
+        h._id,
+        {
+          relevanceScore: h._score,
+          matchedTopics: (h._source?.topics || []).filter((t) => postTopics.includes(t)),
+        },
+      ]),
+    );
+
     const papers = await Paper.find({ _id: { $in: paperIds }, isPublished: true })
       .populate('uploadedBy', 'displayName avatar')
       .populate('organizationId', 'name slug avatar');
 
-    // Sort papers by ES relevance score order
+    // Sort papers by ES relevance score order and enrich with ES metadata
     const idOrder = new Map(paperIds.map((id, i) => [id, i]));
     papers.sort((a, b) => (idOrder.get(a._id.toString()) ?? 0) - (idOrder.get(b._id.toString()) ?? 0));
 
-    res.status(200).json({ papers });
+    const enrichedPapers = papers.map((paper) => {
+      const obj = paper.toObject();
+      const esMeta = esMetaMap.get(paper._id.toString()) || {};
+      obj.relevanceScore = esMeta.relevanceScore ?? null;
+      obj.matchedTopics = esMeta.matchedTopics ?? [];
+      return obj;
+    });
+
+    res.status(200).json({ papers: enrichedPapers });
   } catch (error) {
     console.log('Error in getRelatedPapers:', error.message);
     res.status(200).json({ papers: [] });
