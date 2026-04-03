@@ -1,14 +1,14 @@
 'use client';
 
-import { Lightbulb, MessageSquare, FileText, BookOpen, Download, Eye } from 'lucide-react';
+import { Lightbulb, MessageSquare, FileText, Download, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { useAIInsight, useRelatedPosts } from '@/lib/api/insights';
-import { usePapersByIds, useRelatedPapers, useDownloadPaper } from '@/lib/api/papers';
 import { AIInsightSummary } from './AIInsightSummary';
 import { RelatedPostCard } from './RelatedPostCard';
-import type { Post, Paper } from '@/lib/types';
+import type { AIInsight, RelatedPost } from '@/lib/api/insights';
+import type { Paper } from '@/lib/types';
 import type { LucideIcon } from 'lucide-react';
+import type { useDownloadPaper } from '@/lib/api/papers';
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -60,14 +60,6 @@ function PaperItem({
   paper: Paper;
   downloadMutation: ReturnType<typeof useDownloadPaper>;
 }) {
-  const handleDownload = async () => {
-    try {
-      await downloadMutation.mutateAsync(paper._id);
-    } catch {
-      // Ignore download errors silently
-    }
-  };
-
   return (
     <div className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
       <div className="flex items-start gap-3 min-w-0">
@@ -97,16 +89,16 @@ function PaperItem({
             onClick={() => window.open(paper.fileUrl!, '_blank')}
           >
             <Eye className="h-3 w-3" />
-            <span className="hidden sm:inline">View</span>
+            View
           </Button>
           <Button
             size="sm"
             className="gap-1.5 text-[12px] h-7 bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => handleDownload()}
+            onClick={() => downloadMutation.mutateAsync(paper._id).catch(() => {})}
             disabled={downloadMutation.isPending}
           >
             <Download className="h-3 w-3" />
-            <span className="hidden sm:inline">Download</span>
+            PDF
           </Button>
         </div>
       )}
@@ -114,69 +106,56 @@ function PaperItem({
   );
 }
 
-// ── Main Component ───────────────────────────────────────────────
+// ── Mobile fallback (shown below comments on < xl) ──────────────
 
-export function RelatedInsights({ post }: { post: Post }) {
-  const { data: aiInsight, isLoading: loadingAI } = useAIInsight(post._id);
-  const { data: relatedPosts, isLoading: loadingPosts } = useRelatedPosts(post._id);
-  const { data: discoveredData, isLoading: loadingPapers } = useRelatedPapers(post._id);
-  const { data: attachedPapers, isLoading: loadingAttached } = usePapersByIds(
-    post.paperIds || [],
-  );
-  const downloadMutation = useDownloadPaper();
-
-  const discovered = discoveredData?.papers || [];
-  const attached = attachedPapers || [];
-  const hasAttachedPapers = attached.length > 0;
+/**
+ * Full Related Insights card for mobile/tablet — rendered below comments.
+ * Hidden on xl+ where the sidebar version is used instead.
+ */
+export function RelatedInsightsMobile({
+  aiInsight,
+  loadingAI,
+  relatedPosts,
+  loadingPosts,
+  discoveredPapers,
+  loadingPapers,
+  downloadMutation,
+}: {
+  aiInsight: AIInsight | undefined;
+  loadingAI: boolean;
+  attachedPapers?: Paper[];
+  loadingAttached?: boolean;
+  relatedPosts: RelatedPost[];
+  loadingPosts: boolean;
+  discoveredPapers: Paper[];
+  loadingPapers: boolean;
+  downloadMutation: ReturnType<typeof useDownloadPaper>;
+}) {
   const hasAI = !!aiInsight?.summary;
-  const hasPosts = (relatedPosts?.length || 0) > 0;
-  const hasPapers = discovered.length > 0;
-  const isLoading = loadingAI || loadingPosts || loadingPapers || loadingAttached;
+  const hasPosts = relatedPosts.length > 0;
+  const hasPapers = discoveredPapers.length > 0;
+  const isLoading = loadingAI || loadingPosts || loadingPapers;
 
-  // Don't render if nothing to show and not loading
-  if (!isLoading && !hasAI && !hasPosts && !hasPapers && !hasAttachedPapers) {
+  if (!isLoading && !hasAI && !hasPosts && !hasPapers) {
     return null;
   }
 
   return (
     <div
-      className="overflow-hidden rounded-lg border border-border/50 bg-white"
+      className="overflow-hidden rounded-lg border border-border/50 bg-white xl:hidden"
       role="complementary"
       aria-label="Related insights for this post"
     >
-      {/* Header */}
-      <div className="p-4 pb-3 md:p-5 md:pb-3">
+      <div className="p-4 pb-3">
         <h3 className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
           <Lightbulb className="h-5 w-5 text-primary" />
           Related Insights
         </h3>
       </div>
 
-      <div className="space-y-6 p-4 pt-0 md:p-5 md:pt-0">
-        {/* AI-Generated Insight Summary — shows its own skeleton/fade */}
+      <div className="space-y-6 p-4 pt-0">
         <AIInsightSummary insight={aiInsight} isLoading={loadingAI} />
 
-        {/* Attached Papers (manually linked by author) — progressive reveal */}
-        {(hasAttachedPapers || loadingAttached) && (
-          <InsightSection
-            title="Referenced in This Post"
-            icon={BookOpen}
-            isLoading={loadingAttached}
-            isEmpty={!hasAttachedPapers}
-          >
-            <div className="flex flex-col divide-y divide-border/40">
-              {attached.map((paper: Paper) => (
-                <PaperItem
-                  key={paper._id}
-                  paper={paper}
-                  downloadMutation={downloadMutation}
-                />
-              ))}
-            </div>
-          </InsightSection>
-        )}
-
-        {/* Related Discussions (auto-discovered posts) — progressive reveal */}
         {(hasPosts || loadingPosts) && (
           <InsightSection
             title="Related Discussions"
@@ -185,14 +164,13 @@ export function RelatedInsights({ post }: { post: Post }) {
             isEmpty={!hasPosts}
           >
             <div className="space-y-2">
-              {relatedPosts?.map((p) => (
+              {relatedPosts.slice(0, 3).map((p) => (
                 <RelatedPostCard key={p._id} post={p} />
               ))}
             </div>
           </InsightSection>
         )}
 
-        {/* Related Research (auto-discovered papers) — progressive reveal */}
         {(hasPapers || loadingPapers) && (
           <InsightSection
             title="Related Research"
@@ -201,12 +179,8 @@ export function RelatedInsights({ post }: { post: Post }) {
             isEmpty={!hasPapers}
           >
             <div className="flex flex-col divide-y divide-border/40">
-              {discovered.map((paper: Paper) => (
-                <PaperItem
-                  key={paper._id}
-                  paper={paper}
-                  downloadMutation={downloadMutation}
-                />
+              {discoveredPapers.slice(0, 3).map((paper) => (
+                <PaperItem key={paper._id} paper={paper} downloadMutation={downloadMutation} />
               ))}
             </div>
           </InsightSection>

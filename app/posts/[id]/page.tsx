@@ -9,9 +9,12 @@ import { usePost } from '@/lib/api/posts';
 import { useOrganization } from '@/lib/api/organizations';
 import { useJoinRoom, useSocketEvent } from '@/hooks/useSocket';
 import { useQueryClient } from '@tanstack/react-query';
+import { useRelatedPapers, useDownloadPaper } from '@/lib/api/papers';
+import { useAIInsight, useRelatedPosts } from '@/lib/api/insights';
 import { useAppSelector } from '@/store/hooks';
 import { Loader2, ArrowLeft } from 'lucide-react';
-import { RelatedInsights } from './components/RelatedInsights';
+import { InsightsSidebar } from './components/InsightsSidebar';
+import { RelatedInsightsMobile } from './components/RelatedInsights';
 
 export default function PostDiscussionPage() {
   const params = useParams();
@@ -55,7 +58,15 @@ export default function PostDiscussionPage() {
   } else if (org && !userId) {
     orgAccessRole = 'none';
   }
-  // If post has no org, role stays 'member' (unrestricted)
+
+  // ── Insight data (shared between sidebar + mobile fallback) ────
+  const { data: aiInsight, isLoading: loadingAI } = useAIInsight(post?._id);
+  const { data: relatedPosts, isLoading: loadingPosts } = useRelatedPosts(post?._id);
+  const { data: discoveredData, isLoading: loadingPapers } = useRelatedPapers(post?._id);
+  const downloadMutation = useDownloadPaper();
+
+  const discovered = discoveredData?.papers || [];
+  const relatedPostsList = relatedPosts || [];
 
   // Redirect to home if post not found / deleted
   useEffect(() => {
@@ -65,7 +76,21 @@ export default function PostDiscussionPage() {
   }, [isLoading, isError, router]);
 
   return (
-    <AuthenticatedLayout>
+    <AuthenticatedLayout
+      rightSidebarTop={
+        post ? (
+          <InsightsSidebar
+            aiInsight={aiInsight}
+            loadingAI={loadingAI}
+            relatedPosts={relatedPostsList}
+            loadingPosts={loadingPosts}
+            discoveredPapers={discovered}
+            loadingPapers={loadingPapers}
+            downloadMutation={downloadMutation}
+          />
+        ) : undefined
+      }
+    >
       <div className="flex flex-col gap-5">
         {/* Back button */}
         <button
@@ -94,17 +119,24 @@ export default function PostDiscussionPage() {
           <>
             <PostCard post={post} orgAccessRole={orgAccessRole} isOrgAdmin={isOrgAdmin} isDetailView />
 
-            {/* Related Insights (AI summary, attached papers, related posts & papers) */}
-            <RelatedInsights post={post} />
-
             {/* Discussion section */}
             <div className="rounded-lg border border-border/50 bg-white">
               <CommentsSection postId={postId} orgAccessRole={orgAccessRole} commentCount={post.commentCount} isOrgAdmin={isOrgAdmin} />
             </div>
+
+            {/* Mobile/tablet fallback — hidden on xl where sidebar is used */}
+            <RelatedInsightsMobile
+              aiInsight={aiInsight}
+              loadingAI={loadingAI}
+              relatedPosts={relatedPostsList}
+              loadingPosts={loadingPosts}
+              discoveredPapers={discovered}
+              loadingPapers={loadingPapers}
+              downloadMutation={downloadMutation}
+            />
           </>
         )}
       </div>
     </AuthenticatedLayout>
   );
 }
-
