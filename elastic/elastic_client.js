@@ -46,9 +46,15 @@ const kmsPostsMapping = {
       bodyText:         { type: 'text', analyzer: 'english' },
       tags:             { type: 'keyword' },
       authorId:         { type: 'keyword' },
-      authorName:       { type: 'text' },
+      authorName:       {
+        type: 'text',
+        fields: { keyword: { type: 'keyword' } },
+      },
       organizationId:   { type: 'keyword' },
-      organizationName: { type: 'text' },
+      organizationName: {
+        type: 'text',
+        fields: { keyword: { type: 'keyword' } },
+      },
       status:           { type: 'keyword' },
       likeCount:        { type: 'integer' },
       commentCount:     { type: 'integer' },
@@ -112,6 +118,14 @@ async function createIndex(name, body) {
       }
       if (name === 'kms_posts') {
         newFields.topics = { type: 'keyword' };
+        newFields.organizationName = {
+          type: 'text',
+          fields: { keyword: { type: 'keyword' } },
+        };
+        newFields.authorName = {
+          type: 'text',
+          fields: { keyword: { type: 'keyword' } },
+        };
       }
       if (Object.keys(newFields).length > 0) {
         await esClient.indices.putMapping({

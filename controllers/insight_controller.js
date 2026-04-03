@@ -122,7 +122,7 @@ export const getTopicSummary = async (req, res) => {
               filter: { range: { publishedAt: { gte: 'now-30d' } } },
             },
             topOrgs: {
-              terms: { field: 'organizationName', size: 3 },
+              terms: { field: 'organizationName.keyword', size: 3 },
             },
             topTags: {
               terms: { field: 'tags', size: 10 },
@@ -221,7 +221,7 @@ async function getTopicSummaryData(topics) {
         _source: ['title', 'tags', 'likeCount', 'commentCount', 'organizationName'],
         aggs: {
           recent: { filter: { range: { publishedAt: { gte: 'now-30d' } } } },
-          topOrgs: { terms: { field: 'organizationName', size: 3 } },
+          topOrgs: { terms: { field: 'organizationName.keyword', size: 3 } },
           topTags: { terms: { field: 'tags', size: 10 } },
           coTopics: { terms: { field: 'topics', size: 8 } },
         },
