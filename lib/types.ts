@@ -358,7 +358,7 @@ export interface Notification {
   _id: string;
   recipientId: string;
   senderId: NotificationSender;
-  type: 'reply' | 'comment' | 'like' | 'mention' | 'join_request' | 'join_approved' | 'join_rejected' | 'post_approved' | 'post_rejected' | 'announcement' | 'org_request_submitted' | 'org_request_approved' | 'org_request_rejected' | 'org_request_followup' | 'org_request_reply';
+  type: 'reply' | 'comment' | 'like' | 'mention' | 'join_request' | 'join_approved' | 'join_rejected' | 'post_approved' | 'post_rejected' | 'announcement' | 'org_request_submitted' | 'org_request_approved' | 'org_request_rejected' | 'org_request_followup' | 'org_request_reply' | 'bulk_upload_complete';
   postId?: NotificationPost | null;
   commentId?: string | null;
   orgRequestId?: string | null;

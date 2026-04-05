@@ -281,3 +281,30 @@ export function useBulkImportPapers() {
     },
   });
 }
+
+// ─── Bulk import papers from PDFs (AI-powered, async) ──────────
+
+export function useBulkImportPdfs() {
+  return useMutation({
+    mutationFn: async ({
+      files,
+      organizationId,
+    }: {
+      files: File[];
+      organizationId: string;
+    }) => {
+      const formData = new FormData();
+      files.forEach((f) => formData.append('files', f));
+      formData.append('organizationId', organizationId);
+      const { data } = await axiosInstance.post('/papers/bulk-pdf', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 2 * 60 * 1000, // 2 min for upload phase only
+      });
+      return data as {
+        jobId: string;
+        total: number;
+        message: string;
+      };
+    },
+  });
+}

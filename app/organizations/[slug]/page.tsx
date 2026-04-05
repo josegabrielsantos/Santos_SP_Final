@@ -336,7 +336,7 @@ export default function OrgDetailPage() {
                         </Link>
                       )}
 
-                      {/* Import CSV button (owner/admin only) */}
+                      {/* Bulk Upload Papers button (owner/admin only) */}
                       {canManage && orgId && (
                         <Button
                           variant="outline"
@@ -345,7 +345,7 @@ export default function OrgDetailPage() {
                           onClick={() => setShowBulkImport(true)}
                         >
                           <UploadCloud className="h-4 w-4" />
-                          Import CSV
+                          Bulk Upload
                         </Button>
                       )}
 
@@ -1031,6 +1031,7 @@ export default function OrgDetailPage() {
           open={showBulkImport}
           onClose={() => setShowBulkImport(false)}
           orgId={orgId}
+          orgName={org.name}
         />
       )}
     </AuthenticatedLayout>

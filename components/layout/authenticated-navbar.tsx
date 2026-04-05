@@ -28,6 +28,7 @@ import {
   X,
 } from 'lucide-react';
 import { NotificationDropdown } from './notification-dropdown';
+import { useBulkUploadProgress } from '@/hooks/useBulkUploadProgress';
 import { SusModal } from '@/components/feedback/sus-modal';
 
 export function AuthenticatedNavbar() {
@@ -36,6 +37,9 @@ export function AuthenticatedNavbar() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Global listener for bulk upload socket events → sonner toasts
+  useBulkUploadProgress();
   const [showSus, setShowSus] = useState(false);
 
   const { data: suggestions } = useSuggest(searchQuery);

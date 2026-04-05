@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Bell, MessageCircle, Reply, AtSign, ThumbsUp, UserPlus, Check, X, FileText, Megaphone, Loader2, Building2 } from 'lucide-react';
+import { Bell, MessageCircle, Reply, AtSign, ThumbsUp, UserPlus, Check, X, FileText, Megaphone, Loader2, Building2, UploadCloud } from 'lucide-react';
 import { useNotifications, useNotificationSummary, useMarkNotificationsRead } from '@/lib/api/notifications';
 import { useAppSelector } from '@/store/hooks';
 import { useSocketEvent } from '@/hooks/useSocket';
@@ -51,6 +51,8 @@ function notifIcon(type: Notification['type']) {
     case 'org_request_followup':
     case 'org_request_reply':
       return <Building2 className="h-4 w-4" />;
+    case 'bulk_upload_complete':
+      return <UploadCloud className="h-4 w-4" />;
     default:
       return <Bell className="h-4 w-4" />;
   }
@@ -86,6 +88,8 @@ function notifIconBg(type: Notification['type']) {
       return 'bg-red-100 text-red-600';
     case 'org_request_followup':
       return 'bg-blue-100 text-blue-600';
+    case 'bulk_upload_complete':
+      return 'bg-emerald-100 text-emerald-600';
     default:
       return 'bg-muted text-muted-foreground';
   }
