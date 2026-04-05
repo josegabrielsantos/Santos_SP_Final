@@ -21,6 +21,7 @@ const notificationSchema = new mongoose.Schema(
         'post_approved', 'post_rejected', 'announcement',
         'org_request_submitted', 'org_request_approved', 'org_request_rejected',
         'org_request_followup', 'org_request_reply',
+        'bulk_upload_complete',
       ],
       required: true,
     },

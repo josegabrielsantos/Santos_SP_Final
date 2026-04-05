@@ -1,8 +1,11 @@
 import Paper from '../models/paper_model.js';
 import Post from '../models/post_model.js';
 import Organization from '../models/organization_model.js';
+import Notification from '../models/notification_model.js';
 import { uploadToSpaces } from '../lib/spaces.js';
 import { extractPdfMetadataWithGemini } from '../lib/util/gemini_pdf_metadata.js';
+import { enqueue } from '../lib/bulk-upload-queue.js';
+import { getIO, emitNotification } from '../socket.js';
 import esClient from '../elastic/elastic_client.js';
 import { randomUUID } from 'crypto';
 
@@ -497,6 +500,259 @@ const bulkImportCsv = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/papers/bulk-pdf
+ * Accept multiple PDF files, validate, upload to Spaces immediately, then return
+ * a jobId. AI metadata extraction + paper creation runs in the background via a
+ * concurrency-limited queue. Socket events keep the client updated:
+ *   - bulk-upload:progress  { jobId, current, total, fileName, status, paperTitle? }
+ *   - bulk-upload:complete  { jobId, created, skipped, errors[], papers[] }
+ *
+ * Expects multipart/form-data with field "files" (multiple) and "organizationId".
+ */
+const bulkImportPdfs = async (req, res) => {
+  try {
+    const files = req.files;
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'At least one PDF file is required.' });
+    }
+
+    const { organizationId } = req.body;
+    if (!organizationId) {
+      return res.status(400).json({ error: 'organizationId is required for bulk PDF import.' });
+    }
+
+    const org = await Organization.findById(organizationId);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+
+    const uid = req.user._id.toString();
+    const isOrgAdmin =
+      org.ownerId.toString() === uid ||
+      org.adminIds.map(String).includes(uid);
+    if (!isOrgAdmin && req.user.role !== 'website_admin') {
+      return res.status(403).json({ error: 'Only organization admins can bulk import papers.' });
+    }
+
+    const jobId = randomUUID();
+    const userId = req.user._id;
+    const total = files.length;
+
+    // ── Phase 1 (sync): Upload all files to Spaces ──
+    // This is fast (just S3 PutObject) so we do it before returning.
+    const uploadedFiles = [];
+    for (const file of files) {
+      const fileName = file.originalname || `paper_${uploadedFiles.length + 1}.pdf`;
+      try {
+        const { url: fileUrl, size: fileSize } = await uploadToSpaces(
+          file.buffer,
+          fileName,
+          'papers',
+          file.mimetype || 'application/pdf'
+        );
+        uploadedFiles.push({ fileName, fileUrl, fileSize, buffer: file.buffer });
+      } catch (err) {
+        console.log(`[bulkImportPdfs][${jobId}] Upload failed for ${fileName}:`, err.message);
+        uploadedFiles.push({ fileName, fileUrl: null, fileSize: 0, buffer: null, uploadError: err.message });
+      }
+    }
+
+    // Return immediately — client tracks progress via socket
+    res.status(202).json({
+      jobId,
+      total,
+      message: `${total} file${total !== 1 ? 's' : ''} accepted. Processing in background.`,
+    });
+
+    // ── Phase 2 (async): AI extraction + paper creation via queue ──
+    const emitProgress = (data) => {
+      try {
+        const io = getIO();
+        io.to(`user:${userId}`).emit('bulk-upload:progress', { jobId, ...data });
+      } catch { /* socket may not be available in tests */ }
+    };
+
+    (async () => {
+      let created = 0;
+      const errors = [];
+      const createdPapers = [];
+      const orgName = org.name;
+
+      for (let i = 0; i < uploadedFiles.length; i++) {
+        const uf = uploadedFiles[i];
+
+        // Skip files that failed to upload
+        if (!uf.fileUrl) {
+          errors.push({ file: uf.fileName, reason: uf.uploadError || 'Upload failed' });
+          emitProgress({
+            current: i + 1,
+            total,
+            fileName: uf.fileName,
+            status: 'error',
+            error: uf.uploadError || 'Upload failed',
+          });
+          continue;
+        }
+
+        // Notify client we're starting this file
+        emitProgress({
+          current: i + 1,
+          total,
+          fileName: uf.fileName,
+          status: 'processing',
+        });
+
+        try {
+          // Enqueue the Gemini call through the concurrency limiter
+          const geminiResult = await enqueue(() => extractPdfMetadataWithGemini(uf.buffer));
+          const ai = geminiResult.metadata;
+
+          const paper = new Paper({
+            title: ai?.title || uf.fileName.replace(/\.pdf$/i, ''),
+            authors: ai?.authors || [],
+            abstract: ai?.abstract || null,
+            keywords: ai?.keywords || [],
+            topics: ai?.topics || [],
+            doi: ai?.doi || null,
+            year: ai?.year || null,
+            journal: ai?.journal || null,
+            fileUrl: uf.fileUrl,
+            fileSize: uf.fileSize,
+            uploadedBy: userId,
+            organizationId,
+            isPublished: true,
+          });
+
+          await paper.save();
+          created++;
+          createdPapers.push(paper);
+
+          emitProgress({
+            current: i + 1,
+            total,
+            fileName: uf.fileName,
+            status: 'done',
+            paperTitle: paper.title,
+          });
+        } catch (err) {
+          console.log(`[bulkImportPdfs][${jobId}] Error processing ${uf.fileName}:`, err.message);
+          errors.push({ file: uf.fileName, reason: err.message });
+          emitProgress({
+            current: i + 1,
+            total,
+            fileName: uf.fileName,
+            status: 'error',
+            error: err.message,
+          });
+        }
+      }
+
+      // ── Phase 3: Auto-generate announcement post ──
+      if (created > 0) {
+        try {
+          const paperTitles = createdPapers.map((p) => p.title);
+          const paperIds = createdPapers.map((p) => p._id);
+          const allTopics = [...new Set(createdPapers.flatMap((p) => p.topics || []))];
+
+          const bodyContent = [
+            {
+              type: 'paragraph',
+              content: [{
+                type: 'text',
+                marks: [{ type: 'bold' }],
+                text: `${created} new research paper${created !== 1 ? 's have' : ' has'} been added to ${orgName}!`,
+              }],
+            },
+            { type: 'paragraph' },
+            {
+              type: 'paragraph',
+              content: [{
+                type: 'text',
+                marks: [{ type: 'bold' }],
+                text: 'Newly added papers:',
+              }],
+            },
+            {
+              type: 'bulletList',
+              content: paperTitles.map((title) => ({
+                type: 'listItem',
+                content: [{ type: 'paragraph', content: [{ type: 'text', text: title }] }],
+              })),
+            },
+            { type: 'paragraph' },
+            {
+              type: 'paragraph',
+              content: [{
+                type: 'text',
+                text: 'Browse the Papers tab to explore, download, and cite these works. Happy reading!',
+              }],
+            },
+          ];
+
+          const plainText =
+            `${created} new research paper${created !== 1 ? 's have' : ' has'} been added to ${orgName}!\n\n` +
+            `Newly added papers:\n${paperTitles.map((t) => `• ${t}`).join('\n')}\n\n` +
+            'Browse the Papers tab to explore, download, and cite these works. Happy reading!';
+
+          const post = new Post({
+            title: `📚 ${created} New Paper${created !== 1 ? 's' : ''} Added to ${orgName}`,
+            body: { type: 'doc', content: bodyContent },
+            bodyText: plainText,
+            tags: ['bulk-upload', 'new-papers'],
+            topics: allTopics,
+            authorId: userId,
+            organizationId,
+            type: 'update',
+            status: 'published',
+            mediaUrls: [],
+            paperIds,
+            publishedAt: new Date(),
+          });
+
+          await post.save();
+          await Organization.findByIdAndUpdate(organizationId, { $inc: { postCount: 1 } });
+        } catch (postErr) {
+          console.log(`[bulkImportPdfs][${jobId}] Failed to create announcement post:`, postErr.message);
+        }
+      }
+
+      // ── Phase 4: Emit completion + create notification ──
+      const completionData = {
+        jobId,
+        created,
+        skipped: errors.length,
+        errors,
+        papers: createdPapers.map((p) => ({ _id: p._id, title: p.title })),
+        orgName: org.name,
+        organizationId,
+      };
+
+      try {
+        const io = getIO();
+        io.to(`user:${userId}`).emit('bulk-upload:complete', completionData);
+      } catch { /* ignore */ }
+
+      // Persist a notification so the admin sees it even if they were offline
+      try {
+        await Notification.create({
+          recipientId: userId,
+          senderId: userId,
+          type: 'bulk_upload_complete',
+          organizationId,
+          message: `Bulk upload complete: ${created} paper${created !== 1 ? 's' : ''} added to ${org.name}${errors.length > 0 ? ` (${errors.length} failed)` : ''}.`,
+        });
+        await emitNotification(userId.toString());
+      } catch (notifErr) {
+        console.log(`[bulkImportPdfs][${jobId}] Notification error:`, notifErr.message);
+      }
+
+      console.log(`[bulkImportPdfs][${jobId}] DONE created=${created} errors=${errors.length}`);
+    })();
+  } catch (error) {
+    console.log('Error in bulkImportPdfs:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
 const enrichDoi = async (req, res) => {
   try {
     const { doi } = req.body;
@@ -669,5 +925,6 @@ export {
   parsePdf,
   enrichDoi,
   bulkImportCsv,
+  bulkImportPdfs,
   getRelatedPapers,
 };
