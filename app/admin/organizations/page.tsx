@@ -21,10 +21,16 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useOrganizations } from '@/lib/api/organizations';
-import { useAdminUsers, useAdminCreateOrg, useAdminDeleteOrg } from '@/lib/api/admin';
+import {
+  useAdminUsers,
+  useAdminCreateOrg,
+  useAdminDeactivateOrg,
+  useAdminHardDeleteOrg,
+  useAdminOrganizations,
+} from '@/lib/api/admin';
 import {
   Search,
   Plus,
@@ -34,8 +40,12 @@ import {
   FileText,
   Loader2,
   X,
+  Power,
+  PowerOff,
+  AlertTriangle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 function initials(name: string) {
   return name
@@ -46,7 +56,7 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-/* ─── Row skeleton ─────────────────────────────────────────────── */
+/* ─── Row skeleton ──���──────────────────────────────────────────── */
 function OrgRowSkeleton() {
   return (
     <div className="grid grid-cols-[1fr_120px_120px_100px_60px] items-center gap-4 border-b border-border/25 px-5 py-3.5 last:border-b-0">
@@ -249,16 +259,18 @@ function CreateOrgDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
-/* ─── Main page ───────────────────────────────────────────────── */
+/* ─── Main page ──────────��────────────────────────────────────── */
 
 export default function AdminOrganizationsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [showCreate, setShowCreate] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string; isActive: boolean } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
-  const { data, isLoading } = useOrganizations({ page, limit: 20, search: search || undefined });
-  const deleteOrg = useAdminDeleteOrg();
+  const { data, isLoading } = useAdminOrganizations({ page, limit: 20, search: search || undefined });
+  const deactivateOrg = useAdminDeactivateOrg();
+  const hardDeleteOrg = useAdminHardDeleteOrg();
 
   return (
     <div className="bg-page-bg min-h-full">
@@ -327,7 +339,7 @@ export default function AdminOrganizationsPage() {
             {data?.organizations.map((org) => (
               <div
                 key={org._id}
-                className="grid grid-cols-[1fr_120px_120px_100px_60px] items-center gap-4 border-b border-border/25 px-5 py-3 last:border-b-0 transition-colors hover:bg-muted/20"
+                className={`grid grid-cols-[1fr_120px_120px_100px_60px] items-center gap-4 border-b border-border/25 px-5 py-3 last:border-b-0 transition-colors hover:bg-muted/20 ${!org.isActive ? 'opacity-60' : ''}`}
               >
                 {/* Org info */}
                 <div className="flex items-center gap-3 min-w-0">
@@ -354,12 +366,21 @@ export default function AdminOrganizationsPage() {
                 </div>
 
                 {/* Status */}
-                <Badge
-                  variant="secondary"
-                  className="w-fit text-[11px] rounded-full text-kain-green bg-kain-green/10"
-                >
-                  Active
-                </Badge>
+                {org.isActive ? (
+                  <Badge
+                    variant="secondary"
+                    className="w-fit text-[11px] rounded-full text-kain-green bg-kain-green/10"
+                  >
+                    Active
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="secondary"
+                    className="w-fit text-[11px] rounded-full text-muted-foreground bg-muted"
+                  >
+                    Inactive
+                  </Badge>
+                )}
 
                 {/* Actions */}
                 <DropdownMenu>
@@ -368,13 +389,32 @@ export default function AdminOrganizationsPage() {
                       <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuContent align="end" className="w-52">
                     <DropdownMenuItem
-                      className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+                      className="cursor-pointer gap-2 text-[13px]"
+                      onClick={() =>
+                        setDeactivateTarget({ id: org._id, name: org.name, isActive: org.isActive })
+                      }
+                    >
+                      {org.isActive ? (
+                        <>
+                          <PowerOff className="h-4 w-4 text-muted-foreground" />
+                          Deactivate
+                        </>
+                      ) : (
+                        <>
+                          <Power className="h-4 w-4 text-kain-green" />
+                          Reactivate
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2 text-destructive focus:text-destructive text-[13px]"
                       onClick={() => setDeleteTarget({ id: org._id, name: org.name })}
                     >
                       <Trash2 className="h-4 w-4" />
-                      Delete Organization
+                      Permanently Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -418,16 +458,24 @@ export default function AdminOrganizationsPage() {
       {/* Create dialog */}
       {showCreate && <CreateOrgDialog onClose={() => setShowCreate(false)} />}
 
-      {/* Delete confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      {/* Deactivate / Reactivate confirmation */}
+      <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete organization?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deactivateTarget?.isActive ? 'Deactivate' : 'Reactivate'} organization?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget && (
+              {deactivateTarget?.isActive ? (
                 <>
-                  You are about to delete <strong className="text-foreground">&ldquo;{deleteTarget.name}&rdquo;</strong>.
-                  This will permanently remove the organization, its settings, and all associated data. This action cannot be undone.
+                  <strong className="text-foreground">&ldquo;{deactivateTarget?.name}&rdquo;</strong> will
+                  be hidden from users but all data (posts, papers, members) will be preserved. You can
+                  reactivate it at any time.
+                </>
+              ) : (
+                <>
+                  <strong className="text-foreground">&ldquo;{deactivateTarget?.name}&rdquo;</strong> will
+                  be made visible again to all users.
                 </>
               )}
             </AlertDialogDescription>
@@ -436,14 +484,64 @@ export default function AdminOrganizationsPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
+                if (deactivateTarget) {
+                  deactivateOrg.mutate(deactivateTarget.id, {
+                    onSuccess: (data) => {
+                      toast.success(
+                        data.isActive
+                          ? `${deactivateTarget.name} reactivated.`
+                          : `${deactivateTarget.name} deactivated.`,
+                      );
+                    },
+                  });
+                  setDeactivateTarget(null);
+                }
+              }}
+            >
+              {deactivateTarget?.isActive ? 'Deactivate' : 'Reactivate'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Hard delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Permanently delete organization?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                You are about to permanently delete{' '}
+                <strong className="text-foreground">&ldquo;{deleteTarget?.name}&rdquo;</strong>.
+              </span>
+              <span className="block text-destructive font-medium">
+                This will permanently remove the organization, all its posts, papers, comments,
+                uploaded files, and associated data. This action cannot be undone.
+              </span>
+              <span className="block">
+                Members, admins, and followers will not be deleted.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
                 if (deleteTarget) {
-                  deleteOrg.mutate(deleteTarget.id);
+                  hardDeleteOrg.mutate(deleteTarget.id, {
+                    onSuccess: () => {
+                      toast.success(`${deleteTarget.name} permanently deleted.`);
+                    },
+                  });
                   setDeleteTarget(null);
                 }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete Organization
+              Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

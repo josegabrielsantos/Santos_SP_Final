@@ -963,7 +963,7 @@ export default function OrgDetailPage() {
                             <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                             <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                             <Tooltip />
-                            <Bar dataKey="count" fill="oklch(0.32 0.13 19)" radius={[3, 3, 0, 0]} name="Posts" />
+                            <Bar dataKey="count" fill="oklch(0.24 0.09 150)" radius={[3, 3, 0, 0]} name="Posts" />
                           </BarChart>
                         </ResponsiveContainer>
                       </CardContent>

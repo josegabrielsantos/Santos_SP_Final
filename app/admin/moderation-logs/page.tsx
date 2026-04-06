@@ -27,6 +27,9 @@ import {
   FileText,
   MessageCircle,
   User,
+  Building2,
+  PowerOff,
+  Power,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -102,12 +105,28 @@ const ACTION_CONFIG: Record<ModerationAction, { label: string; icon: React.React
     icon: <ShieldMinus className="h-3.5 w-3.5" />,
     color: 'bg-blue-50 text-blue-700 border-blue-200/60',
   },
+  org_deactivated: {
+    label: 'Org Deactivated',
+    icon: <PowerOff className="h-3.5 w-3.5" />,
+    color: 'bg-amber-50 text-amber-700 border-amber-200/60',
+  },
+  org_reactivated: {
+    label: 'Org Reactivated',
+    icon: <Power className="h-3.5 w-3.5" />,
+    color: 'bg-emerald-50 text-emerald-700 border-emerald-200/60',
+  },
+  org_deleted: {
+    label: 'Org Deleted',
+    icon: <Trash2 className="h-3.5 w-3.5" />,
+    color: 'bg-red-50 text-red-700 border-red-200/60',
+  },
 };
 
 const TARGET_ICONS: Record<string, React.ReactNode> = {
   post: <FileText className="h-4 w-4 text-primary" />,
   comment: <MessageCircle className="h-4 w-4 text-violet-500" />,
   user: <User className="h-4 w-4 text-amber-600" />,
+  organization: <Building2 className="h-4 w-4 text-primary" />,
 };
 
 function RowSkeleton() {
@@ -138,6 +157,8 @@ function LogRow({ log }: { log: ModerationLog }) {
     targetLabel = meta.bodyPreview;
   } else if (log.targetType === 'user') {
     targetLabel = meta?.displayName || meta?.email || log.targetId;
+  } else if (log.targetType === 'organization') {
+    targetLabel = meta?.name || log.targetId;
   } else {
     targetLabel = log.targetId;
   }
@@ -239,6 +260,7 @@ export default function ModerationLogsPage() {
               <SelectItem value="post">Posts</SelectItem>
               <SelectItem value="comment">Comments</SelectItem>
               <SelectItem value="user">Users</SelectItem>
+              <SelectItem value="organization">Organizations</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -262,6 +284,9 @@ export default function ModerationLogsPage() {
               <SelectItem value="user_deactivated">User Deactivated</SelectItem>
               <SelectItem value="user_reactivated">User Reactivated</SelectItem>
               <SelectItem value="user_role_changed">Role Changed</SelectItem>
+              <SelectItem value="org_deactivated">Org Deactivated</SelectItem>
+              <SelectItem value="org_reactivated">Org Reactivated</SelectItem>
+              <SelectItem value="org_deleted">Org Deleted</SelectItem>
             </SelectContent>
           </Select>
         </div>

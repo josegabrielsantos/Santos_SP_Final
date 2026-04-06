@@ -19,36 +19,24 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/80 backdrop-blur-md">
-      <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 sm:px-7 lg:px-9">
-        {/* Logo / Brand */}
-        <Link href="/" className="flex items-center gap-3.5">
-          <Image
-            src="/uplb_logo.png"
-            alt="UPLB Logo"
-            width={40}
-            height={40}
-            className="rounded-full"
-          />
-          <Image
-            src="/FaNS_logo.png"
-            alt="FaNS Logo"
-            width={40}
-            height={40}
-            className="rounded-full"
-          />
+    <header className="sticky top-0 z-50 w-full bg-primary border-b border-primary/80">
+      <div className="mx-auto flex h-[60px] max-w-[1400px] items-center justify-between px-4 lg:px-6">
+        {/* Left – Logos + Brand */}
+        <Link href="/" className="flex shrink-0 items-center gap-2.5 group">
+          <Image src="/uplb_logo.png" alt="UPLB" width={32} height={32} className="rounded-full ring-1 ring-white/30" />
+          <Image src="/FaNS_logo.png" alt="FaNS" width={32} height={32} className="rounded-full ring-1 ring-white/30" />
           <div className="flex flex-col leading-tight">
-            <span className="text-[21px] font-bold tracking-tight text-foreground">
+            <span className="text-[17px] font-bold tracking-tight text-white font-heading">
               UPLB FaNS Knowledge Hub
             </span>
-            <span className="hidden text-[12px] text-muted-foreground sm:block">
+            <span className="hidden text-[11px] text-white/70 sm:block">
               Food and Nutrition Security Research Platform
             </span>
           </div>
         </Link>
 
-        {/* Nav Actions */}
-        <nav className="flex items-center gap-3.5">
+        {/* Right – Nav Actions */}
+        <nav className="flex items-center gap-2.5">
           {isAuthenticated && user ? (
             <>
               <div className="hidden items-center gap-2.5 sm:flex">
@@ -56,34 +44,34 @@ export function Navbar() {
                   <img
                     src={user.avatar}
                     alt={user.displayName}
-                    className="h-9 w-9 rounded-full object-cover ring-2 ring-primary/20"
+                    className="h-8 w-8 rounded-full object-cover ring-2 ring-white/30"
                   />
                 ) : (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <User className="h-5 w-5" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white">
+                    <User className="h-4 w-4" />
                   </div>
                 )}
-                <span className="text-[16px] font-medium text-foreground">
+                <span className="text-[14px] font-medium text-white">
                   {user.displayName}
                 </span>
               </div>
               <Button
                 variant="ghost"
-                size="default"
+                size="sm"
                 onClick={handleLogout}
                 disabled={logoutMutation.isPending}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-white/80 hover:text-white hover:bg-white/10"
               >
-                <LogOut className="h-5 w-5" />
+                <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Logout</span>
               </Button>
             </>
           ) : (
             <>
-              <Button variant="ghost" size="default" asChild>
+              <Button variant="ghost" size="sm" className="text-white/90 hover:text-white hover:bg-white/10" asChild>
                 <Link href="/login">Log in</Link>
               </Button>
-              <Button size="default" asChild>
+              <Button size="sm" className="bg-white text-primary hover:bg-white/90 font-semibold" asChild>
                 <Link href="/signup">Sign up</Link>
               </Button>
             </>

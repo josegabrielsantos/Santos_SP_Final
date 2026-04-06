@@ -21,6 +21,41 @@ export interface UsersResponse {
   pages: number;
 }
 
+// ─── Admin organizations (all, including inactive) ─────────────
+
+export interface AdminOrg {
+  _id: string;
+  name: string;
+  slug: string;
+  avatar: string | null;
+  description: string | null;
+  memberCount: number;
+  postCount: number;
+  isActive: boolean;
+}
+
+export interface AdminOrgsResponse {
+  organizations: AdminOrg[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
+export function useAdminOrganizations(params?: { page?: number; limit?: number; search?: string }) {
+  const page = params?.page ?? 1;
+  const limit = params?.limit ?? 20;
+
+  return useQuery<AdminOrgsResponse>({
+    queryKey: ['admin', 'organizations', { page, limit, search: params?.search }],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<AdminOrgsResponse>('/admin/organizations', {
+        params: { page, limit, search: params?.search },
+      });
+      return data;
+    },
+  });
+}
+
 // ─── Dashboard stats ────────────────────────────────────────────
 
 export function useAdminStats() {
@@ -129,18 +164,38 @@ export function useAdminCreateOrg() {
   });
 }
 
-// ─── Delete organization (admin) ────────────────────────────────
+// ─── Deactivate / reactivate organization (admin) ──────────────
 
-export function useAdminDeleteOrg() {
+export function useAdminDeactivateOrg() {
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: async (orgId: string) => {
-      await axiosInstance.delete(`/admin/organizations/${orgId}`);
+      const { data } = await axiosInstance.patch(`/admin/organizations/${orgId}/deactivate`);
+      return data as { _id: string; isActive: boolean };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['organizations'] });
       qc.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'moderation-logs'] });
+    },
+  });
+}
+
+// ─── Hard delete organization (admin) ──────────────────────────
+
+export function useAdminHardDeleteOrg() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (orgId: string) => {
+      const { data } = await axiosInstance.delete(`/admin/organizations/${orgId}`);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'moderation-logs'] });
     },
   });
 }

@@ -137,13 +137,18 @@ export function ArticleListItem({ post, isOrgAdmin = false }: ArticleListItemPro
         onClick={handleCardClick}
         className="group cursor-pointer rounded-lg border border-border/60 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
       >
-        {/* Top row: type badge + ellipsis */}
+        {/* Top row: type badge + topic badges + ellipsis */}
         <div className="flex items-start justify-between mb-2">
-          <Badge
-            className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0 leading-5 border ${typeColor}`}
-          >
-            {typeLabel}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge
+              className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0 leading-5 border ${typeColor}`}
+            >
+              {typeLabel}
+            </Badge>
+            {post.topics?.slice(0, 2).map((t) => (
+              <TopicBadge key={t} topicId={t} size="sm" />
+            ))}
+          </div>
 
           {/* Ellipsis dropdown */}
           <div onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
@@ -209,7 +214,7 @@ export function ArticleListItem({ post, isOrgAdmin = false }: ArticleListItemPro
           {authorId ? (
             <Link
               href={`/profile/${authorId}`}
-              className="font-medium hover:text-primary transition-colors"
+              className="font-semibold text-foreground/80 underline decoration-transparent hover:decoration-primary hover:text-primary transition-all"
               onClick={(e) => e.stopPropagation()}
             >
               {authorName}
@@ -222,7 +227,7 @@ export function ArticleListItem({ post, isOrgAdmin = false }: ArticleListItemPro
               <span>·</span>
               <Link
                 href={`/organizations/${orgSlug}`}
-                className="flex items-center gap-1 hover:text-primary transition-colors"
+                className="flex items-center gap-1 font-semibold text-foreground/80 underline decoration-transparent hover:decoration-primary hover:text-primary transition-all"
                 onClick={(e) => e.stopPropagation()}
               >
                 <Building2 className="h-3 w-3" />
@@ -319,9 +324,6 @@ export function ArticleListItem({ post, isOrgAdmin = false }: ArticleListItemPro
                 <ChevronUp className="h-3 w-3" />
               </button>
             )}
-            {post.topics?.slice(0, 2).map((t) => (
-              <TopicBadge key={t} topicId={t} size="sm" />
-            ))}
           </div>
 
           {/* Engagement counts */}

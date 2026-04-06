@@ -32,13 +32,16 @@ export type ModerationAction =
   | 'user_unbanned'
   | 'user_deactivated'
   | 'user_reactivated'
-  | 'user_role_changed';
+  | 'user_role_changed'
+  | 'org_deactivated'
+  | 'org_reactivated'
+  | 'org_deleted';
 
 export interface ModerationLog {
   _id: string;
   performedBy: UserSummary;
   action: ModerationAction;
-  targetType: 'post' | 'comment' | 'user';
+  targetType: 'post' | 'comment' | 'user' | 'organization';
   targetId: string;
   details: string | null;
   metadata: Record<string, unknown> | null;
