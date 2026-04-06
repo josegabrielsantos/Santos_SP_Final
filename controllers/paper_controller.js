@@ -2,7 +2,10 @@ import Paper from '../models/paper_model.js';
 import Post from '../models/post_model.js';
 import Organization from '../models/organization_model.js';
 import Notification from '../models/notification_model.js';
-import { uploadToSpaces } from '../lib/spaces.js';
+import User from '../models/user_model.js';
+import UserActivity from '../models/user_activity_model.js';
+import { uploadToSpaces, deleteFromSpaces, keyFromUrl } from '../lib/spaces.js';
+import { deletePaper as esDeletePaper } from '../elastic/esSync.js';
 import { extractPdfMetadataWithGemini } from '../lib/util/gemini_pdf_metadata.js';
 import { enqueue } from '../lib/bulk-upload-queue.js';
 import { getIO, emitNotification } from '../socket.js';
@@ -186,6 +189,24 @@ const deletePaper = async (req, res) => {
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ error: 'Not authorized.' });
     }
+
+    // Remove from Elasticsearch
+    await esDeletePaper(paper._id.toString());
+
+    // Delete S3 file — best-effort
+    if (paper.fileUrl) {
+      const key = keyFromUrl(paper.fileUrl);
+      if (key) await deleteFromSpaces(key).catch(() => {});
+    }
+
+    // Clean up savedPapers references in users
+    await User.updateMany(
+      { savedPapers: paper._id },
+      { $pull: { savedPapers: paper._id } },
+    );
+
+    // Clean up user activities for this paper
+    await UserActivity.deleteMany({ targetId: paper._id });
 
     await Paper.findByIdAndDelete(paper._id);
     res.status(200).json({ message: 'Paper deleted.' });

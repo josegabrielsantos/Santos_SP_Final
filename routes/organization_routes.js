@@ -4,7 +4,7 @@ import {
   getOrganizations,
   getOrganization,
   updateOrganization,
-  deleteOrganization,
+  hardDeleteOrganization,
   addMember,
   removeMember,
   promoteToAdmin,
@@ -33,7 +33,7 @@ router.post('/', protectRoute, requireWebsiteAdmin, createOrganization);
 router.get('/', getOrganizations);
 router.get('/:id', getOrganization);
 router.put('/:id', protectRoute, requireOrgAdmin, updateOrganization);
-router.delete('/:id', protectRoute, requireWebsiteAdmin, deleteOrganization);
+router.delete('/:id', protectRoute, requireWebsiteAdmin, hardDeleteOrganization);
 
 // Members (optionalAuth on GET so admins see pending list)
 router.get('/:id/members', optionalAuth, getOrganizationMembers);

@@ -21,12 +21,15 @@ const moderationLogSchema = new mongoose.Schema(
         'user_deactivated',
         'user_reactivated',
         'user_role_changed',
+        'org_deactivated',
+        'org_reactivated',
+        'org_deleted',
       ],
       required: true,
     },
     targetType: {
       type: String,
-      enum: ['post', 'comment', 'user'],
+      enum: ['post', 'comment', 'user', 'organization'],
       required: true,
     },
     targetId: {

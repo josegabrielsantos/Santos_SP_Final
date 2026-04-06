@@ -3,8 +3,13 @@ import Comment from '../models/comment_model.js';
 import User from '../models/user_model.js';
 import Organization from '../models/organization_model.js';
 import FeaturedPost from '../models/featured_post_model.js';
+import Notification from '../models/notification_model.js';
+import UserActivity from '../models/user_activity_model.js';
+import InsightCache from '../models/insight_cache_model.js';
 import ModerationLog from '../models/moderation_log_model.js';
 import { emitToHome, emitToPost, disconnectUser } from '../socket.js';
+import { deleteFromSpaces, keyFromUrl } from '../lib/spaces.js';
+import { deletePost as esDeletePost } from '../elastic/esSync.js';
 
 // ─── Helper: create a moderation log entry ───────────────────────
 
@@ -111,6 +116,22 @@ const adminDeletePost = async (req, res) => {
 
     // Remove from featured
     await FeaturedPost.deleteOne({ postId: post._id });
+
+    // Remove notifications referencing this post
+    await Notification.deleteMany({ postId: post._id });
+
+    // Remove user activities for this post
+    await UserActivity.deleteMany({ targetId: post._id });
+
+    // Remove insight caches for this post
+    await InsightCache.deleteMany({ postId: post._id });
+
+    // Delete S3 files (media URLs) — best-effort
+    const s3Keys = (post.mediaUrls || []).map(keyFromUrl).filter(Boolean);
+    await Promise.allSettled(s3Keys.map((key) => deleteFromSpaces(key)));
+
+    // Remove from Elasticsearch
+    await esDeletePost(post._id.toString());
 
     await Post.findByIdAndDelete(post._id);
 

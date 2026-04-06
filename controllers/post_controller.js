@@ -4,8 +4,12 @@ import Comment from '../models/comment_model.js';
 import Notification from '../models/notification_model.js';
 import FeaturedPost from '../models/featured_post_model.js';
 import Organization from '../models/organization_model.js';
+import UserActivity from '../models/user_activity_model.js';
+import InsightCache from '../models/insight_cache_model.js';
 import User from '../models/user_model.js';
 import { emitNotification, emitNotificationBulk, emitToPost, emitToHome } from '../socket.js';
+import { deleteFromSpaces, keyFromUrl } from '../lib/spaces.js';
+import { deletePost as esDeletePost } from '../elastic/esSync.js';
 import { classifyTopicsWithGemini } from '../lib/util/gemini_topic_classifier.js';
 
 /**
@@ -372,6 +376,18 @@ const deletePost = async (req, res) => {
 
     // Remove from featured
     await FeaturedPost.deleteOne({ postId: post._id });
+
+    // Remove notifications, user activities, insight caches
+    await Notification.deleteMany({ postId: post._id });
+    await UserActivity.deleteMany({ targetId: post._id });
+    await InsightCache.deleteMany({ postId: post._id });
+
+    // Delete S3 files (media URLs) — best-effort
+    const s3Keys = (post.mediaUrls || []).map(keyFromUrl).filter(Boolean);
+    await Promise.allSettled(s3Keys.map((key) => deleteFromSpaces(key)));
+
+    // Remove from Elasticsearch
+    await esDeletePost(post._id.toString());
 
     await Post.findByIdAndDelete(post._id);
 

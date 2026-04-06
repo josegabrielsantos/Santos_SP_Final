@@ -1,7 +1,7 @@
 import express from 'express';
 import { protectRoute, requireWebsiteAdmin } from '../middleware/protectRoute.js';
 import { getAllUsers, updateUserRole, toggleUserActive, getAdminStats } from '../controllers/user_controller.js';
-import { deleteOrganization } from '../controllers/organization_controller.js';
+import { deactivateOrganization, hardDeleteOrganization, getAdminOrganizations } from '../controllers/organization_controller.js';
 import { getAdminCharts } from '../controllers/analytics_controller.js';
 import { syncExistingData, ensureIndexes } from '../elastic/elastic_client.js';
 import {
@@ -22,7 +22,9 @@ router.get('/users', protectRoute, requireWebsiteAdmin, getAllUsers);
 router.patch('/users/:id/role', protectRoute, requireWebsiteAdmin, updateUserRole);
 router.patch('/users/:id/deactivate', protectRoute, requireWebsiteAdmin, toggleUserActive);
 router.patch('/users/:id/ban', protectRoute, requireWebsiteAdmin, toggleBanUser);
-router.delete('/organizations/:id', protectRoute, requireWebsiteAdmin, deleteOrganization);
+router.get('/organizations', protectRoute, requireWebsiteAdmin, getAdminOrganizations);
+router.patch('/organizations/:id/deactivate', protectRoute, requireWebsiteAdmin, deactivateOrganization);
+router.delete('/organizations/:id', protectRoute, requireWebsiteAdmin, hardDeleteOrganization);
 
 // Post moderation (website_admin + org admins — controller checks org-level auth)
 router.patch('/posts/:id/hide', protectRoute, toggleHidePost);

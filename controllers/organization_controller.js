@@ -1,8 +1,17 @@
 import Organization from '../models/organization_model.js';
 import Post from '../models/post_model.js';
+import Paper from '../models/paper_model.js';
+import Comment from '../models/comment_model.js';
 import User from '../models/user_model.js';
 import Notification from '../models/notification_model.js';
+import FeaturedPost from '../models/featured_post_model.js';
+import OrgRequest from '../models/org_request_model.js';
+import UserActivity from '../models/user_activity_model.js';
+import InsightCache from '../models/insight_cache_model.js';
 import { emitNotification, emitNotificationBulk, emitToOrg, emitToHome } from '../socket.js';
+import { deleteFromSpaces, keyFromUrl } from '../lib/spaces.js';
+import { deletePost as esDeletePost, deletePaper as esDeletePaper } from '../elastic/esSync.js';
+import { logAction } from './moderation_controller.js';
 
 /*  CRUD  */
 
@@ -141,20 +150,177 @@ const updateOrganization = async (req, res) => {
 };
 
 /**
- * DELETE /api/organizations/:id
- * Soft-delete (deactivate) an organization (website_admin only)
+ * PATCH /api/admin/organizations/:id/deactivate
+ * Toggle active/inactive status of an organization (website_admin only)
  */
-const deleteOrganization = async (req, res) => {
+const deactivateOrganization = async (req, res) => {
   try {
     const org = await Organization.findById(req.params.id);
     if (!org) {
       return res.status(404).json({ error: 'Organization not found.' });
     }
-    org.isActive = false;
+    org.isActive = !org.isActive;
     await org.save();
-    res.status(200).json({ message: 'Organization deactivated.' });
+
+    const action = org.isActive ? 'org_reactivated' : 'org_deactivated';
+    await logAction(req.user._id, action, 'organization', org._id, null, {
+      name: org.name,
+      slug: org.slug,
+    });
+
+    res.status(200).json({ _id: org._id, isActive: org.isActive });
   } catch (error) {
-    console.log('Error in deleteOrganization:', error.message);
+    console.log('Error in deactivateOrganization:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * DELETE /api/admin/organizations/:id
+ * Hard delete an organization and ALL related data (website_admin only).
+ * Cascade: posts, papers, comments, notifications, featured posts,
+ *          org requests, user activities, insight caches, S3 files, ES docs.
+ * Users (members/admins/followers) are NOT deleted — only their savedPapers
+ * are cleaned up if they saved papers from this org.
+ */
+const hardDeleteOrganization = async (req, res) => {
+  try {
+    const org = await Organization.findById(req.params.id);
+    if (!org) {
+      return res.status(404).json({ error: 'Organization not found.' });
+    }
+
+    const orgId = org._id;
+    const orgName = org.name;
+
+    // ── Gather related IDs ──
+    const posts = await Post.find({ organizationId: orgId }).select('_id mediaUrls paperIds');
+    const postIds = posts.map((p) => p._id);
+
+    const papers = await Paper.find({ organizationId: orgId }).select('_id fileUrl');
+    const paperIds = papers.map((p) => p._id);
+
+    // ── 1. Delete comments on org posts ──
+    await Comment.deleteMany({ postId: { $in: postIds } });
+
+    // ── 2. Delete notifications referencing org or its posts ──
+    await Notification.deleteMany({
+      $or: [{ organizationId: orgId }, { postId: { $in: postIds } }],
+    });
+
+    // ── 3. Delete insight caches for org posts ──
+    await InsightCache.deleteMany({ postId: { $in: postIds } });
+
+    // ── 4. Delete user activities for org posts and papers ──
+    await UserActivity.deleteMany({ targetId: { $in: [...postIds, ...paperIds] } });
+
+    // ── 5. Delete featured posts ──
+    await FeaturedPost.deleteMany({ postId: { $in: postIds } });
+
+    // ── 6. Delete org requests ──
+    await OrgRequest.deleteMany({ organizationId: orgId });
+
+    // ── 7. Clean up savedPapers references in users ──
+    if (paperIds.length > 0) {
+      await User.updateMany(
+        { savedPapers: { $in: paperIds } },
+        { $pullAll: { savedPapers: paperIds } },
+      );
+    }
+
+    // ── 8. Delete from Elasticsearch ──
+    await Promise.allSettled(postIds.map((id) => esDeletePost(id.toString())));
+    await Promise.allSettled(paperIds.map((id) => esDeletePaper(id.toString())));
+
+    // ── 9. Delete S3 files (best-effort) ──
+    const s3Keys = [];
+
+    // Post media
+    for (const post of posts) {
+      for (const url of post.mediaUrls || []) {
+        const key = keyFromUrl(url);
+        if (key) s3Keys.push(key);
+      }
+    }
+
+    // Paper files
+    for (const paper of papers) {
+      if (paper.fileUrl) {
+        const key = keyFromUrl(paper.fileUrl);
+        if (key) s3Keys.push(key);
+      }
+    }
+
+    // Org avatar & banner
+    if (org.avatar) {
+      const key = keyFromUrl(org.avatar);
+      if (key) s3Keys.push(key);
+    }
+    if (org.bannerImage) {
+      const key = keyFromUrl(org.bannerImage);
+      if (key) s3Keys.push(key);
+    }
+
+    // Fire all S3 deletes in parallel (best-effort)
+    await Promise.allSettled(s3Keys.map((key) => deleteFromSpaces(key)));
+
+    // ── 10. Delete papers ──
+    await Paper.deleteMany({ organizationId: orgId });
+
+    // ── 11. Delete posts ──
+    await Post.deleteMany({ organizationId: orgId });
+
+    // ── 12. Delete the organization ──
+    await Organization.deleteOne({ _id: orgId });
+
+    // ── 13. Log the action ──
+    await logAction(req.user._id, 'org_deleted', 'organization', orgId, null, {
+      name: orgName,
+      postsDeleted: postIds.length,
+      papersDeleted: paperIds.length,
+      s3FilesDeleted: s3Keys.length,
+    });
+
+    res.status(200).json({
+      message: 'Organization permanently deleted.',
+      deleted: {
+        posts: postIds.length,
+        papers: paperIds.length,
+        s3Files: s3Keys.length,
+      },
+    });
+  } catch (error) {
+    console.log('Error in hardDeleteOrganization:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * GET /api/admin/organizations
+ * List ALL organizations (including inactive) with pagination. Website admin only.
+ */
+const getAdminOrganizations = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+    if (req.query.search) {
+      filter.name = { $regex: req.query.search, $options: 'i' };
+    }
+
+    const orgs = await Organization.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select('name slug avatar description memberCount postCount isActive');
+
+    const total = await Organization.countDocuments(filter);
+
+    res.status(200).json({ organizations: orgs, total, page, pages: Math.ceil(total / limit) });
+  } catch (error) {
+    console.log('Error in getAdminOrganizations:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
   }
 };
@@ -790,7 +956,9 @@ export {
   getOrganizations,
   getOrganization,
   updateOrganization,
-  deleteOrganization,
+  deactivateOrganization,
+  hardDeleteOrganization,
+  getAdminOrganizations,
   addMember,
   removeMember,
   promoteToAdmin,
