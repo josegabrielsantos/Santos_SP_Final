@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Megaphone,
   Plus,
+  BookOpen,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CreateAnnouncementDialog } from '@/components/announcement/create-announcement-dialog';
@@ -62,6 +63,12 @@ export default function AdminDashboardPage() {
           iconClass: 'text-kain-amber bg-kain-amber/10',
         },
         {
+          label: 'Total Papers',
+          value: stats.totalPapers,
+          icon: BookOpen,
+          iconClass: 'text-kain-green bg-kain-green/10',
+        },
+        {
           label: 'Organizations',
           value: stats.totalOrgs,
           icon: Building2,
@@ -101,7 +108,7 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <CreateAnnouncementDialog>
-          <Button className="gap-2 bg-amber-600 text-white hover:bg-amber-700">
+          <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
             <Megaphone className="h-4 w-4" />
             Create Announcement
           </Button>
@@ -111,7 +118,7 @@ export default function AdminDashboardPage() {
       {/* Stats grid — skeletons while loading */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {isLoading
-          ? Array.from({ length: 7 }).map((_, i) => <StatCardSkeleton key={i} />)
+          ? Array.from({ length: 8 }).map((_, i) => <StatCardSkeleton key={i} />)
           : cards.map((c, i) => {
               const Icon = c.icon;
               return (

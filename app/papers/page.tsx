@@ -423,7 +423,7 @@ function PapersPageContent() {
             <div className="flex flex-wrap gap-1.5">
               <button
                 onClick={() => { setFilterTopic(undefined); setPage(1); }}
-                className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${!filterTopic ? 'border-primary bg-primary text-white font-semibold' : 'border-border text-muted-foreground hover:bg-muted/50'}`}
+                className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${!filterTopic ? 'border-primary bg-primary text-white font-semibold' : 'border-primary/35 bg-primary/10 text-primary hover:shadow-sm'}`}
               >
                 All
               </button>

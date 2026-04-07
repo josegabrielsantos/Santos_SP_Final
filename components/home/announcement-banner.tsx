@@ -27,10 +27,10 @@ export function AnnouncementBanner() {
     if (isAdmin && !latestAnnouncement) {
       return (
         <div className="flex items-center justify-center gap-2 border-b border-kain-amber/10 bg-kain-amber-light/30 px-4 py-2">
-          <Megaphone className="h-3.5 w-3.5 text-kain-amber" />
+          <Megaphone className="h-3.5 w-3.5 text-primary" />
           <span className="text-[12px] text-muted-foreground">No announcements</span>
           <CreateAnnouncementDialog>
-            <Button variant="ghost" size="sm" className="h-6 gap-1 px-2 text-[11px] text-kain-amber hover:text-kain-amber">
+            <Button variant="ghost" size="sm" className="h-6 gap-1 px-2 text-[11px] text-primary hover:text-primary">
               <Plus className="h-3 w-3" />
               Create
             </Button>
@@ -43,7 +43,7 @@ export function AnnouncementBanner() {
 
   return (
     <div className="flex items-center gap-3 border-b border-kain-amber/15 bg-kain-amber-light/40 px-4 py-2.5">
-      <Megaphone className="h-4 w-4 shrink-0 text-kain-amber" />
+      <Megaphone className="h-4 w-4 shrink-0 text-primary" />
       <button
         className="flex-1 min-w-0 text-left text-[13px] text-foreground/80 hover:text-foreground transition-colors truncate"
         onClick={() => router.push(`/posts/${latestAnnouncement._id}`)}
@@ -58,7 +58,7 @@ export function AnnouncementBanner() {
       </button>
       {isAdmin && (
         <CreateAnnouncementDialog>
-          <Button variant="ghost" size="sm" className="h-6 gap-1 px-2 text-[11px] shrink-0 text-kain-amber hover:text-kain-amber">
+          <Button variant="ghost" size="sm" className="h-6 gap-1 px-2 text-[11px] shrink-0 text-primary hover:text-primary">
             <Plus className="h-3 w-3" />
             New
           </Button>
@@ -90,12 +90,12 @@ export function AnnouncementBannerCompact() {
     <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Megaphone className="h-4 w-4 text-kain-amber" />
+          <Megaphone className="h-4 w-4 text-primary" />
           <h3 className="text-section-title text-[14px]">Announcements</h3>
         </div>
         {isAdmin && (
           <CreateAnnouncementDialog>
-            <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-[11px] text-kain-amber hover:text-kain-amber">
+            <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-[11px] text-primary hover:text-primary">
               <Plus className="h-3 w-3" />
               New
             </Button>

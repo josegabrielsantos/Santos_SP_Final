@@ -49,6 +49,7 @@ import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { ShieldAlert } from 'lucide-react';
+import { TopicBadge } from '@/components/ui/topic-badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,14 +64,8 @@ import {
 // ─── Tag color system ──────────────────────────────────────────
 
 const TAG_COLORS = [
-  'bg-blue-50 text-blue-700 border border-blue-200/60',
-  'bg-emerald-50 text-emerald-700 border border-emerald-200/60',
-  'bg-violet-50 text-violet-700 border border-violet-200/60',
-  'bg-amber-50 text-amber-700 border border-amber-200/60',
-  'bg-rose-50 text-rose-700 border border-rose-200/60',
-  'bg-cyan-50 text-cyan-700 border border-cyan-200/60',
-  'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200/60',
-  'bg-lime-50 text-lime-700 border border-lime-200/60',
+  'bg-primary/5 text-primary/70 border border-primary/15',
+  'bg-muted text-muted-foreground border border-border/60',
 ];
 
 function getTagColor(tag: string) {
@@ -412,12 +407,15 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
       >
         {/* ── Post Section: Author's contribution ── */}
         <div className={isDetailView ? 'px-6 pt-5 pb-4' : 'px-4 pt-3 pb-3'}>
-          {/* Post badge */}
-          <div className="mb-3">
+          {/* Post badge + topics */}
+          <div className="mb-3 flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
               <FileText className="h-3 w-3" />
               Research Paper
             </span>
+            {post.topics?.slice(0, 2).map((t) => (
+              <TopicBadge key={t} topicId={t} size="sm" />
+            ))}
           </div>
 
           {/* Post title */}
@@ -853,8 +851,11 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
 
       {/* Content */}
       <div className={isDetailView ? 'px-6 pb-1 pt-3' : 'px-4 pb-1 pt-2'}>
-        <div className="flex items-start gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <PostTypeBadge type={post.type} />
+          {post.topics?.slice(0, 2).map((t) => (
+            <TopicBadge key={t} topicId={t} size="sm" />
+          ))}
         </div>
 
         <h3 className={isDetailView

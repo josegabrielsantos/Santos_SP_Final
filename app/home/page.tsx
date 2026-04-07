@@ -119,8 +119,8 @@ export default function HomePage() {
                   <p className="text-[18px] font-bold text-kain-green">{statsPapers?.total ?? '—'}</p>
                   <p className="text-[10px] font-medium text-gray-600">Papers</p>
                 </div>
-                <div className="rounded-lg bg-kain-amber/15 px-3 py-2.5 text-center">
-                  <p className="text-[18px] font-bold text-kain-amber">{statsOrgs?.total ?? '—'}</p>
+                <div className="rounded-lg bg-primary/15 px-3 py-2.5 text-center">
+                  <p className="text-[18px] font-bold text-primary">{statsOrgs?.total ?? '—'}</p>
                   <p className="text-[10px] font-medium text-gray-600">Organizations</p>
                 </div>
               </div>
@@ -164,7 +164,7 @@ export default function HomePage() {
                 href="/organizations"
                 className="flex items-center gap-3 rounded-lg p-2.5 -mx-1 text-[13px] font-medium text-gray-800 transition-colors hover:bg-white/40 group"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-kain-amber/20 text-kain-amber shrink-0">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/20 text-primary shrink-0">
                   <Users className="h-4 w-4" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -177,7 +177,7 @@ export default function HomePage() {
                 href="/analytics"
                 className="flex items-center gap-3 rounded-lg p-2.5 -mx-1 text-[13px] font-medium text-gray-800 transition-colors hover:bg-white/40 group"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-500/20 text-blue-600 shrink-0">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/20 text-primary shrink-0">
                   <BarChart2 className="h-4 w-4" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -233,7 +233,7 @@ export default function HomePage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => { setActiveTopic(undefined); setLatestPage(1); setPopularPage(1); }}
-              className={`shrink-0 rounded-full border px-3 py-1 text-[12px] font-medium transition-all ${!activeTopic ? 'border-primary bg-primary text-white font-semibold shadow-sm' : 'border-border text-muted-foreground hover:bg-muted/50 hover:border-primary/30'}`}
+              className={`shrink-0 rounded-full border px-3 py-1 text-[12px] font-medium transition-all ${!activeTopic ? 'border-primary bg-primary text-white font-semibold shadow-sm' : 'border-primary/35 bg-primary/10 text-primary hover:shadow-sm'}`}
             >
               All Topics
             </button>

@@ -7,6 +7,7 @@ import type { UserDetail, ModerationLogsResponse } from '@/lib/types';
 export interface AdminStats {
   totalUsers: number;
   totalPosts: number;
+  totalPapers: number;
   totalOrgs: number;
   activeUsers: number;
   totalAdmins: number;

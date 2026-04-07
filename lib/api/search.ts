@@ -42,6 +42,8 @@ export interface SearchParams {
   postTags?: string;
   dateFrom?: string;
   dateTo?: string;
+  // Topic filter (applies to both posts and papers)
+  topic?: string;
   // Pagination
   page?: number;
   limit?: number;
@@ -61,7 +63,8 @@ export function useSearch(params: SearchParams) {
     !!params.postType?.trim() ||
     !!params.postTags?.trim() ||
     !!params.dateFrom?.trim() ||
-    !!params.dateTo?.trim();
+    !!params.dateTo?.trim() ||
+    !!params.topic?.trim();
 
   return useQuery<SearchResponse>({
     queryKey: ['search', params],

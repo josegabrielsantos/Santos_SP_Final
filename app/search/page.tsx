@@ -43,6 +43,8 @@ import {
 } from 'lucide-react';
 import { CitationButton } from '@/components/paper/citation-button';
 import { AbstractText } from '@/components/paper/abstract-text';
+import { TopicBadge } from '@/components/ui/topic-badge';
+import { RESEARCH_TOPICS } from '@/lib/constants/research-topics';
 import { getInitials } from '@/lib/utils';
 import type { OrgListItem, PaperSearchHit } from '@/lib/types';
 import type { PostSearchHit } from '@/lib/api/search';
@@ -119,6 +121,7 @@ function SearchPageContent() {
   const postTags = searchParams.get('postTags') ?? '';
   const dateFrom = searchParams.get('dateFrom') ?? '';
   const dateTo = searchParams.get('dateTo') ?? '';
+  const topic = searchParams.get('topic') ?? '';
   const pageParam = parseInt(searchParams.get('page') ?? '1', 10);
 
   // ── Local input states (synced to URL on apply) ──
@@ -191,9 +194,10 @@ function SearchPageContent() {
     if (dateFromInput.trim()) params.set('dateFrom', dateFromInput.trim());
     if (dateToInput.trim()) params.set('dateTo', dateToInput.trim());
     if (sortInput !== 'relevance') params.set('sort', sortInput);
+    if (topic) params.set('topic', topic);
     // Reset to page 1 on new search
     router.replace(`/search?${params.toString()}`);
-  }, [qInput, type, titleInput, authorInput, tagsInput, tagModeInput, yearFromInput, yearToInput, postTypeInput, postTagsInput, dateFromInput, dateToInput, sortInput, router]);
+  }, [qInput, type, titleInput, authorInput, tagsInput, tagModeInput, yearFromInput, yearToInput, postTypeInput, postTagsInput, dateFromInput, dateToInput, sortInput, topic, router]);
 
   const handleClearFilters = useCallback(() => {
     setTitleInput('');
@@ -216,7 +220,7 @@ function SearchPageContent() {
 
   // ── ES search ──
   const searchType = type === 'organizations' ? 'all' : type;
-  const hasAnyCriteria = !!q || !!author || !!yearFrom || !!yearTo || !!tags || !!titleFilter || !!postType || !!postTags || !!dateFrom || !!dateTo;
+  const hasAnyCriteria = !!q || !!author || !!yearFrom || !!yearTo || !!tags || !!titleFilter || !!postType || !!postTags || !!dateFrom || !!dateTo || !!topic;
 
   const { data, isLoading } = useSearch({
     q,
@@ -232,6 +236,7 @@ function SearchPageContent() {
     postTags: postTags || undefined,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
+    topic: topic || undefined,
     page: pageParam,
     limit: 20,
     enabled: type !== 'organizations' && hasAnyCriteria,
@@ -330,6 +335,28 @@ function SearchPageContent() {
             onApply={handleApplySearch}
             onClear={handleClearFilters}
           />
+
+          {/* Topic filter */}
+          <div className="mb-4">
+            <p className="text-[12px] font-medium text-muted-foreground mb-1.5">Research Topic</p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => updateParams({ topic: '', page: '' })}
+                className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${!topic ? 'border-primary bg-primary text-white font-semibold' : 'border-primary/35 bg-primary/10 text-primary hover:shadow-sm'}`}
+              >
+                All
+              </button>
+              {RESEARCH_TOPICS.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => updateParams({ topic: topic === t.id ? '' : t.id, page: '' })}
+                  className="shrink-0"
+                >
+                  <TopicBadge topicId={t.id} size="sm" active={topic === t.id} />
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Tabs */}
           <Tabs
