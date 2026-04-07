@@ -78,7 +78,19 @@ const getOrganizations = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select('name slug avatar description memberCount postCount');
+      .select('name slug avatar description memberCount postCount')
+      .lean();
+
+    // Compute real postCount from the Posts collection
+    const orgIds = orgs.map((o) => o._id);
+    const postCounts = await Post.aggregate([
+      { $match: { organizationId: { $in: orgIds }, status: 'published' } },
+      { $group: { _id: '$organizationId', count: { $sum: 1 } } },
+    ]);
+    const countMap = Object.fromEntries(postCounts.map((pc) => [pc._id.toString(), pc.count]));
+    for (const org of orgs) {
+      org.postCount = countMap[org._id.toString()] || 0;
+    }
 
     const total = await Organization.countDocuments({ isActive: true });
 
@@ -109,7 +121,13 @@ const getOrganization = async (req, res) => {
     if (!org) {
       return res.status(404).json({ error: 'Organization not found.' });
     }
-    res.status(200).json(org);
+
+    // Compute real postCount
+    const realPostCount = await Post.countDocuments({ organizationId: org._id, status: 'published' });
+    const orgObj = org.toObject();
+    orgObj.postCount = realPostCount;
+
+    res.status(200).json(orgObj);
   } catch (error) {
     console.log('Error in getOrganization:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
@@ -314,7 +332,19 @@ const getAdminOrganizations = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select('name slug avatar description memberCount postCount isActive');
+      .select('name slug avatar description memberCount postCount isActive')
+      .lean();
+
+    // Compute real postCount from the Posts collection
+    const orgIds = orgs.map((o) => o._id);
+    const postCounts = await Post.aggregate([
+      { $match: { organizationId: { $in: orgIds }, status: 'published' } },
+      { $group: { _id: '$organizationId', count: { $sum: 1 } } },
+    ]);
+    const countMap = Object.fromEntries(postCounts.map((pc) => [pc._id.toString(), pc.count]));
+    for (const org of orgs) {
+      org.postCount = countMap[org._id.toString()] || 0;
+    }
 
     const total = await Organization.countDocuments(filter);
 

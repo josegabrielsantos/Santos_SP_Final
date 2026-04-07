@@ -205,12 +205,13 @@ const toggleUserActive = async (req, res) => {
  */
 const getAdminStats = async (req, res) => {
   try {
-    const [totalUsers, totalPosts, totalOrgs, activeUsers, totalAdmins] = await Promise.all([
+    const [totalUsers, totalPosts, totalOrgs, activeUsers, totalAdmins, totalPapers] = await Promise.all([
       User.countDocuments(),
       Post.countDocuments(),
       Organization.countDocuments({ isActive: true }),
       User.countDocuments({ isActive: true }),
       User.countDocuments({ role: 'website_admin' }),
+      Paper.countDocuments(),
     ]);
 
     // Recent signups (last 30 days)
@@ -224,6 +225,7 @@ const getAdminStats = async (req, res) => {
     res.status(200).json({
       totalUsers,
       totalPosts,
+      totalPapers,
       totalOrgs,
       activeUsers,
       totalAdmins,
