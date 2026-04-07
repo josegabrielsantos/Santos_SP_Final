@@ -98,7 +98,7 @@ export default function PostDiscussionPage() {
           className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground w-fit"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back to feed
+          Back
         </button>
 
         {/* Loading / Error states */}

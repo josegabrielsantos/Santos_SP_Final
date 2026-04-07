@@ -225,6 +225,16 @@ export default function HomePage() {
         {/* Divider */}
         <div className="my-4 h-px bg-border/50" />
 
+        {/* Discover prompt */}
+        <div className="mb-4">
+          <h2 className="font-heading text-[16px] font-semibold text-foreground">
+            Discover Research & Content
+          </h2>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
+            Explore posts and papers across FaNS research topics — filter below to narrow your feed to what matters most to you.
+          </p>
+        </div>
+
         {/* Topic filter */}
         <div>
           <h3 className="text-[13px] font-semibold text-foreground mb-2.5">

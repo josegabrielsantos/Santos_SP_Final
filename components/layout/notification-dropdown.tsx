@@ -194,7 +194,7 @@ export function NotificationDropdown() {
           </div>
 
           {/* Notification list */}
-          <ScrollArea className="h-[min(400px,70vh)]">
+          <ScrollArea className="h-[min(400px,70vh)] [&>[data-slot=scroll-area-viewport]>div]:!block">
             {isLoading && (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -212,7 +212,7 @@ export function NotificationDropdown() {
               <button
                 key={notif._id}
                 onClick={() => handleNotifClick(notif)}
-                className={`flex w-full items-start gap-2.5 px-3.5 py-3 text-left transition-colors hover:bg-muted/40 overflow-hidden ${
+                className={`flex w-full items-start gap-2.5 pl-3.5 pr-4 py-3 text-left transition-colors hover:bg-muted/40 overflow-hidden ${
                   !notif.isRead ? 'bg-primary/[0.03]' : ''
                 }`}
               >
