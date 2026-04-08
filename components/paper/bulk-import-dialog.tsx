@@ -93,7 +93,7 @@ export function BulkImportDialog({ open, onClose, orgId, orgName }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-2">
+        <div className="flex flex-col gap-4 py-2 min-w-0">
           {/* Info banner */}
           <div className="flex items-start gap-3 rounded-lg border border-border/60 bg-muted/40 px-4 py-3">
             <svg className="h-9 w-9 shrink-0 text-primary/70 mt-0.5" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -145,7 +145,7 @@ export function BulkImportDialog({ open, onClose, orgId, orgName }: Props) {
 
           {/* Selected files list */}
           {files.length > 0 && (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 min-w-0">
               <div className="flex items-center justify-between">
                 <p className="text-[13px] font-semibold text-foreground">
                   {files.length} file{files.length !== 1 ? 's' : ''} selected
@@ -157,7 +157,7 @@ export function BulkImportDialog({ open, onClose, orgId, orgName }: Props) {
                   Clear all
                 </button>
               </div>
-              <div className="max-h-48 overflow-y-auto rounded-lg border border-border/60 bg-white divide-y divide-border/40">
+              <div className="max-h-48 overflow-y-auto overflow-x-hidden rounded-lg border border-border/60 bg-background divide-y divide-border/40">
                 {files.map((file, i) => (
                   <div key={`${file.name}-${file.size}`} className="flex items-center gap-3 px-3 py-2.5 group">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-500">
