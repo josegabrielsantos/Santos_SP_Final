@@ -122,6 +122,7 @@ export interface CreatePostPayload {
   mediaUrls?: string[];
   paperIds?: string[];
   paperMetadata?: PaperMetadataInput | null;
+  skipDuplicateCheck?: boolean;
   poll?: {
     question: string;
     isMultiple: boolean;

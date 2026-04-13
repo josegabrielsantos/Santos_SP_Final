@@ -282,6 +282,45 @@ export function useBulkImportPapers() {
   });
 }
 
+// ─── Bulk create papers (force-create after duplicate confirmation) ──
+
+export function useBulkCreatePapers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      papers,
+      organizationId,
+    }: {
+      papers: {
+        title: string;
+        authors?: string[];
+        abstract?: string | null;
+        keywords?: string[];
+        topics?: string[];
+        doi?: string | null;
+        year?: number | null;
+        journal?: string | null;
+        fileUrl?: string | null;
+        fileSize?: number | null;
+      }[];
+      organizationId: string;
+    }) => {
+      const { data } = await axiosInstance.post('/papers/bulk-create', {
+        papers,
+        organizationId,
+      });
+      return data as {
+        created: number;
+        errors: { title: string; reason: string }[];
+        papers: { _id: string; title: string }[];
+      };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['papers'] });
+    },
+  });
+}
+
 // ─── Bulk import papers from PDFs (AI-powered, async) ──────────
 
 export function useBulkImportPdfs() {

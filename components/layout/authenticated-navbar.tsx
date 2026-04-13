@@ -29,6 +29,9 @@ import {
 } from 'lucide-react';
 import { NotificationDropdown } from './notification-dropdown';
 import { useBulkUploadProgress } from '@/hooks/useBulkUploadProgress';
+import { DuplicatePaperDialog } from '@/components/paper/duplicate-paper-dialog';
+import { useBulkCreatePapers } from '@/lib/api/papers';
+import { toast } from 'sonner';
 import { SusModal } from '@/components/feedback/sus-modal';
 
 export function AuthenticatedNavbar() {
@@ -39,7 +42,8 @@ export function AuthenticatedNavbar() {
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Global listener for bulk upload socket events → sonner toasts
-  useBulkUploadProgress();
+  const { pendingDuplicates, clearDuplicates } = useBulkUploadProgress();
+  const bulkCreateMutation = useBulkCreatePapers();
   const [showSus, setShowSus] = useState(false);
 
   const { data: suggestions } = useSuggest(searchQuery);
@@ -208,6 +212,30 @@ export function AuthenticatedNavbar() {
         </div>
         <SusModal open={showSus} onClose={() => setShowSus(false)} />
       </header>
+
+      {/* Duplicate paper confirmation dialog (triggered by bulk upload) */}
+      {pendingDuplicates && (
+        <DuplicatePaperDialog
+          open={true}
+          onClose={clearDuplicates}
+          duplicates={pendingDuplicates.duplicates}
+          isSubmitting={bulkCreateMutation.isPending}
+          onConfirm={async (selectedPapers) => {
+            try {
+              const result = await bulkCreateMutation.mutateAsync({
+                papers: selectedPapers,
+                organizationId: pendingDuplicates.organizationId,
+              });
+              toast.success(
+                `${result.created} duplicate paper${result.created !== 1 ? 's' : ''} uploaded to ${pendingDuplicates.orgName}.`,
+              );
+              clearDuplicates();
+            } catch {
+              toast.error('Failed to create papers. Please try again.');
+            }
+          }}
+        />
+      )}
     </>
   );
 }

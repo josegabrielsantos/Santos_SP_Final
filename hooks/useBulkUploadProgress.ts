@@ -1,18 +1,43 @@
 'use client';
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useSocket } from '@/hooks/useSocket';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import type { DuplicateEntry } from '@/components/paper/duplicate-paper-dialog';
 
 interface ProgressEvent {
   jobId: string;
   current: number;
   total: number;
   fileName: string;
-  status: 'processing' | 'done' | 'error';
+  status: 'processing' | 'done' | 'error' | 'duplicate';
   paperTitle?: string;
   error?: string;
+}
+
+interface DuplicateData {
+  fileName: string;
+  paper: {
+    title: string;
+    authors: string[];
+    abstract: string | null;
+    keywords: string[];
+    topics: string[];
+    doi: string | null;
+    year: number | null;
+    journal: string | null;
+    fileUrl: string | null;
+    fileSize: number | null;
+  };
+  existingMatches: {
+    _id: string;
+    title: string;
+    authors: string[];
+    year: number | null;
+    doi: string | null;
+    journal: string | null;
+  }[];
 }
 
 interface CompleteEvent {
@@ -20,19 +45,30 @@ interface CompleteEvent {
   created: number;
   skipped: number;
   errors: { file: string; reason: string }[];
+  duplicates?: DuplicateData[];
   papers: { _id: string; title: string }[];
   orgName: string;
   organizationId: string;
 }
 
+export interface PendingDuplicates {
+  duplicates: DuplicateEntry[];
+  organizationId: string;
+  orgName: string;
+}
+
 /**
  * Global hook that listens for bulk-upload socket events and shows
  * sonner toasts with live progress. Mount once in a layout component.
+ * Returns pending duplicates state for rendering a confirmation dialog.
  */
 export function useBulkUploadProgress() {
   const { socket } = useSocket();
   const qc = useQueryClient();
   const activeJobs = useRef<Set<string>>(new Set());
+  const [pendingDuplicates, setPendingDuplicates] = useState<PendingDuplicates | null>(null);
+
+  const clearDuplicates = useCallback(() => setPendingDuplicates(null), []);
 
   const handleProgress = useCallback((data: ProgressEvent) => {
     activeJobs.current.add(data.jobId);
@@ -43,9 +79,10 @@ export function useBulkUploadProgress() {
         ? `Analyzing "${data.fileName}"...`
         : data.status === 'done'
           ? `Processed "${data.paperTitle || data.fileName}"`
-          : `Failed: ${data.fileName}`;
+          : data.status === 'duplicate'
+            ? `Duplicate skipped: "${data.paperTitle || data.fileName}"`
+            : `Failed: ${data.fileName}`;
 
-    // Use a persistent toast per job that updates in place
     toast.loading(
       `Bulk Upload: ${data.current}/${data.total} (${pct}%) — ${message}`,
       {
@@ -60,6 +97,7 @@ export function useBulkUploadProgress() {
     (data: CompleteEvent) => {
       activeJobs.current.delete(data.jobId);
       const toastId = `bulk-upload-${data.jobId}`;
+      const dupCount = data.duplicates?.length ?? 0;
 
       if (data.created > 0 && data.skipped === 0) {
         toast.success(
@@ -75,7 +113,16 @@ export function useBulkUploadProgress() {
           `Bulk upload finished with issues`,
           {
             id: toastId,
-            description: `${data.created} paper${data.created !== 1 ? 's' : ''} added, ${data.skipped} failed in ${data.orgName}.`,
+            description: `${data.created} paper${data.created !== 1 ? 's' : ''} added${dupCount > 0 ? `, ${dupCount} duplicate${dupCount !== 1 ? 's' : ''} skipped` : ''}${data.errors.length > 0 ? `, ${data.errors.length} failed` : ''} in ${data.orgName}.`,
+            duration: 10000,
+          },
+        );
+      } else if (dupCount > 0 && data.created === 0 && data.errors.length === 0) {
+        toast.warning(
+          `All papers are potential duplicates`,
+          {
+            id: toastId,
+            description: `${dupCount} paper${dupCount !== 1 ? 's' : ''} matched existing entries in ${data.orgName}.`,
             duration: 10000,
           },
         );
@@ -88,6 +135,19 @@ export function useBulkUploadProgress() {
             duration: 10000,
           },
         );
+      }
+
+      // Surface duplicates for confirmation dialog
+      if (data.duplicates && data.duplicates.length > 0) {
+        setPendingDuplicates({
+          duplicates: data.duplicates.map((d) => ({
+            label: d.fileName,
+            paper: d.paper,
+            existingMatches: d.existingMatches,
+          })),
+          organizationId: data.organizationId,
+          orgName: data.orgName,
+        });
       }
 
       // Refresh relevant data
@@ -110,4 +170,6 @@ export function useBulkUploadProgress() {
       socket.off('bulk-upload:complete', handleComplete);
     };
   }, [socket, handleProgress, handleComplete]);
+
+  return { pendingDuplicates, clearDuplicates };
 }

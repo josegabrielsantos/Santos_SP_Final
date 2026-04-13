@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/select';
 import { useCreatePost, useParsePdf } from '@/lib/api/posts';
 import { useEnrichDoi } from '@/lib/api/papers';
+import { DuplicatePaperDialog, type DuplicateEntry } from '@/components/paper/duplicate-paper-dialog';
+import { AxiosError } from 'axios';
 import { useUploadFile, useDeleteUploadedFile } from '@/lib/api/upload';
 import { useAppSelector } from '@/store/hooks';
 import { useUserOrganizations } from '@/lib/api/users';
@@ -91,6 +93,8 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
   const [parseError, setParseError] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [parsedTopics, setParsedTopics] = useState<string[]>([]);
+  const [duplicateEntries, setDuplicateEntries] = useState<DuplicateEntry[]>([]);
+  const [pendingSubmitValues, setPendingSubmitValues] = useState<PostFormValues | null>(null);
 
   const user = useAppSelector((s) => s.auth.user);
   const createPost = useCreatePost();
@@ -396,19 +400,40 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
 
     const isOrgPost = values.organizationId && values.organizationId !== 'personal';
 
-    await createPost.mutateAsync({
-      title: values.title,
-      body: bodyJson,
-      bodyText,
-      tags: cleanTags,
-      topics: selectedType === 'research_paper' ? parsedTopics : undefined,
-      organizationId: isOrgPost ? values.organizationId : null,
-      type: values.type,
-      status: isOrgPost ? 'pending' : 'published',
-      mediaUrls,
-      poll,
-      paperMetadata,
-    });
+    try {
+      await createPost.mutateAsync({
+        title: values.title,
+        body: bodyJson,
+        bodyText,
+        tags: cleanTags,
+        topics: selectedType === 'research_paper' ? parsedTopics : undefined,
+        organizationId: isOrgPost ? values.organizationId : null,
+        type: values.type,
+        status: isOrgPost ? 'pending' : 'published',
+        mediaUrls,
+        poll,
+        paperMetadata,
+        skipDuplicateCheck: pendingSubmitValues !== null,
+      });
+    } catch (err) {
+      if (err instanceof AxiosError && err.response?.status === 409 && err.response.data?.duplicates) {
+        const dups: DuplicateEntry[] = [{
+          label: paperResearchTitle.trim() || 'Research Paper',
+          paper: {
+            title: paperResearchTitle.trim(),
+            authors: researchAuthors,
+            year: paperDatePublished ? new Date(paperDatePublished).getFullYear() : null,
+            doi: paperDoi.trim() || null,
+            journal: paperJournal.trim() || null,
+          },
+          existingMatches: err.response.data.duplicates,
+        }];
+        setDuplicateEntries(dups);
+        setPendingSubmitValues(values);
+        return;
+      }
+      throw err;
+    }
 
     // Keep temp PDF for published post; skip cancel cleanup for this close.
     skipTempCleanupOnCloseRef.current = true;
@@ -431,6 +456,8 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
     setParsedTopics([]);
     setParseError('');
     setSubmitError('');
+    setDuplicateEntries([]);
+    setPendingSubmitValues(null);
     setOpen(false);
     skipTempCleanupOnCloseRef.current = false;
   };
@@ -448,6 +475,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
         {children ?? (
@@ -1052,6 +1080,25 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
         </form>
       </DialogContent>
     </Dialog>
+
+    {/* Duplicate paper confirmation dialog */}
+    <DuplicatePaperDialog
+      open={duplicateEntries.length > 0}
+      onClose={() => {
+        setDuplicateEntries([]);
+        setPendingSubmitValues(null);
+      }}
+      duplicates={duplicateEntries}
+      onConfirm={async () => {
+        if (!pendingSubmitValues) return;
+        // Re-submit with skipDuplicateCheck — pendingSubmitValues being set triggers the flag
+        await onSubmit(pendingSubmitValues);
+        setDuplicateEntries([]);
+        setPendingSubmitValues(null);
+      }}
+      isSubmitting={createPost.isPending}
+    />
+    </>
   );
 }
 
