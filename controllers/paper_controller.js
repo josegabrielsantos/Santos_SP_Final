@@ -13,11 +13,46 @@ import esClient from '../elastic/elastic_client.js';
 import { randomUUID } from 'crypto';
 
 /**
+ * Check for duplicate papers by DOI (exact) or normalized title + year.
+ * Returns an array of matching Paper documents (populated with uploader & org).
+ */
+async function findDuplicates({ title, doi, year, organizationId, excludeId }) {
+  const conditions = [];
+
+  // 1. Exact DOI match (if provided and non-empty)
+  if (doi && doi.trim()) {
+    const cleanDoi = doi.trim().replace(/^https?:\/\/doi\.org\//i, '');
+    conditions.push({ doi: { $regex: new RegExp(`^${cleanDoi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } });
+  }
+
+  // 2. Normalized title match (case-insensitive, collapsed whitespace)
+  if (title && title.trim()) {
+    const normalized = title.trim().replace(/\s+/g, ' ');
+    const titleRegex = new RegExp(`^${normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const titleCondition = { title: titleRegex };
+    if (year) titleCondition.year = year;
+    conditions.push(titleCondition);
+  }
+
+  if (conditions.length === 0) return [];
+
+  const filter = { $or: conditions };
+  if (excludeId) filter._id = { $ne: excludeId };
+
+  const matches = await Paper.find(filter)
+    .limit(5)
+    .populate('uploadedBy', 'displayName avatar')
+    .populate('organizationId', 'name slug avatar');
+
+  return matches;
+}
+
+/**
  * POST /api/papers
  */
 const createPaper = async (req, res) => {
   try {
-    const { title, authors, abstract, keywords, doi, year, journal, fileUrl, fileSize, organizationId } = req.body;
+    const { title, authors, abstract, keywords, doi, year, journal, fileUrl, fileSize, organizationId, skipDuplicateCheck } = req.body;
 
     if (!title || !fileUrl) {
       return res.status(400).json({ error: 'Title and fileUrl are required.' });
@@ -31,6 +66,27 @@ const createPaper = async (req, res) => {
       const isMember = org.adminIds.map(String).includes(uid) || org.memberIds.map(String).includes(uid);
       if (!isMember && req.user.role !== 'website_admin') {
         return res.status(403).json({ error: 'Not a member of this organization.' });
+      }
+    }
+
+    // Check for duplicates unless explicitly skipped
+    if (!skipDuplicateCheck) {
+      const duplicates = await findDuplicates({ title, doi, year, organizationId });
+      if (duplicates.length > 0) {
+        return res.status(409).json({
+          error: 'Potential duplicate paper detected.',
+          duplicates: duplicates.map((d) => ({
+            _id: d._id,
+            title: d.title,
+            authors: d.authors,
+            year: d.year,
+            doi: d.doi,
+            journal: d.journal,
+            organizationId: d.organizationId,
+            uploadedBy: d.uploadedBy,
+            createdAt: d.createdAt,
+          })),
+        });
       }
     }
 
@@ -472,8 +528,10 @@ const bulkImportCsv = async (req, res) => {
       return res.status(403).json({ error: 'Only organization admins can bulk import papers.' });
     }
 
+    const skipDuplicateCheck = req.body.skipDuplicateCheck === 'true' || req.body.skipDuplicateCheck === true;
     let created = 0;
     const errors = [];
+    const duplicates = [];
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -491,6 +549,20 @@ const bulkImportCsv = async (req, res) => {
         : [];
       const yearRaw = row.year ? parseInt(row.year.trim(), 10) : null;
       const year = yearRaw && !isNaN(yearRaw) ? yearRaw : null;
+      const doi = row.doi?.trim() || null;
+
+      // Check for duplicates
+      if (!skipDuplicateCheck) {
+        const matches = await findDuplicates({ title, doi, year, organizationId });
+        if (matches.length > 0) {
+          duplicates.push({
+            row: rowNum,
+            paper: { title, authors, abstract: row.abstract?.trim() || null, keywords, doi, isbn: row.isbn?.trim() || null, year, journal: row.journal?.trim() || null },
+            existingMatches: matches.map((d) => ({ _id: d._id, title: d.title, authors: d.authors, year: d.year, doi: d.doi, journal: d.journal })),
+          });
+          continue;
+        }
+      }
 
       try {
         const paper = new Paper({
@@ -498,7 +570,7 @@ const bulkImportCsv = async (req, res) => {
           authors,
           abstract: row.abstract?.trim() || null,
           keywords,
-          doi: row.doi?.trim() || null,
+          doi,
           isbn: row.isbn?.trim() || null,
           year,
           journal: row.journal?.trim() || null,
@@ -514,7 +586,7 @@ const bulkImportCsv = async (req, res) => {
       }
     }
 
-    res.status(200).json({ created, skipped: errors.length, errors });
+    res.status(200).json({ created, skipped: errors.length + duplicates.length, errors, duplicates });
   } catch (error) {
     console.log('Error in bulkImportCsv:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
@@ -596,6 +668,7 @@ const bulkImportPdfs = async (req, res) => {
       let created = 0;
       const errors = [];
       const createdPapers = [];
+      const skippedDuplicates = [];
       const orgName = org.name;
 
       for (let i = 0; i < uploadedFiles.length; i++) {
@@ -627,14 +700,47 @@ const bulkImportPdfs = async (req, res) => {
           const geminiResult = await enqueue(() => extractPdfMetadataWithGemini(uf.buffer));
           const ai = geminiResult.metadata;
 
+          const paperTitle = ai?.title || uf.fileName.replace(/\.pdf$/i, '');
+          const paperDoi = ai?.doi || null;
+          const paperYear = ai?.year || null;
+
+          // Check for duplicates
+          const matches = await findDuplicates({ title: paperTitle, doi: paperDoi, year: paperYear, organizationId });
+          if (matches.length > 0) {
+            skippedDuplicates.push({
+              fileName: uf.fileName,
+              paper: {
+                title: paperTitle,
+                authors: ai?.authors || [],
+                abstract: ai?.abstract || null,
+                keywords: ai?.keywords || [],
+                topics: ai?.topics || [],
+                doi: paperDoi,
+                year: paperYear,
+                journal: ai?.journal || null,
+                fileUrl: uf.fileUrl,
+                fileSize: uf.fileSize,
+              },
+              existingMatches: matches.map((d) => ({ _id: d._id, title: d.title, authors: d.authors, year: d.year, doi: d.doi, journal: d.journal })),
+            });
+            emitProgress({
+              current: i + 1,
+              total,
+              fileName: uf.fileName,
+              status: 'duplicate',
+              paperTitle,
+            });
+            continue;
+          }
+
           const paper = new Paper({
-            title: ai?.title || uf.fileName.replace(/\.pdf$/i, ''),
+            title: paperTitle,
             authors: ai?.authors || [],
             abstract: ai?.abstract || null,
             keywords: ai?.keywords || [],
             topics: ai?.topics || [],
-            doi: ai?.doi || null,
-            year: ai?.year || null,
+            doi: paperDoi,
+            year: paperYear,
             journal: ai?.journal || null,
             fileUrl: uf.fileUrl,
             fileSize: uf.fileSize,
@@ -740,8 +846,9 @@ const bulkImportPdfs = async (req, res) => {
       const completionData = {
         jobId,
         created,
-        skipped: errors.length,
+        skipped: errors.length + skippedDuplicates.length,
         errors,
+        duplicates: skippedDuplicates,
         papers: createdPapers.map((p) => ({ _id: p._id, title: p.title })),
         orgName: org.name,
         organizationId,
@@ -759,7 +866,7 @@ const bulkImportPdfs = async (req, res) => {
           senderId: userId,
           type: 'bulk_upload_complete',
           organizationId,
-          message: `Bulk upload complete: ${created} paper${created !== 1 ? 's' : ''} added to ${org.name}${errors.length > 0 ? ` (${errors.length} failed)` : ''}.`,
+          message: `Bulk upload complete: ${created} paper${created !== 1 ? 's' : ''} added to ${org.name}${errors.length > 0 ? ` (${errors.length} failed)` : ''}${skippedDuplicates.length > 0 ? ` (${skippedDuplicates.length} duplicate${skippedDuplicates.length !== 1 ? 's' : ''} skipped)` : ''}.`,
         });
         await emitNotification(userId.toString());
       } catch (notifErr) {
@@ -770,6 +877,65 @@ const bulkImportPdfs = async (req, res) => {
     })();
   } catch (error) {
     console.log('Error in bulkImportPdfs:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
+ * POST /api/papers/bulk-create
+ * Force-create papers from pre-extracted metadata (used after duplicate confirmation).
+ * Body: { papers: [{ title, authors, abstract, keywords, topics, doi, year, journal, fileUrl, fileSize }], organizationId }
+ */
+const bulkCreatePapers = async (req, res) => {
+  try {
+    const { papers, organizationId } = req.body;
+    if (!Array.isArray(papers) || papers.length === 0) {
+      return res.status(400).json({ error: 'papers array is required.' });
+    }
+    if (!organizationId) {
+      return res.status(400).json({ error: 'organizationId is required.' });
+    }
+
+    const org = await Organization.findById(organizationId);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+    const uid = req.user._id.toString();
+    const isOrgAdmin = org.ownerId.toString() === uid || org.adminIds.map(String).includes(uid);
+    if (!isOrgAdmin && req.user.role !== 'website_admin') {
+      return res.status(403).json({ error: 'Only organization admins can create papers.' });
+    }
+
+    let created = 0;
+    const errors = [];
+    const createdPapers = [];
+
+    for (const p of papers) {
+      try {
+        const paper = new Paper({
+          title: p.title,
+          authors: p.authors || [],
+          abstract: p.abstract || null,
+          keywords: p.keywords || [],
+          topics: p.topics || [],
+          doi: p.doi || null,
+          year: p.year || null,
+          journal: p.journal || null,
+          fileUrl: p.fileUrl || null,
+          fileSize: p.fileSize || null,
+          uploadedBy: req.user._id,
+          organizationId,
+          isPublished: true,
+        });
+        await paper.save();
+        created++;
+        createdPapers.push(paper);
+      } catch (err) {
+        errors.push({ title: p.title, reason: err.message });
+      }
+    }
+
+    res.status(201).json({ created, errors, papers: createdPapers });
+  } catch (error) {
+    console.log('Error in bulkCreatePapers:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
   }
 };
@@ -948,4 +1114,6 @@ export {
   bulkImportCsv,
   bulkImportPdfs,
   getRelatedPapers,
+  findDuplicates,
+  bulkCreatePapers,
 };

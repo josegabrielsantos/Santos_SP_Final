@@ -11,6 +11,7 @@ import { emitNotification, emitNotificationBulk, emitToPost, emitToHome } from '
 import { deleteFromSpaces, keyFromUrl } from '../lib/spaces.js';
 import { deletePost as esDeletePost } from '../elastic/esSync.js';
 import { classifyTopicsWithGemini } from '../lib/util/gemini_topic_classifier.js';
+import { findDuplicates } from './paper_controller.js';
 
 /**
  * Helper: check org-level access for a post interaction.
@@ -74,6 +75,33 @@ const createPost = async (req, res) => {
         return res.status(400).json({
           error: 'Research paper posts require research title, abstract, at least one author, publication date, and journal.',
         });
+      }
+
+      // Check for duplicate papers unless explicitly skipped
+      if (!req.body.skipDuplicateCheck) {
+        const pubYear = datePublished ? new Date(datePublished).getFullYear() : null;
+        const duplicates = await findDuplicates({
+          title: researchTitle,
+          doi: paperMetadata?.doi,
+          year: Number.isNaN(pubYear) ? null : pubYear,
+          organizationId,
+        });
+        if (duplicates.length > 0) {
+          return res.status(409).json({
+            error: 'Potential duplicate paper detected.',
+            duplicates: duplicates.map((d) => ({
+              _id: d._id,
+              title: d.title,
+              authors: d.authors,
+              year: d.year,
+              doi: d.doi,
+              journal: d.journal,
+              organizationId: d.organizationId,
+              uploadedBy: d.uploadedBy,
+              createdAt: d.createdAt,
+            })),
+          });
+        }
       }
     }
 
