@@ -2,6 +2,7 @@ import { useMutation, useInfiniteQuery, useQueryClient, type InfiniteData } from
 import axiosInstance from '@/lib/axios';
 import { useAppSelector } from '@/store/hooks';
 import { AxiosError } from 'axios';
+import { toast } from 'sonner';
 import type { Comment, CommentsResponse, RepliesResponse, Post } from '@/lib/types';
 
 // ─── Helpers: patch a comment by id across all infinite-query pages ──
@@ -105,7 +106,7 @@ export function useCreateComment() {
     },
     onError: (err) => {
       const msg = err instanceof AxiosError ? (err.response?.data as { error?: string })?.error : undefined;
-      if (msg) alert(msg);
+      if (msg) toast.error(msg);
     },
   });
 }
@@ -151,7 +152,7 @@ export function useDeleteComment() {
       ctx?.repliesSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
       if (ctx?.postSnap) qc.setQueryData(['posts', vars.postId], ctx.postSnap);
       const msg = err instanceof AxiosError ? (err.response?.data as { error?: string })?.error : undefined;
-      if (msg) alert(msg);
+      if (msg) toast.error(msg);
     },
     onSettled: (_d, _e, vars) => {
       qc.invalidateQueries({ queryKey: ['comments', vars.postId] });
@@ -207,7 +208,7 @@ export function useToggleCommentLike() {
       ctx?.commentsSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
       ctx?.repliesSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
       const msg = err instanceof AxiosError ? (err.response?.data as { error?: string })?.error : undefined;
-      if (msg) alert(msg);
+      if (msg) toast.error(msg);
     },
     onSettled: (_d, _e, vars) => {
       qc.invalidateQueries({ queryKey: ['comments', vars.postId] });
@@ -259,7 +260,7 @@ export function useToggleCommentDislike() {
       ctx?.commentsSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
       ctx?.repliesSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
       const msg = err instanceof AxiosError ? (err.response?.data as { error?: string })?.error : undefined;
-      if (msg) alert(msg);
+      if (msg) toast.error(msg);
     },
     onSettled: (_d, _e, vars) => {
       qc.invalidateQueries({ queryKey: ['comments', vars.postId] });

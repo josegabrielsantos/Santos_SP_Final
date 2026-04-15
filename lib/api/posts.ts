@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tansta
 import axiosInstance from '@/lib/axios';
 import { useAppSelector } from '@/store/hooks';
 import { AxiosError } from 'axios';
+import { toast } from 'sonner';
 import type {
   Post,
   PostsResponse,
@@ -145,7 +146,7 @@ export function useCreatePost() {
         }
       }
       const msg = _err instanceof AxiosError ? (_err.response?.data as { error?: string })?.error : 'Failed to create post. Please try again.';
-      alert(msg || 'Failed to create post. Please try again.');
+      toast.error(msg || 'Failed to create post. Please try again.');
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['posts'] });
@@ -228,7 +229,7 @@ export function useToggleLike() {
       if (ctx?.snapshot) qc.setQueryData(['posts', postId], ctx.snapshot);
       qc.invalidateQueries({ queryKey: ['posts'] });
       const msg = err instanceof AxiosError ? (err.response?.data as { error?: string })?.error : undefined;
-      if (msg) alert(msg);
+      if (msg) toast.error(msg);
     },
     onSettled: (_data, _err, postId) => {
       qc.invalidateQueries({ queryKey: ['posts', postId] });
@@ -276,7 +277,7 @@ export function useTogglePostDislike() {
       if (ctx?.snapshot) qc.setQueryData(['posts', postId], ctx.snapshot);
       qc.invalidateQueries({ queryKey: ['posts'] });
       const msg = err instanceof AxiosError ? (err.response?.data as { error?: string })?.error : undefined;
-      if (msg) alert(msg);
+      if (msg) toast.error(msg);
     },
     onSettled: (_data, _err, postId) => {
       qc.invalidateQueries({ queryKey: ['posts', postId] });
