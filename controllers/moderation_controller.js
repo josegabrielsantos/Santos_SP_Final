@@ -10,6 +10,7 @@ import ModerationLog from '../models/moderation_log_model.js';
 import { emitToHome, emitToPost, disconnectUser } from '../socket.js';
 import { deleteFromSpaces, keyFromUrl } from '../lib/spaces.js';
 import { deletePost as esDeletePost } from '../elastic/esSync.js';
+import { removeUserFromAllOrgs } from '../utils/org_membership.js';
 
 // ─── Helper: create a moderation log entry ───────────────────────
 
@@ -266,21 +267,27 @@ const toggleBanUser = async (req, res) => {
     user.banReason = wasBanned ? null : (req.body.reason || 'No reason provided.');
     await user.save();
 
-    // Force-disconnect banned user so they can't receive real-time updates
+    let membershipSummary = null;
+
+    // Force-disconnect banned user and strip their org memberships.
+    // On unban, users must rejoin organizations themselves.
     if (user.isBanned) {
       disconnectUser(user._id.toString());
+      membershipSummary = await removeUserFromAllOrgs(user._id);
     }
 
     const action = user.isBanned ? 'user_banned' : 'user_unbanned';
     await logAction(req.user._id, action, 'user', user._id, user.banReason, {
       displayName: user.displayName,
       email: user.email,
+      ...(membershipSummary ? { membershipCleanup: membershipSummary } : {}),
     });
 
     res.status(200).json({
       _id: user._id,
       isBanned: user.isBanned,
       banReason: user.banReason,
+      ...(membershipSummary ? { membershipCleanup: membershipSummary } : {}),
     });
   } catch (error) {
     console.log('Error in toggleBanUser:', error.message);

@@ -4,6 +4,8 @@ import Post from '../models/post_model.js';
 import Paper from '../models/paper_model.js';
 import { logAction } from './moderation_controller.js';
 import { disconnectUser } from '../socket.js';
+import { removeUserFromAllOrgs } from '../utils/org_membership.js';
+import { deleteFromSpaces, keyFromUrl } from '../lib/spaces.js';
 
 /**
  * GET /api/users/:id
@@ -39,7 +41,14 @@ const updateProfile = async (req, res) => {
 
     // Avatar is expected to be a URL (uploaded via /api/upload)
     if (displayName !== undefined) user.displayName = displayName;
-    if (avatar !== undefined) user.avatar = avatar;
+    if (avatar !== undefined) {
+      const oldAvatar = user.avatar;
+      user.avatar = avatar;
+      if (oldAvatar && oldAvatar !== avatar) {
+        const oldKey = keyFromUrl(oldAvatar);
+        if (oldKey) deleteFromSpaces(oldKey).catch((err) => console.log('S3 old avatar cleanup failed:', err.message));
+      }
+    }
     if (bio !== undefined) user.bio = bio;
     if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
     if (expertise !== undefined) user.expertise = expertise;
@@ -181,18 +190,27 @@ const toggleUserActive = async (req, res) => {
     user.isActive = !user.isActive;
     await user.save();
 
-    // Force-disconnect deactivated user so they can't receive real-time updates
+    let membershipSummary = null;
+
+    // Force-disconnect deactivated user and strip their org memberships.
+    // On reactivation, users must rejoin organizations themselves.
     if (!user.isActive) {
       disconnectUser(user._id.toString());
+      membershipSummary = await removeUserFromAllOrgs(user._id);
     }
 
     const action = user.isActive ? 'user_reactivated' : 'user_deactivated';
     await logAction(req.user._id, action, 'user', user._id, null, {
       displayName: user.displayName,
       email: user.email,
+      ...(membershipSummary ? { membershipCleanup: membershipSummary } : {}),
     });
 
-    res.status(200).json({ _id: user._id, isActive: user.isActive });
+    res.status(200).json({
+      _id: user._id,
+      isActive: user.isActive,
+      ...(membershipSummary ? { membershipCleanup: membershipSummary } : {}),
+    });
   } catch (error) {
     console.log('Error in toggleUserActive:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });

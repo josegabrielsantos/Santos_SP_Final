@@ -152,8 +152,22 @@ const updateOrganization = async (req, res) => {
 
     if (name !== undefined) org.name = name;
     if (description !== undefined) org.description = description;
-    if (bannerImage !== undefined) org.bannerImage = bannerImage;
-    if (avatar !== undefined) org.avatar = avatar;
+    if (bannerImage !== undefined) {
+      const oldBanner = org.bannerImage;
+      org.bannerImage = bannerImage;
+      if (oldBanner && oldBanner !== bannerImage) {
+        const oldKey = keyFromUrl(oldBanner);
+        if (oldKey) deleteFromSpaces(oldKey).catch((err) => console.log('S3 old banner cleanup failed:', err.message));
+      }
+    }
+    if (avatar !== undefined) {
+      const oldAvatar = org.avatar;
+      org.avatar = avatar;
+      if (oldAvatar && oldAvatar !== avatar) {
+        const oldKey = keyFromUrl(oldAvatar);
+        if (oldKey) deleteFromSpaces(oldKey).catch((err) => console.log('S3 old org avatar cleanup failed:', err.message));
+      }
+    }
     if (welcomeMessage !== undefined) org.welcomeMessage = welcomeMessage;
 
     await org.save();

@@ -348,7 +348,19 @@ const updatePost = async (req, res) => {
     if (mediaUrls !== undefined) post.mediaUrls = mediaUrls;
     if (paperIds !== undefined) post.paperIds = paperIds;
     if (poll !== undefined) post.poll = poll;
-    if (status !== undefined) {
+    if (status !== undefined && status !== post.status) {
+      // Block org post authors from self-publishing pending posts.
+      // Only org admins or website admins may change status on org-scoped posts.
+      if (post.organizationId) {
+        const org = await Organization.findById(post.organizationId).select('ownerId adminIds');
+        const isOrgAdmin = org && (
+          org.ownerId.toString() === req.user._id.toString() ||
+          (org.adminIds || []).some((id) => id.toString() === req.user._id.toString())
+        );
+        if (!isOrgAdmin && !isAdmin) {
+          return res.status(403).json({ error: 'Only organization admins can change post status.' });
+        }
+      }
       post.status = status;
       if (status === 'published' && !post.publishedAt) {
         post.publishedAt = new Date();
@@ -394,9 +406,12 @@ const deletePost = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized.' });
     }
 
-    // Decrement org postCount if was published
+    // Decrement org postCount if was published (guard against negative values)
     if (post.status === 'published' && post.organizationId) {
-      await Organization.findByIdAndUpdate(post.organizationId, { $inc: { postCount: -1 } });
+      await Organization.findOneAndUpdate(
+        { _id: post.organizationId, postCount: { $gt: 0 } },
+        { $inc: { postCount: -1 } },
+      );
     }
 
     // Remove associated comments
@@ -449,27 +464,32 @@ const toggleLike = async (req, res) => {
 
     const userIdStr = userId.toString();
     const alreadyLiked = post.likedBy.map(String).includes(userIdStr);
-    const alreadyDisliked = post.dislikedBy.map(String).includes(userIdStr);
 
+    // Atomically toggle membership. $addToSet / $pull are idempotent, so concurrent
+    // requests from the same user converge rather than double-applying.
     if (alreadyLiked) {
-      post.likedBy.pull(userId);
+      await Post.updateOne({ _id: post._id }, { $pull: { likedBy: userId } });
     } else {
-      // Remove dislike if present, then add like
-      if (alreadyDisliked) {
-        post.dislikedBy.pull(userId);
-      }
-      post.likedBy.push(userId);
+      await Post.updateOne(
+        { _id: post._id },
+        { $addToSet: { likedBy: userId }, $pull: { dislikedBy: userId } }
+      );
     }
 
-    post.likeCount = post.likedBy.length - post.dislikedBy.length;
-    await post.save();
+    // Recompute likeCount from actual array sizes in a single atomic pipeline
+    // update — prevents drift regardless of concurrent likers.
+    const updated = await Post.findOneAndUpdate(
+      { _id: post._id },
+      [{ $set: { likeCount: { $subtract: [{ $size: '$likedBy' }, { $size: '$dislikedBy' }] } } }],
+      { new: true, projection: { likeCount: 1 } }
+    );
 
     emitToPost(req.params.id, 'post:updated', { postId: req.params.id, authorId: req.user._id.toString() });
 
     res.status(200).json({
       liked: !alreadyLiked,
       disliked: false,
-      likeCount: post.likeCount,
+      likeCount: updated?.likeCount ?? 0,
     });
   } catch (error) {
     console.log('Error in toggleLike:', error.message);
@@ -495,29 +515,29 @@ const togglePostDislike = async (req, res) => {
     }
 
     const userIdStr = userId.toString();
-    const alreadyLiked = post.likedBy.map(String).includes(userIdStr);
     const alreadyDisliked = post.dislikedBy.map(String).includes(userIdStr);
 
     if (alreadyDisliked) {
-      // Un-dislike
-      post.dislikedBy.pull(userId);
+      await Post.updateOne({ _id: post._id }, { $pull: { dislikedBy: userId } });
     } else {
-      // Remove like if present, then add dislike
-      if (alreadyLiked) {
-        post.likedBy.pull(userId);
-      }
-      post.dislikedBy.push(userId);
+      await Post.updateOne(
+        { _id: post._id },
+        { $addToSet: { dislikedBy: userId }, $pull: { likedBy: userId } }
+      );
     }
 
-    post.likeCount = post.likedBy.length - post.dislikedBy.length;
-    await post.save();
+    const updated = await Post.findOneAndUpdate(
+      { _id: post._id },
+      [{ $set: { likeCount: { $subtract: [{ $size: '$likedBy' }, { $size: '$dislikedBy' }] } } }],
+      { new: true, projection: { likeCount: 1 } }
+    );
 
     emitToPost(req.params.id, 'post:updated', { postId: req.params.id, authorId: req.user._id.toString() });
 
     res.status(200).json({
       liked: false,
       disliked: !alreadyDisliked,
-      likeCount: post.likeCount,
+      likeCount: updated?.likeCount ?? 0,
     });
   } catch (error) {
     console.log('Error in togglePostDislike:', error.message);
@@ -679,9 +699,8 @@ const createComment = async (req, res) => {
     });
     await comment.save();
 
-    // Increment post commentCount
-    post.commentCount += 1;
-    await post.save();
+    // Atomic increment avoids read-modify-write drift under concurrent comments.
+    await Post.updateOne({ _id: post._id }, { $inc: { commentCount: 1 } });
 
     // Create notification for parent comment author (if replying and not self-reply)
     if (parentComment && parentComment.authorId._id.toString() !== req.user._id.toString()) {
@@ -784,8 +803,11 @@ const deleteComment = async (req, res) => {
     comment.isDeleted = true;
     await comment.save();
 
-    // Decrement post commentCount
-    await Post.findByIdAndUpdate(comment.postId, { $inc: { commentCount: -1 } });
+    // Guarded decrement: no-op if count is already 0 so we never go negative.
+    await Post.findOneAndUpdate(
+      { _id: comment.postId, commentCount: { $gt: 0 } },
+      { $inc: { commentCount: -1 } }
+    );
 
     emitToPost(comment.postId.toString(), 'comment:deleted', {
       postId: comment.postId.toString(),
@@ -932,14 +954,14 @@ const votePoll = async (req, res) => {
     const userId = req.user._id;
     const userIdStr = userId.toString();
 
-    // Check if user already voted on any option
+    // Pre-checks (validation only — the real guard against double-voting is the
+    // atomic filter below, which rejects the write if the user appears in any
+    // option's voterIds at update time).
     for (const opt of post.poll.options) {
       if (opt.voterIds.map(String).includes(userIdStr)) {
         return res.status(400).json({ error: 'You have already voted.' });
       }
     }
-
-    // Validate all optionIds exist
     const validOptionIds = post.poll.options.map((o) => o.optionId);
     for (const oid of optionIds) {
       if (!validOptionIds.includes(oid)) {
@@ -947,25 +969,38 @@ const votePoll = async (req, res) => {
       }
     }
 
-    // Cast votes
-    for (const opt of post.poll.options) {
-      if (optionIds.includes(opt.optionId)) {
-        opt.voterIds.push(userId);
-        opt.voteCount += 1;
+    // Atomic cast: only applies if the user is not already in ANY option's
+    // voterIds and the poll is not closed. arrayFilters targets only the
+    // selected options for the $addToSet / $inc.
+    const updated = await Post.findOneAndUpdate(
+      {
+        _id: post._id,
+        'poll.options.voterIds': { $ne: userId },
+        'poll.isClosed': { $ne: true },
+      },
+      {
+        $addToSet: { 'poll.options.$[sel].voterIds': userId },
+        $inc: {
+          'poll.options.$[sel].voteCount': 1,
+          'poll.totalVotes': 1,
+        },
+      },
+      {
+        arrayFilters: [{ 'sel.optionId': { $in: optionIds } }],
+        new: true,
       }
+    );
+
+    if (!updated) {
+      return res.status(409).json({ error: 'Unable to vote — you may have already voted, or the poll was just closed.' });
     }
-    post.poll.totalVotes += 1;
 
-    post.markModified('poll');
-    await post.save();
-
-    // Notify poll viewers of vote count change
     emitToPost(req.params.id, 'post:updated', {
       postId: req.params.id,
       authorId: req.user._id.toString(),
     });
 
-    res.status(200).json({ poll: post.poll });
+    res.status(200).json({ poll: updated.poll });
   } catch (error) {
     console.log('Error in votePoll:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
@@ -1030,23 +1065,21 @@ const toggleCommentLike = async (req, res) => {
     const userId = req.user._id;
     const userIdStr = userId.toString();
     const alreadyLiked = comment.likedBy.map(String).includes(userIdStr);
-    const alreadyDisliked = comment.dislikedBy.map(String).includes(userIdStr);
 
     if (alreadyLiked) {
-      // Un-like
-      comment.likedBy.pull(userId);
+      await Comment.updateOne({ _id: comment._id }, { $pull: { likedBy: userId } });
     } else {
-      // Remove dislike if present, then add like
-      if (alreadyDisliked) {
-        comment.dislikedBy.pull(userId);
-      }
-      comment.likedBy.push(userId);
+      await Comment.updateOne(
+        { _id: comment._id },
+        { $addToSet: { likedBy: userId }, $pull: { dislikedBy: userId } }
+      );
     }
 
-    // Recalculate: likes - dislikes
-    comment.likeCount = comment.likedBy.length - comment.dislikedBy.length;
-
-    await comment.save();
+    const updated = await Comment.findOneAndUpdate(
+      { _id: comment._id },
+      [{ $set: { likeCount: { $subtract: [{ $size: '$likedBy' }, { $size: '$dislikedBy' }] } } }],
+      { new: true, projection: { likeCount: 1 } }
+    );
 
     emitToPost(req.params.id, 'comment:updated', {
       postId: req.params.id,
@@ -1057,7 +1090,7 @@ const toggleCommentLike = async (req, res) => {
     res.status(200).json({
       liked: !alreadyLiked,
       disliked: false,
-      likeCount: comment.likeCount,
+      likeCount: updated?.likeCount ?? 0,
     });
   } catch (error) {
     console.log('Error in toggleCommentLike:', error.message);
@@ -1088,24 +1121,22 @@ const toggleCommentDislike = async (req, res) => {
 
     const userId = req.user._id;
     const userIdStr = userId.toString();
-    const alreadyLiked = comment.likedBy.map(String).includes(userIdStr);
     const alreadyDisliked = comment.dislikedBy.map(String).includes(userIdStr);
 
     if (alreadyDisliked) {
-      // Un-dislike
-      comment.dislikedBy.pull(userId);
+      await Comment.updateOne({ _id: comment._id }, { $pull: { dislikedBy: userId } });
     } else {
-      // Remove like if present, then add dislike
-      if (alreadyLiked) {
-        comment.likedBy.pull(userId);
-      }
-      comment.dislikedBy.push(userId);
+      await Comment.updateOne(
+        { _id: comment._id },
+        { $addToSet: { dislikedBy: userId }, $pull: { likedBy: userId } }
+      );
     }
 
-    // Recalculate: likes - dislikes
-    comment.likeCount = comment.likedBy.length - comment.dislikedBy.length;
-
-    await comment.save();
+    const updated = await Comment.findOneAndUpdate(
+      { _id: comment._id },
+      [{ $set: { likeCount: { $subtract: [{ $size: '$likedBy' }, { $size: '$dislikedBy' }] } } }],
+      { new: true, projection: { likeCount: 1 } }
+    );
 
     emitToPost(req.params.id, 'comment:updated', {
       postId: req.params.id,
@@ -1116,7 +1147,7 @@ const toggleCommentDislike = async (req, res) => {
     res.status(200).json({
       liked: false,
       disliked: !alreadyDisliked,
-      likeCount: comment.likeCount,
+      likeCount: updated?.likeCount ?? 0,
     });
   } catch (error) {
     console.log('Error in toggleCommentDislike:', error.message);

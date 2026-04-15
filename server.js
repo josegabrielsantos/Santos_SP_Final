@@ -57,17 +57,28 @@ const writeLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 30, standardHead
 const uploadLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
 // Search: 60 / 1 min
 const searchLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
+// Baseline API limiter (applied broadly to prevent abuse)
+const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
+// High-abuse-risk actions: like/dislike, downloads, joins, add-member
+const actionLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
+
+// Stricter limiters scoped to specific endpoints
+app.use('/api/posts/:id/like', actionLimiter);
+app.use('/api/posts/:id/dislike', actionLimiter);
+app.use('/api/papers/:id/download', actionLimiter);
+app.use('/api/organizations/:id/join', actionLimiter);
+app.use('/api/organizations/:id/members', actionLimiter);
 
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/users', apiLimiter, userRoutes);
 app.use('/api/posts', writeLimiter, postRoutes);
-app.use('/api/organizations', organizationRoutes);
-app.use('/api/papers', paperRoutes);
+app.use('/api/organizations', apiLimiter, organizationRoutes);
+app.use('/api/papers', apiLimiter, paperRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/search', searchLimiter, searchRoutes);
 app.use('/api/upload', uploadLimiter, uploadRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/notifications', apiLimiter, notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/activity', activityRoutes);

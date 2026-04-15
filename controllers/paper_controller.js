@@ -284,9 +284,6 @@ const downloadPaper = async (req, res) => {
       return res.status(400).json({ error: 'No downloadable file is attached to this paper.' });
     }
 
-    paper.downloadCount += 1;
-    await paper.save();
-
     const upstream = await fetch(paper.fileUrl);
     if (!upstream.ok) {
       return res.status(502).json({ error: 'Failed to fetch paper file from storage.' });
@@ -303,7 +300,13 @@ const downloadPaper = async (req, res) => {
     res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length', buffer.length);
-    return res.status(200).send(buffer);
+    res.status(200).send(buffer);
+
+    // Increment only after a successful send, atomically.
+    Paper.updateOne({ _id: paper._id }, { $inc: { downloadCount: 1 } }).catch((err) => {
+      console.log('Failed to increment downloadCount:', err.message);
+    });
+    return;
   } catch (error) {
     console.log('Error in downloadPaper:', error.message);
     res.status(500).json({ error: 'Internal Server Error.' });
