@@ -213,6 +213,7 @@ export default function LandingPage() {
           ].map((feat, i) => (
             <motion.div
               key={feat.title}
+              className="h-full"
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -268,6 +269,7 @@ export default function LandingPage() {
             ].map((obj, i) => (
               <motion.div
                 key={obj.number}
+                className="h-full"
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -358,8 +360,8 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <Card className="group border-border/50 bg-white border border-border transition-all duration-200 hover:border-border/80 hover:-translate-y-0.5">
-      <CardContent className="flex flex-col gap-3 p-6">
+    <Card className="group h-full border-border/50 bg-white border border-border transition-all duration-200 hover:border-border/80 hover:-translate-y-0.5">
+      <CardContent className="flex h-full flex-col gap-3 p-6">
         <div className="flex h-[48px] w-[48px] items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
           {icon}
         </div>
@@ -380,7 +382,7 @@ function ObjectiveCard({
   description: string;
 }) {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-border/50 bg-white p-8 border border-border">
+    <div className="flex h-full flex-col gap-4 rounded-2xl border border-border/50 bg-white p-8 border border-border">
       <span
         className="text-4xl font-extrabold text-primary/15"
         style={{ fontFamily: 'var(--font-heading)' }}

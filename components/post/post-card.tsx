@@ -241,9 +241,10 @@ interface PostCardProps {
   orgAccessRole?: 'member' | 'follower' | 'none';
   isOrgAdmin?: boolean;
   isDetailView?: boolean;
+  isReview?: boolean;
 }
 
-export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, isDetailView = false }: PostCardProps) {
+export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, isDetailView = false, isReview = false }: PostCardProps) {
   const router = useRouter();
   const user = useAppSelector((s) => s.auth.user);
   const userId = user?._id;
@@ -463,7 +464,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
                 <span>{isDetailView ? `Published ${publishedDate}` : timeAgo}</span>
               </div>
             </div>
-            <div className="ml-auto" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+            {!isReview && <div className="ml-auto" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted/50">
@@ -517,7 +518,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
+            </div>}
           </div>
 
           {isDetailView && <div className="mt-4 h-px bg-border/50" />}
@@ -656,7 +657,8 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
           </button>
         </div>
 
-        {/* Engagement + Actions */}
+        {/* Engagement + Actions (hidden in review mode) */}
+        {!isReview && (
         <div className={`border-t border-border ${isDetailView ? 'mx-6 mt-3 py-3' : 'mx-4 mt-2 py-1.5'}`}>
           {(post.likeCount !== 0 || post.commentCount > 0) && (
             <div className="flex items-center gap-3 text-[13px] text-muted-foreground pb-1.5">
@@ -713,6 +715,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
             </button>
           </div>
         </div>
+        )}
       </motion.div>
 
       <DeletePostDialog
@@ -815,6 +818,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
           </div>
         </div>
 
+        {!isReview && (
         <div onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -874,6 +878,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        )}
       </div>
 
       {/* Content */}
@@ -1080,7 +1085,8 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
         </div>
       )}
 
-      {/* Engagement + Actions */}
+      {/* Engagement + Actions (hidden in review mode) */}
+      {!isReview && (
       <div className={`border-t border-border ${isDetailView ? 'mx-6 mt-3 py-3' : 'mx-4 mt-2 py-1.5'}`}>
         {(post.likeCount !== 0 || post.commentCount > 0) && (
           <div className="flex items-center gap-3 text-[13px] text-muted-foreground pb-1.5">
@@ -1137,6 +1143,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
           </button>
         </div>
       </div>
+      )}
     </motion.div>
 
     <DeletePostDialog

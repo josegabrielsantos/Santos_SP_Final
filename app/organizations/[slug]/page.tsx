@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout';
@@ -154,8 +154,20 @@ function PostsSkeleton() {
 }
 
 export default function OrgDetailPage() {
+  return (
+    <Suspense>
+      <OrgDetailContent />
+    </Suspense>
+  );
+}
+
+function OrgDetailContent() {
   const params = useParams<{ slug: string }>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const slug = params.slug;
+  const initialTab = searchParams.get('tab') || 'posts';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const user = useAppSelector((s) => s.auth.user);
   const userId = user?._id;
 
@@ -498,7 +510,7 @@ export default function OrgDetailPage() {
             </Dialog>
 
             {/* Tabs */}
-            <Tabs defaultValue="posts" className="mt-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
               <TabsList className="w-full justify-start rounded-lg border border-border/60 bg-white p-0 border border-border h-auto">
                 <TabsTrigger
                   value="posts"
@@ -879,10 +891,15 @@ export default function OrgDetailPage() {
                             return (
                               <motion.div
                                 key={post._id}
-                                className="rounded-xl border border-border/50 bg-muted/20 p-4"
+                                className="rounded-xl border border-border/50 bg-muted/20 p-4 cursor-pointer transition-colors hover:bg-muted/40"
                                 initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.04, duration: 0.22 }}
+                                onClick={(e) => {
+                                  const target = e.target as HTMLElement;
+                                  if (target.closest('a, button, [role="button"]')) return;
+                                  router.push(`/posts/${post._id}/review?org=${slug}`);
+                                }}
                               >
                                 <div className="flex items-start justify-between gap-4">
                                   <div className="flex items-start gap-3 min-w-0">
@@ -894,7 +911,9 @@ export default function OrgDetailPage() {
                                       <Link href={`/profile/${authorProfileId}`} className="text-[15px] font-semibold text-foreground hover:underline">
                                         {authorName}
                                       </Link>
-                                      <p className="mt-0.5 text-[17px] font-semibold text-foreground line-clamp-2">{post.title}</p>
+                                      <Link href={`/posts/${post._id}/review?org=${slug}`} className="mt-0.5 block text-[17px] font-semibold text-foreground line-clamp-2 hover:text-primary transition-colors">
+                                        {post.title}
+                                      </Link>
                                       {post.bodyText && (
                                         <p className="mt-1 text-[14px] text-muted-foreground line-clamp-2">{post.bodyText}</p>
                                       )}
