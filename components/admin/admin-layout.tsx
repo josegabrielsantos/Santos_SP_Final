@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAppSelector } from '@/store/hooks';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Users, Building2, ArrowLeft, ShieldCheck, BarChart2, MessageSquare, ClipboardList, ScrollText } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, ArrowLeft, ShieldCheck, BarChart2, MessageSquare, ClipboardList, ScrollText, Flag } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useOrgRequestPendingCount } from '@/lib/api/org-requests';
+import { useAdminReports } from '@/lib/api/reports';
 import { useEffect } from 'react';
 
 const adminNav = [
@@ -16,6 +17,7 @@ const adminNav = [
   { label: 'Users', href: '/admin/users', icon: Users },
   { label: 'Organizations', href: '/admin/organizations', icon: Building2 },
   { label: 'Org Requests', href: '/admin/org-requests', icon: ClipboardList },
+  { label: 'Reports', href: '/admin/reports', icon: Flag },
   { label: 'Moderation Logs', href: '/admin/moderation-logs', icon: ScrollText },
 ];
 
@@ -25,6 +27,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = useAppSelector((s) => s.auth.user);
   const { data: pendingCountData } = useOrgRequestPendingCount();
   const pendingCount = pendingCountData?.count ?? 0;
+  const { data: reportsData } = useAdminReports({ status: 'open' });
+  const openReportCount = reportsData?.openCount ?? 0;
 
   // Redirect non-admins
   useEffect(() => {
@@ -68,6 +72,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 {item.href === '/admin/org-requests' && pendingCount > 0 && (
                   <Badge className="ml-auto h-5 min-w-[20px] justify-center rounded-full bg-destructive px-1.5 text-[11px] font-bold text-white">
                     {pendingCount}
+                  </Badge>
+                )}
+                {item.href === '/admin/reports' && openReportCount > 0 && (
+                  <Badge className="ml-auto h-5 min-w-[20px] justify-center rounded-full bg-destructive px-1.5 text-[11px] font-bold text-white">
+                    {openReportCount}
                   </Badge>
                 )}
               </Link>

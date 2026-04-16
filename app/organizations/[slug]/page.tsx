@@ -26,6 +26,8 @@ import {
   useRejectPost,
 } from '@/lib/api/organizations';
 import { useOrgAnalytics } from '@/lib/api/analytics';
+import { useOrgReports, useUpdateReport } from '@/lib/api/reports';
+import { useAdminToggleHidePost, useAdminDeletePost } from '@/lib/api/admin';
 import {
   ResponsiveContainer,
   BarChart,
@@ -73,6 +75,11 @@ import {
   UploadCloud,
   BookOpen,
   Download,
+  Flag,
+  Eye,
+  EyeOff,
+  Trash2,
+  XCircle,
 } from 'lucide-react';
 import { BulkImportDialog } from '@/components/paper/bulk-import-dialog';
 import { useOrgPapers } from '@/lib/api/papers';
@@ -194,6 +201,12 @@ function OrgDetailContent() {
 
   const { data: pendingPostsData } = useOrgPendingPosts(orgId);
   const pendingCount = pendingPostsData?.posts.length ?? 0;
+  const [reportStatusFilter, setReportStatusFilter] = useState('all');
+  const { data: orgReportsData } = useOrgReports(orgId, { status: reportStatusFilter });
+  const reportOpenCount = orgReportsData?.openCount ?? 0;
+  const updateReport = useUpdateReport();
+  const adminHidePost = useAdminToggleHidePost();
+  const adminDeletePostMod = useAdminDeletePost();
   const { data: orgAnalytics } = useOrgAnalytics(orgId);
   const queryClient = useQueryClient();
 
@@ -559,6 +572,20 @@ function OrgDetailContent() {
                     {pendingCount > 0 && (
                       <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-kain-amber text-[11px] font-bold text-white">
                         {pendingCount}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                )}
+                {canManage && (
+                  <TabsTrigger
+                    value="reports"
+                    className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  >
+                    <Flag className="h-4 w-4" />
+                    Reports
+                    {reportOpenCount > 0 && (
+                      <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[11px] font-bold text-white">
+                        {reportOpenCount}
                       </span>
                     )}
                   </TabsTrigger>
@@ -948,6 +975,167 @@ function OrgDetailContent() {
                         <div className="flex flex-col items-center py-8 text-center">
                           <Inbox className="mb-2 h-8 w-8 text-muted-foreground/30" />
                           <p className="text-[15px] text-muted-foreground">No posts pending review.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
+
+              {/* Reports tab */}
+              {canManage && (
+                <TabsContent value="reports" className="mt-4">
+                  <Card className="rounded-xl border-border/60 bg-white border border-border">
+                    <CardContent className="p-6">
+                      {/* Status filter */}
+                      <div className="flex items-center gap-2 mb-4">
+                        {(['all', 'open', 'action_taken', 'dismissed'] as const).map((s) => (
+                          <Button
+                            key={s}
+                            size="default"
+                            variant={reportStatusFilter === s ? 'default' : 'outline'}
+                            className="gap-1.5 text-[14px]"
+                            onClick={() => setReportStatusFilter(s)}
+                          >
+                            {s === 'all' ? 'All' : s === 'open' ? 'Open' : s === 'action_taken' ? 'Action Taken' : 'Dismissed'}
+                          </Button>
+                        ))}
+                      </div>
+
+                      {orgReportsData?.reports && orgReportsData.reports.length > 0 ? (
+                        <div className="flex flex-col gap-4">
+                          {orgReportsData.reports.map((report: any, index: number) => {
+                            const target = report.targetId;
+                            const postTitle = typeof target === 'object' ? target?.title : null;
+                            const postBody = typeof target === 'object' ? target?.bodyText : null;
+                            const postAuthor = typeof target === 'object' && target?.authorId ? target.authorId.displayName : null;
+                            const reporterName = report.reporterId?.displayName || 'Unknown';
+                            const reporterAvatar = report.reporterId?.avatar ?? undefined;
+                            const reviewerName = report.reviewedBy?.displayName || null;
+                            const targetPostId = typeof target === 'object' ? target?._id : report.targetId;
+
+                            const statusColor =
+                              report.status === 'open' ? 'bg-destructive/10 text-destructive border-destructive/20' :
+                              report.status === 'action_taken' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              'bg-muted text-muted-foreground border-border';
+
+                            const reasonLabel = report.reason.replace('_', ' ').replace(/^\w/, (c: string) => c.toUpperCase());
+
+                            return (
+                              <motion.div
+                                key={report._id}
+                                className="rounded-xl border border-border/50 bg-muted/20 p-4"
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.04, duration: 0.22 }}
+                              >
+                                {/* Header: status + type + reason */}
+                                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                  <Badge className={`text-[11px] font-semibold px-2 py-0 ${statusColor}`}>
+                                    {report.status === 'open' ? 'Open' : report.status === 'action_taken' ? 'Action Taken' : 'Dismissed'}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-[11px] px-2 py-0">Post</Badge>
+                                  <Badge variant="outline" className="text-[11px] px-2 py-0">{reasonLabel}</Badge>
+                                </div>
+
+                                {/* Post preview */}
+                                {postTitle && (
+                                  <p className="text-[15px] font-semibold text-foreground line-clamp-2">{postTitle}</p>
+                                )}
+                                {postBody && (
+                                  <p className="mt-0.5 text-[13px] text-muted-foreground line-clamp-2">{postBody}</p>
+                                )}
+                                {postAuthor && (
+                                  <p className="mt-1 text-[12px] text-muted-foreground">Post by <span className="font-medium text-foreground/70">{postAuthor}</span></p>
+                                )}
+
+                                {/* Reporter info */}
+                                <div className="flex items-center gap-2 mt-3">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={reporterAvatar} alt={reporterName} />
+                                    <AvatarFallback className="text-[10px]">{initials(reporterName)}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-[12px] text-muted-foreground">
+                                    Reported by <span className="font-medium text-foreground/70">{reporterName}</span>
+                                    {' · '}
+                                    {new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                  </span>
+                                </div>
+
+                                {/* Reporter details */}
+                                {report.details && (
+                                  <p className="mt-2 rounded-md bg-muted/40 px-3 py-2 text-[13px] text-muted-foreground italic">&ldquo;{report.details}&rdquo;</p>
+                                )}
+
+                                {/* Review info (for handled reports) */}
+                                {report.status !== 'open' && reviewerName && (
+                                  <div className="mt-2 text-[12px] text-muted-foreground">
+                                    Reviewed by <span className="font-medium text-foreground/70">{reviewerName}</span>
+                                    {report.actionTaken && <> · Action: <span className="font-medium">{report.actionTaken.replace('_', ' ')}</span></>}
+                                    {report.reviewNote && <> · Note: &ldquo;{report.reviewNote}&rdquo;</>}
+                                  </div>
+                                )}
+
+                                {/* Actions (for open reports) */}
+                                {report.status === 'open' && (
+                                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
+                                    <Button
+                                      size="default"
+                                      variant="outline"
+                                      className="gap-1.5 text-[14px]"
+                                      asChild
+                                    >
+                                      <Link href={`/posts/${targetPostId}`}>
+                                        <Eye className="h-4 w-4" />
+                                        View Post
+                                      </Link>
+                                    </Button>
+                                    <Button
+                                      size="default"
+                                      variant="outline"
+                                      className="gap-1.5 text-[14px] text-orange-600 hover:text-orange-600"
+                                      onClick={async () => {
+                                        await adminHidePost.mutateAsync({ postId: targetPostId });
+                                        updateReport.mutate({ reportId: report._id, status: 'action_taken', actionTaken: 'post_hidden' });
+                                      }}
+                                      disabled={adminHidePost.isPending}
+                                    >
+                                      <EyeOff className="h-4 w-4" />
+                                      Hide Post
+                                    </Button>
+                                    <Button
+                                      size="default"
+                                      variant="outline"
+                                      className="gap-1.5 text-[14px] text-destructive hover:text-destructive"
+                                      onClick={async () => {
+                                        await adminDeletePostMod.mutateAsync({ postId: targetPostId });
+                                        updateReport.mutate({ reportId: report._id, status: 'action_taken', actionTaken: 'post_deleted' });
+                                      }}
+                                      disabled={adminDeletePostMod.isPending}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Delete Post
+                                    </Button>
+                                    <Button
+                                      size="default"
+                                      variant="outline"
+                                      className="gap-1.5 text-[14px] text-muted-foreground"
+                                      onClick={() => updateReport.mutate({ reportId: report._id, status: 'dismissed' })}
+                                      disabled={updateReport.isPending}
+                                    >
+                                      <XCircle className="h-4 w-4" />
+                                      Dismiss
+                                    </Button>
+                                  </div>
+                                )}
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center py-8 text-center">
+                          <Flag className="mb-2 h-8 w-8 text-muted-foreground/30" />
+                          <p className="text-[15px] text-muted-foreground">No reports to review.</p>
                         </div>
                       )}
                     </CardContent>

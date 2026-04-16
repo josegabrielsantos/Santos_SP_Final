@@ -38,7 +38,8 @@ import {
   Pencil,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useToggleLike, useTogglePostDislike, useVotePoll, useReportPost, useClosePoll, useDeletePost } from '@/lib/api/posts';
+import { useToggleLike, useTogglePostDislike, useVotePoll, useClosePoll, useDeletePost } from '@/lib/api/posts';
+import { ReportDialog } from '@/components/report/report-dialog';
 import { useAdminToggleHidePost, useAdminDeletePost } from '@/lib/api/admin';
 import { useDownloadPaper } from '@/lib/api/papers';
 import { useAppSelector } from '@/store/hooks';
@@ -252,7 +253,6 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
   const toggleLike = useToggleLike();
   const toggleDislike = useTogglePostDislike();
   const votePoll = useVotePoll();
-  const reportPost = useReportPost();
   const closePoll = useClosePoll();
   const deletePost = useDeletePost();
   const downloadPaperMutation = useDownloadPaper();
@@ -276,6 +276,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
   const [showAdminHideConfirm, setShowAdminHideConfirm] = useState(false);
   const [showAdminDeleteConfirm, setShowAdminDeleteConfirm] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   useEffect(() => {
     const el = bodyRef.current;
@@ -494,7 +495,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
                   {!isPostAuthor && !canModeratePost && (
                     <DropdownMenuItem
                       className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
-                      onClick={() => reportPost.mutate(post._id)}
+                      onClick={() => setShowReportDialog(true)}
                     >
                       <Flag className="h-4 w-4" /> Report post
                     </DropdownMenuItem>
@@ -754,6 +755,13 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
         showReason
         onConfirm={async (reason) => { await adminDeletePost.mutateAsync({ postId: post._id, reason }); router.push('/home'); }}
       />
+      <ReportDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        targetType="post"
+        targetId={post._id}
+        targetLabel={post.title}
+      />
     </>
     );
   }
@@ -853,7 +861,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
               {!isPostAuthor && !canModeratePost && (
                 <DropdownMenuItem
                   className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
-                  onClick={() => reportPost.mutate(post._id)}
+                  onClick={() => setShowReportDialog(true)}
                 >
                   <Flag className="h-4 w-4" /> Report post
                 </DropdownMenuItem>
@@ -1181,6 +1189,13 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
       variant="destructive"
       showReason
       onConfirm={async (reason) => { await adminDeletePost.mutateAsync({ postId: post._id, reason }); router.push('/home'); }}
+    />
+    <ReportDialog
+      open={showReportDialog}
+      onOpenChange={setShowReportDialog}
+      targetType="post"
+      targetId={post._id}
+      targetLabel={post.title}
     />
     </>
   );

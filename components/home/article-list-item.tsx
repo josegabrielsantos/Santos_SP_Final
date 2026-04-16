@@ -30,7 +30,8 @@ import {
 import { TopicBadge } from '@/components/ui/topic-badge';
 import { MediaViewer } from '@/components/post/media-viewer';
 import { useAppSelector } from '@/store/hooks';
-import { useReportPost, useDeletePost } from '@/lib/api/posts';
+import { useDeletePost } from '@/lib/api/posts';
+import { ReportDialog } from '@/components/report/report-dialog';
 import { useAdminToggleHidePost, useAdminDeletePost } from '@/lib/api/admin';
 import {
   AlertDialog,
@@ -77,7 +78,7 @@ export function ArticleListItem({ post, isOrgAdmin = false }: ArticleListItemPro
   const isWebsiteAdmin = user?.role === 'website_admin';
   const canModeratePost = isWebsiteAdmin || isOrgAdmin;
 
-  const reportPost = useReportPost();
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const deletePost = useDeletePost();
   const adminHidePost = useAdminToggleHidePost();
   const adminDeletePost = useAdminDeletePost();
@@ -177,7 +178,7 @@ export function ArticleListItem({ post, isOrgAdmin = false }: ArticleListItemPro
                 {!isPostAuthor && !canModeratePost && userId && (
                   <DropdownMenuItem
                     className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
-                    onClick={() => reportPost.mutate(post._id)}
+                    onClick={() => setShowReportDialog(true)}
                   >
                     <Flag className="h-4 w-4" /> Report post
                   </DropdownMenuItem>
@@ -453,6 +454,13 @@ export function ArticleListItem({ post, isOrgAdmin = false }: ArticleListItemPro
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <ReportDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        targetType="post"
+        targetId={post._id}
+        targetLabel={post.title}
+      />
     </>
   );
 }
