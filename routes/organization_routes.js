@@ -24,6 +24,7 @@ import {
   unpinOrgPost,
   getOrgPinnedPosts,
 } from '../controllers/organization_controller.js';
+import { getOrgReports } from '../controllers/report_controller.js';
 import { protectRoute, requireWebsiteAdmin, requireOrgAdmin, optionalAuth } from '../middleware/protectRoute.js';
 
 const router = express.Router();
@@ -61,6 +62,9 @@ router.post('/:id/posts/pin', protectRoute, requireOrgAdmin, pinOrgPost);
 router.post('/:id/posts/:postId/approve', protectRoute, requireOrgAdmin, approveOrgPost);
 router.post('/:id/posts/:postId/reject', protectRoute, requireOrgAdmin, rejectOrgPost);
 router.delete('/:id/posts/:postId/pin', protectRoute, requireOrgAdmin, unpinOrgPost);
+
+// Reports (org admin only)
+router.get('/:id/reports', protectRoute, requireOrgAdmin, getOrgReports);
 
 // Org posts (public)
 router.get('/:id/posts', getOrganizationPosts);

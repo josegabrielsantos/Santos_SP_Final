@@ -24,6 +24,7 @@ import activityRoutes from './routes/activity_routes.js';
 import recommendationRoutes from './routes/recommendation_routes.js';
 import orgRequestRoutes from './routes/org_request_routes.js';
 import insightRoutes from './routes/insight_routes.js';
+import reportRoutes from './routes/report_routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -85,6 +86,7 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/org-requests', orgRequestRoutes);
 app.use('/api/insights', insightRoutes);
+app.use('/api/reports', apiLimiter, reportRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));

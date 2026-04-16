@@ -12,6 +12,7 @@ import {
   toggleBanUser,
   getModerationLogs,
 } from '../controllers/moderation_controller.js';
+import { getAdminReports } from '../controllers/report_controller.js';
 
 const router = express.Router();
 
@@ -36,6 +37,9 @@ router.delete('/comments/:id', protectRoute, adminDeleteComment);
 
 // Moderation logs
 router.get('/moderation-logs', protectRoute, requireWebsiteAdmin, getModerationLogs);
+
+// Reports
+router.get('/reports', protectRoute, requireWebsiteAdmin, getAdminReports);
 
 router.post('/reindex', protectRoute, requireWebsiteAdmin, async (req, res) => {
   try {

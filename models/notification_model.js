@@ -22,6 +22,7 @@ const notificationSchema = new mongoose.Schema(
         'org_request_submitted', 'org_request_approved', 'org_request_rejected',
         'org_request_followup', 'org_request_reply',
         'bulk_upload_complete',
+        'report_received',
       ],
       required: true,
     },
