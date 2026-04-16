@@ -18,14 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCreatePost, useParsePdf } from '@/lib/api/posts';
+import { useCreatePost, useParsePdf, useUpdatePost } from '@/lib/api/posts';
 import { useEnrichDoi } from '@/lib/api/papers';
 import { DuplicatePaperDialog, type DuplicateEntry } from '@/components/paper/duplicate-paper-dialog';
 import { AxiosError } from 'axios';
 import { useUploadFile, useDeleteUploadedFile } from '@/lib/api/upload';
 import { useAppSelector } from '@/store/hooks';
 import { useUserOrganizations } from '@/lib/api/users';
-import type { PostType, PaperMetadataInput } from '@/lib/types';
+import type { PostType, PaperMetadataInput, Post } from '@/lib/types';
 import {
   Plus,
   X,
@@ -69,10 +69,27 @@ interface PostFormValues {
 interface CreatePostDialogProps {
   children?: React.ReactNode;
   defaultOrgId?: string;
+  mode?: 'create' | 'edit';
+  editingPost?: Post;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogProps) {
-  const [open, setOpen] = useState(false);
+export function CreatePostDialog({
+  children,
+  defaultOrgId,
+  mode = 'create',
+  editingPost,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: CreatePostDialogProps) {
+  const isEdit = mode === 'edit' && !!editingPost;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (next: boolean) => {
+    if (controlledOnOpenChange) controlledOnOpenChange(next);
+    else setInternalOpen(next);
+  };
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [tags, setTags] = useState<string[]>(['']);
@@ -98,6 +115,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
 
   const user = useAppSelector((s) => s.auth.user);
   const createPost = useCreatePost();
+  const updatePost = useUpdatePost();
   const uploadFile = useUploadFile();
   const deleteUploadedFile = useDeleteUploadedFile();
   const parsePdf = useParsePdf();
@@ -134,12 +152,37 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
   const selectedType = watch('type');
   const skipTempCleanupOnCloseRef = useRef(false);
 
-  // Auto-select when user has exactly one org
+  // Auto-select when user has exactly one org (create mode only)
   useEffect(() => {
+    if (isEdit) return;
     if (!defaultOrgId && userOrgs && userOrgs.length === 1) {
       setValue('organizationId', userOrgs[0]._id);
     }
-  }, [userOrgs, defaultOrgId, setValue]);
+  }, [userOrgs, defaultOrgId, setValue, isEdit]);
+
+  // Prefill form state from editingPost when dialog opens in edit mode.
+  // Editor content is set via commands.setContent after the editor is ready.
+  useEffect(() => {
+    if (!isEdit || !open || !editingPost) return;
+    const orgId =
+      typeof editingPost.organizationId === 'object' && editingPost.organizationId
+        ? editingPost.organizationId._id
+        : typeof editingPost.organizationId === 'string'
+          ? editingPost.organizationId
+          : 'personal';
+    reset({
+      title: editingPost.title || '',
+      type: (editingPost.type as PostType) || 'post',
+      organizationId: orgId,
+      pollQuestion: editingPost.poll?.question || '',
+      pollIsMultiple: editingPost.poll?.isMultiple || false,
+      pollOptions: editingPost.poll?.options?.length
+        ? editingPost.poll.options.map((o) => ({ id: o.optionId, text: o.text }))
+        : [{ id: optionId(), text: '' }, { id: optionId(), text: '' }],
+    });
+    setMediaUrls(editingPost.mediaUrls || []);
+    setTags(editingPost.tags?.length ? [...editingPost.tags] : ['']);
+  }, [isEdit, open, editingPost, reset]);
 
   const isTempUrl = useCallback((url: string) => /\/temp\//i.test(url), []);
 
@@ -166,6 +209,16 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
       },
     },
   });
+
+  // Populate editor with existing body when opening in edit mode
+  useEffect(() => {
+    if (!isEdit || !open || !editor || !editingPost) return;
+    if (editingPost.body) {
+      editor.commands.setContent(editingPost.body as object);
+    } else {
+      editor.commands.setContent(editingPost.bodyText || '');
+    }
+  }, [isEdit, open, editor, editingPost]);
 
   const handleFileUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -362,6 +415,36 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
     // Clear previous submit errors
     setSubmitError('');
 
+    // ─── Edit mode branch ───────────────────────────────────────────
+    // Backend accepts only: title, body, bodyText, tags, mediaUrls, paperIds, poll, status.
+    // Type and organizationId are immutable post-creation. Poll is intentionally
+    // omitted here to avoid wiping existing voterIds / voteCount.
+    if (isEdit && editingPost) {
+      try {
+        await updatePost.mutateAsync({
+          id: editingPost._id,
+          title: values.title,
+          body: bodyJson,
+          bodyText,
+          tags: cleanTags,
+          mediaUrls,
+        });
+        reset();
+        editor?.commands.clearContent();
+        setMediaUrls([]);
+        setTags(['']);
+        setSubmitError('');
+        setOpen(false);
+      } catch (err) {
+        const msg =
+          err instanceof AxiosError
+            ? (err.response?.data as { error?: string })?.error
+            : 'Failed to save changes.';
+        setSubmitError(msg || 'Failed to save changes.');
+      }
+      return;
+    }
+
     // Enforce organization for research papers
     if (selectedType === 'research_paper') {
       if (!values.organizationId || values.organizationId === 'personal') {
@@ -463,7 +546,9 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
   };
 
   const handleDialogOpenChange = async (nextOpen: boolean) => {
-    if (!nextOpen && !skipTempCleanupOnCloseRef.current) {
+    // In edit mode, existing media URLs are the post's persisted files — not
+    // temp uploads — so skip the temp-cleanup path entirely.
+    if (!isEdit && !nextOpen && !skipTempCleanupOnCloseRef.current) {
       await cleanupTempUploads();
       setMediaUrls((prev) => prev.filter((url) => !isTempUrl(url)));
       setPaperPdfUrl(null);
@@ -477,19 +562,22 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
   return (
     <>
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogTrigger asChild>
-        {children ?? (
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create Post
-          </Button>
-        )}
-      </DialogTrigger>
+      {/* Omit the trigger when the dialog is controlled externally with no children. */}
+      {(children || controlledOpen === undefined) && (
+        <DialogTrigger asChild>
+          {children ?? (
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create Post
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
 
       <DialogContent className={`max-h-[90vh] overflow-y-auto ${selectedType === 'research_paper' ? 'sm:max-w-4xl' : 'sm:max-w-3xl'}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
-            Submit Post
+            {isEdit ? 'Edit Post' : 'Submit Post'}
           </DialogTitle>
         </DialogHeader>
 
@@ -516,7 +604,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
                 name="organizationId"
                 control={control}
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select organization" />
                     </SelectTrigger>
@@ -533,7 +621,10 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
                   </Select>
                 )}
               />
-              {selectedType === 'research_paper' && (
+              {isEdit && (
+                <p className="text-[12px] text-muted-foreground/70">Organization cannot be changed after posting.</p>
+              )}
+              {!isEdit && selectedType === 'research_paper' && (
                 <p className="text-[12px] text-amber-600">Research papers must belong to an organization.</p>
               )}
             </div>
@@ -545,7 +636,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
                 name="type"
                 control={control}
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
@@ -629,8 +720,8 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
             </div>
           </div>
 
-          {/* Paper Share – AI-powered metadata extraction */}
-          {selectedType === 'research_paper' && !paperMetadataLoaded && !parsingPdf && (
+          {/* Paper Share – AI-powered metadata extraction (create mode only) */}
+          {!isEdit && selectedType === 'research_paper' && !paperMetadataLoaded && !parsingPdf && (
             <div className="flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-blue-200 bg-blue-50/20 p-6 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100">
                 <Upload className="h-7 w-7 text-blue-600" />
@@ -662,7 +753,7 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
           )}
 
           {/* AI parsing in progress */}
-          {selectedType === 'research_paper' && parsingPdf && (
+          {!isEdit && selectedType === 'research_paper' && parsingPdf && (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-blue-200 bg-blue-50/30 p-6 text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
                 <Sparkles className="h-6 w-6 animate-pulse text-blue-600" />
@@ -678,15 +769,15 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
           )}
 
           {/* Parse error */}
-          {selectedType === 'research_paper' && parseError && (
+          {!isEdit && selectedType === 'research_paper' && parseError && (
             <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/50 px-3 py-2 text-[14px] text-amber-800">
               <AlertCircle className="h-4 w-4 shrink-0" />
               {parseError}
             </div>
           )}
 
-          {/* Paper metadata fields — shown after AI parsing or manual trigger */}
-          {selectedType === 'research_paper' && paperMetadataLoaded && (
+          {/* Paper metadata fields — shown after AI parsing or manual trigger (create mode only) */}
+          {!isEdit && selectedType === 'research_paper' && paperMetadataLoaded && (
             <div className="flex flex-col gap-4 rounded-lg border border-blue-200 bg-blue-50/30 p-4">
               <div className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-blue-600" />
@@ -856,8 +947,16 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
             </div>
           )}
 
-          {/* Poll section */}
-          {selectedType === 'poll' && (
+          {/* Poll read-only notice in edit mode */}
+          {isEdit && selectedType === 'poll' && (
+            <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-[14px] text-muted-foreground">
+              <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span>Poll options can&apos;t be edited after publishing. You can still update the title, body, and keywords.</span>
+            </div>
+          )}
+
+          {/* Poll section (create mode only — editing polls would clobber existing votes) */}
+          {!isEdit && selectedType === 'poll' && (
             <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-4">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-primary" />
@@ -1041,8 +1140,8 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
             </div>
           )}
 
-          {/* Org approval notice */}
-          {watch('organizationId') && watch('organizationId') !== 'personal' && (
+          {/* Org approval notice (create mode only; edits don't re-trigger moderation) */}
+          {!isEdit && watch('organizationId') && watch('organizationId') !== 'personal' && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-[14px] text-amber-800">
               <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
               <div>
@@ -1060,21 +1159,25 @@ export function CreatePostDialog({ children, defaultOrgId }: CreatePostDialogPro
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              disabled={createPost.isPending}
+              disabled={createPost.isPending || updatePost.isPending}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               className="gap-2"
-              disabled={createPost.isPending}
+              disabled={createPost.isPending || updatePost.isPending}
             >
-              {createPost.isPending ? (
+              {createPost.isPending || updatePost.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Send className="h-4 w-4" />
               )}
-              {watch('organizationId') && watch('organizationId') !== 'personal' ? 'Submit for Review' : 'Publish'}
+              {isEdit
+                ? 'Save changes'
+                : watch('organizationId') && watch('organizationId') !== 'personal'
+                  ? 'Submit for Review'
+                  : 'Publish'}
             </Button>
           </div>
         </form>

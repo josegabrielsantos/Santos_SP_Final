@@ -35,6 +35,7 @@ import {
   Eye,
   Trash2,
   Share2,
+  Pencil,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToggleLike, useTogglePostDislike, useVotePoll, useReportPost, useClosePoll, useDeletePost } from '@/lib/api/posts';
@@ -45,6 +46,7 @@ import { useViewTracking } from '@/hooks/useViewTracking';
 import type { Post } from '@/lib/types';
 import { formatDistanceToNow, format } from 'date-fns';
 import { MediaGallery } from './media-gallery';
+import { CreatePostDialog } from './create-post-dialog';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -272,6 +274,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAdminHideConfirm, setShowAdminHideConfirm] = useState(false);
   const [showAdminDeleteConfirm, setShowAdminDeleteConfirm] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     const el = bodyRef.current;
@@ -471,6 +474,14 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
                   <DropdownMenuItem className="cursor-pointer gap-2 text-[13px]">
                     <Bookmark className="h-4 w-4" /> Save post
                   </DropdownMenuItem>
+                  {isPostAuthor && post.type !== 'research_paper' && (
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2 text-[13px]"
+                      onClick={() => setShowEditDialog(true)}
+                    >
+                      <Pencil className="h-4 w-4" /> Edit post
+                    </DropdownMenuItem>
+                  )}
                   {isPostAuthor && (
                     <DropdownMenuItem
                       className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
@@ -710,6 +721,14 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
         title={post.title}
         onConfirm={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
       />
+      {isPostAuthor && post.type !== 'research_paper' && (
+        <CreatePostDialog
+          mode="edit"
+          editingPost={post}
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+        />
+      )}
       <AdminModerationDialog
         open={showAdminHideConfirm}
         onOpenChange={setShowAdminHideConfirm}
@@ -811,6 +830,14 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
               <DropdownMenuItem className="cursor-pointer gap-2 text-[13px]">
                 <Bookmark className="h-4 w-4" /> Save post
               </DropdownMenuItem>
+              {isPostAuthor && (
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2 text-[13px]"
+                  onClick={(e) => { e.stopPropagation(); setShowEditDialog(true); }}
+                >
+                  <Pencil className="h-4 w-4" /> Edit post
+                </DropdownMenuItem>
+              )}
               {isPostAuthor && (
                 <DropdownMenuItem
                   className="cursor-pointer gap-2 text-[13px] text-destructive focus:text-destructive"
@@ -1118,6 +1145,14 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
       title={post.title}
       onConfirm={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
     />
+    {isPostAuthor && (
+      <CreatePostDialog
+        mode="edit"
+        editingPost={post}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+      />
+    )}
     <AdminModerationDialog
       open={showAdminHideConfirm}
       onOpenChange={setShowAdminHideConfirm}
