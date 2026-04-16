@@ -311,8 +311,21 @@ const getPost = async (req, res) => {
     // Hide non-published from non-owners
     if (post.status !== 'published') {
       const isOwner = req.user && post.authorId._id.toString() === req.user._id.toString();
-      const isAdmin = req.user && req.user.role === 'website_admin';
-      if (!isOwner && !isAdmin) {
+      const isWebAdmin = req.user && req.user.role === 'website_admin';
+
+      // Allow org admins/owners to view pending posts in their org
+      let isOrgAdmin = false;
+      if (req.user && post.organizationId) {
+        const orgId = typeof post.organizationId === 'object' ? post.organizationId._id : post.organizationId;
+        const org = await Organization.findById(orgId).select('ownerId adminIds');
+        if (org) {
+          isOrgAdmin =
+            org.ownerId.toString() === req.user._id.toString() ||
+            (org.adminIds || []).some((id) => id.toString() === req.user._id.toString());
+        }
+      }
+
+      if (!isOwner && !isWebAdmin && !isOrgAdmin) {
         return res.status(404).json({ error: 'Post not found.' });
       }
     }

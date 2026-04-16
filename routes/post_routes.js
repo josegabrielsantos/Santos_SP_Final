@@ -33,7 +33,7 @@ router.delete('/featured/:postId', protectRoute, requireWebsiteAdmin, removeFeat
 // CRUD
 router.post('/', protectRoute, createPost);
 router.get('/', getPosts);
-router.get('/:id', getPost);
+router.get('/:id', optionalAuth, getPost);
 router.put('/:id', protectRoute, updatePost);
 router.delete('/:id', protectRoute, deletePost);
 
