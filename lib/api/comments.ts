@@ -111,6 +111,49 @@ export function useCreateComment() {
   });
 }
 
+// ─── Update comment ─────────────────────────────────────────────
+
+export function useUpdateComment() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ postId, commentId, body }: { postId: string; commentId: string; body: string }) => {
+      const { data } = await axiosInstance.put<Comment>(`/posts/${postId}/comments/${commentId}`, { body });
+      return data;
+    },
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: ['comments', vars.postId] });
+      await qc.cancelQueries({ queryKey: ['replies'] });
+
+      const commentsSnap = qc.getQueriesData<InfiniteData<CommentsResponse>>({ queryKey: ['comments', vars.postId] });
+      const repliesSnap = qc.getQueriesData<InfiniteData<RepliesResponse>>({ queryKey: ['replies'] });
+
+      const update = (c: Comment) => ({ ...c, body: vars.body, isEdited: true });
+
+      qc.setQueriesData<InfiniteData<CommentsResponse>>(
+        { queryKey: ['comments', vars.postId] },
+        (old) => old ? { ...old, pages: patchCommentsPages(old.pages, vars.commentId, update) } : old,
+      );
+      qc.setQueriesData<InfiniteData<RepliesResponse>>(
+        { queryKey: ['replies'] },
+        (old) => old ? { ...old, pages: patchRepliesPages(old.pages, vars.commentId, update) } : old,
+      );
+
+      return { commentsSnap, repliesSnap };
+    },
+    onError: (err, vars, ctx) => {
+      ctx?.commentsSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
+      ctx?.repliesSnap?.forEach(([key, data]) => data && qc.setQueryData(key, data));
+      const msg = err instanceof AxiosError ? (err.response?.data as { error?: string })?.error : undefined;
+      if (msg) toast.error(msg);
+    },
+    onSettled: (_d, _e, vars) => {
+      qc.invalidateQueries({ queryKey: ['comments', vars.postId] });
+      qc.invalidateQueries({ queryKey: ['replies'] });
+    },
+  });
+}
+
 // ─── Delete comment ─────────────────────────────────────────────
 
 export function useDeleteComment() {

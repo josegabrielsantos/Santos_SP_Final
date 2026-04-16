@@ -235,6 +235,7 @@ export interface Comment {
   likeCount: number;
   isHidden: boolean;
   isDeleted: boolean;
+  isEdited: boolean;
   createdAt: string;
   updatedAt: string;
 }

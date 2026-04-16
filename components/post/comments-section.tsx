@@ -11,11 +11,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import Link from 'next/link';
-import { ThumbsUp, ThumbsDown, Reply, Trash2, Loader2, ChevronDown, ArrowUpDown, EyeOff, Eye, ShieldAlert } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Reply, Trash2, Loader2, ChevronDown, ArrowUpDown, EyeOff, Eye, ShieldAlert, Pencil } from 'lucide-react';
 import {
   useComments,
   useReplies,
   useCreateComment,
+  useUpdateComment,
   useDeleteComment,
   useToggleCommentLike,
   useToggleCommentDislike,
@@ -206,6 +207,7 @@ function CommentItem({
   const toggleLike = useToggleCommentLike();
   const toggleDislike = useToggleCommentDislike();
   const deleteComment = useDeleteComment();
+  const updateComment = useUpdateComment();
   const createComment = useCreateComment();
   const adminHideComment = useAdminToggleHideComment();
   const adminDeleteComment = useAdminDeleteComment();
@@ -214,6 +216,7 @@ function CommentItem({
 
   const [showReplies, setShowReplies] = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showAdminDeleteDialog, setShowAdminDeleteDialog] = useState(false);
 
@@ -308,46 +311,66 @@ function CommentItem({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              {comment.isEdited && (
+                <span className="text-[11px] text-muted-foreground italic">(edited)</span>
+              )}
               {comment.isHidden && canModerate && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-600 border border-orange-200/60">
                   <EyeOff className="h-3 w-3" /> Hidden
                 </span>
               )}
             </div>
-            <div className="mt-1 text-[14px] leading-relaxed text-foreground/90 break-all [overflow-wrap:anywhere]">
-              {comment.replyToUser && (
-                <span className="mr-1 inline-block rounded bg-primary/10 px-1.5 py-0.5 text-[12px] font-semibold text-primary">
-                  @{comment.replyToUser}
-                </span>
-              )}
-              {isHtml ? (
-                <div
-                  className="comment-body-html"
-                  dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(
-                      isLong && !expanded
-                        ? comment.body.slice(0, comment.body.indexOf('>', COMMENT_COLLAPSE_THRESHOLD) + 1 || COMMENT_COLLAPSE_THRESHOLD) + '…'
-                        : comment.body,
-                      { ALLOWED_TAGS: ['p', 'strong', 'em', 'ul', 'ol', 'li', 'br'] }
-                    ),
+            {showEditForm ? (
+              <div className="mt-1">
+                <CommentEditor
+                  placeholder="Edit your comment…"
+                  initialContent={comment.body}
+                  onSubmit={async (html) => {
+                    await updateComment.mutateAsync({ postId, commentId: comment._id, body: html });
+                    setShowEditForm(false);
                   }}
+                  onCancel={() => setShowEditForm(false)}
+                  isPending={updateComment.isPending}
+                  submitLabel="Save"
+                  minHeight="48px"
                 />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {isLong && !expanded
-                    ? plainText.slice(0, COMMENT_COLLAPSE_THRESHOLD) + '…'
-                    : comment.body}
-                </p>
-              )}
-              {isLong && (
-                <button
-                  onClick={() => setExpanded(!expanded)}
-                  className="mt-0.5 text-[14px] font-medium text-primary hover:underline"
-                >
-                  {expanded ? 'Show less' : 'Read more'}
-                </button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="mt-1 text-[14px] leading-relaxed text-foreground/90 break-all [overflow-wrap:anywhere]">
+                {comment.replyToUser && (
+                  <span className="mr-1 inline-block rounded bg-primary/10 px-1.5 py-0.5 text-[12px] font-semibold text-primary">
+                    @{comment.replyToUser}
+                  </span>
+                )}
+                {isHtml ? (
+                  <div
+                    className="comment-body-html"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(
+                        isLong && !expanded
+                          ? comment.body.slice(0, comment.body.indexOf('>', COMMENT_COLLAPSE_THRESHOLD) + 1 || COMMENT_COLLAPSE_THRESHOLD) + '…'
+                          : comment.body,
+                        { ALLOWED_TAGS: ['p', 'strong', 'em', 'ul', 'ol', 'li', 'br'] }
+                      ),
+                    }}
+                  />
+                ) : (
+                  <p className="whitespace-pre-wrap">
+                    {isLong && !expanded
+                      ? plainText.slice(0, COMMENT_COLLAPSE_THRESHOLD) + '…'
+                      : comment.body}
+                  </p>
+                )}
+                {isLong && (
+                  <button
+                    onClick={() => setExpanded(!expanded)}
+                    className="mt-0.5 text-[14px] font-medium text-primary hover:underline"
+                  >
+                    {expanded ? 'Show less' : 'Read more'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Actions */}
@@ -387,6 +410,14 @@ function CommentItem({
                 className="text-[12px] font-medium text-muted-foreground hover:text-foreground"
               >
                 Reply
+              </button>
+            )}
+            {isAuthor && !comment.isDeleted && (
+              <button
+                onClick={() => { setShowEditForm(!showEditForm); setShowReplyForm(false); }}
+                className="text-[12px] font-medium text-muted-foreground hover:text-foreground"
+              >
+                Edit
               </button>
             )}
             {isAuthor && (

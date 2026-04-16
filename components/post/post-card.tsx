@@ -474,7 +474,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
                   <DropdownMenuItem className="cursor-pointer gap-2 text-[13px]">
                     <Bookmark className="h-4 w-4" /> Save post
                   </DropdownMenuItem>
-                  {isPostAuthor && post.type !== 'research_paper' && (
+                  {isPostAuthor && (
                     <DropdownMenuItem
                       className="cursor-pointer gap-2 text-[13px]"
                       onClick={() => setShowEditDialog(true)}
@@ -721,7 +721,7 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
         title={post.title}
         onConfirm={async () => { await deletePost.mutateAsync(post._id); router.push('/home'); }}
       />
-      {isPostAuthor && post.type !== 'research_paper' && (
+      {isPostAuthor && (
         <CreatePostDialog
           mode="edit"
           editingPost={post}

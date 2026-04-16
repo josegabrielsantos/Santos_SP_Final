@@ -11,6 +11,8 @@ interface CommentEditorProps {
   isPending?: boolean;
   submitLabel?: string;
   minHeight?: string;
+  initialContent?: string;
+  onCancel?: () => void;
 }
 
 export function CommentEditor({
@@ -19,8 +21,10 @@ export function CommentEditor({
   isPending = false,
   submitLabel = 'Post',
   minHeight = '72px',
+  initialContent,
+  onCancel,
 }: CommentEditorProps) {
-  const [isEmpty, setIsEmpty] = useReactState(true);
+  const [isEmpty, setIsEmpty] = useReactState(!initialContent);
 
   const editor = useEditor({
     extensions: [
@@ -38,7 +42,7 @@ export function CommentEditor({
         'data-placeholder': placeholder,
       },
     },
-    content: '',
+    content: initialContent || '',
     immediatelyRender: false,
     onUpdate: ({ editor: e }) => {
       setIsEmpty(!e.getText().trim());
@@ -97,7 +101,16 @@ export function CommentEditor({
       <EditorContent editor={editor} className="comment-editor max-h-[200px] overflow-y-auto" />
 
       {/* Submit */}
-      <div className="flex justify-end border-t border-border/40 px-2 py-1.5">
+      <div className="flex justify-end gap-2 border-t border-border/40 px-2 py-1.5">
+        {onCancel && (
+          <button
+            onClick={onCancel}
+            disabled={isPending}
+            className="rounded-md px-3 py-1 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-muted"
+          >
+            Cancel
+          </button>
+        )}
         <button
           onClick={handleSubmit}
           disabled={isPending || isEmpty}
