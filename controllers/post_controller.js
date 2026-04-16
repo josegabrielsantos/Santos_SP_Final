@@ -821,6 +821,44 @@ const deleteComment = async (req, res) => {
   }
 };
 
+/**
+ * PUT /api/posts/:id/comments/:commentId
+ * Edit a comment (author only)
+ */
+const updateComment = async (req, res) => {
+  try {
+    const { body } = req.body;
+    if (!body || !body.trim()) return res.status(400).json({ error: 'Body is required.' });
+
+    const comment = await Comment.findById(req.params.commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found.' });
+
+    if (comment.authorId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Only the author can edit this comment.' });
+    }
+
+    if (comment.isDeleted) {
+      return res.status(400).json({ error: 'Cannot edit a deleted comment.' });
+    }
+
+    comment.body = body;
+    comment.isEdited = true;
+    await comment.save();
+
+    emitToPost(comment.postId.toString(), 'comment:updated', {
+      postId: comment.postId.toString(),
+      commentId: comment._id.toString(),
+      authorId: req.user._id.toString(),
+    });
+
+    const populated = await comment.populate('authorId', 'displayName avatar');
+    res.status(200).json(populated);
+  } catch (error) {
+    console.log('Error in updateComment:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
 /*  REPORT  */
 
 /**
@@ -1166,6 +1204,7 @@ export {
   getComments,
   getReplies,
   createComment,
+  updateComment,
   deleteComment,
   reportPost,
   getFeaturedPosts,

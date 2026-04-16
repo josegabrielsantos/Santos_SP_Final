@@ -51,6 +51,10 @@ const commentSchema = new mongoose.Schema(
       required: true,
       default: false,
     },
+    isEdited: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

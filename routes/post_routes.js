@@ -10,6 +10,7 @@ import {
   getComments,
   getReplies,
   createComment,
+  updateComment,
   deleteComment,
   reportPost,
   getFeaturedPosts,
@@ -44,6 +45,7 @@ router.post('/:id/dislike', protectRoute, togglePostDislike);
 router.get('/:id/comments', optionalAuth, getComments);
 router.post('/:id/comments', protectRoute, createComment);
 router.get('/:id/comments/:commentId/replies', optionalAuth, getReplies);
+router.put('/:id/comments/:commentId', protectRoute, updateComment);
 router.delete('/:id/comments/:commentId', protectRoute, deleteComment);
 router.post('/:id/comments/:commentId/like', protectRoute, toggleCommentLike);
 router.post('/:id/comments/:commentId/dislike', protectRoute, toggleCommentDislike);
