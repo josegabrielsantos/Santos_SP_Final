@@ -22,6 +22,7 @@ import {
   useUnfollowOrg,
   useRemoveMember,
   useOrgPendingPosts,
+  useOrgHiddenPosts,
   useApprovePost,
   useRejectPost,
 } from '@/lib/api/organizations';
@@ -82,7 +83,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { BulkImportDialog } from '@/components/paper/bulk-import-dialog';
-import { useOrgPapers } from '@/lib/api/papers';
+import { useOrgPapers, useDownloadPaper } from '@/lib/api/papers';
 import { CitationButton } from '@/components/paper/citation-button';
 import { PaperCard } from '@/components/paper/paper-card';
 import type { Paper, UserSummary } from '@/lib/types';
@@ -185,6 +186,8 @@ function OrgDetailContent() {
   const [paperPage, setPaperPage] = useState(1);
   const { data: postsData, isLoading: postsLoading } = useOrgPosts(orgId, { page: postPage });
   const { data: papersData, isLoading: papersLoading, isError: papersError } = useOrgPapers(orgId, { page: paperPage });
+  const downloadPaper = useDownloadPaper();
+  const [paperDownloadError, setPaperDownloadError] = useState('');
   const { data: members } = useOrgMembers(orgId);
 
   const requestJoin = useRequestJoin();
@@ -201,6 +204,8 @@ function OrgDetailContent() {
 
   const { data: pendingPostsData } = useOrgPendingPosts(orgId);
   const pendingCount = pendingPostsData?.posts.length ?? 0;
+  const { data: hiddenPostsData } = useOrgHiddenPosts(orgId);
+  const hiddenCount = hiddenPostsData?.posts.length ?? 0;
   const [reportStatusFilter, setReportStatusFilter] = useState('all');
   const { data: orgReportsData } = useOrgReports(orgId, { status: reportStatusFilter });
   const reportOpenCount = orgReportsData?.openCount ?? 0;
@@ -221,10 +226,11 @@ function OrgDetailContent() {
     }
   });
 
-  // Post moderation (approved/rejected)
+  // Post moderation (approved/rejected/hidden/unhidden)
   useSocketEvent<{ orgId: string; postId: string }>('org:post-moderated', () => {
     if (orgId) {
       queryClient.invalidateQueries({ queryKey: ['organizations', orgId, 'posts', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['organizations', orgId, 'posts', 'hidden'] });
       queryClient.invalidateQueries({ queryKey: ['organizations', orgId, 'posts'] });
     }
   });
@@ -235,6 +241,7 @@ function OrgDetailContent() {
   const [kickTarget, setKickTarget] = useState<{ _id: string; displayName: string } | null>(null);
   const [rejectTarget, setRejectTarget] = useState<{ postId: string; title: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [unhideSuccess, setUnhideSuccess] = useState<{ title: string } | null>(null);
 
   if (orgLoading) {
     return <OrgPageSkeleton />;
@@ -522,6 +529,24 @@ function OrgDetailContent() {
               </DialogContent>
             </Dialog>
 
+            {/* Unhide success dialog */}
+            <Dialog open={!!unhideSuccess} onOpenChange={(open) => { if (!open) setUnhideSuccess(null); }}>
+              <DialogContent>
+                <DialogHeader>
+                  <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+                    <Eye className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <DialogTitle>Post unhidden</DialogTitle>
+                  <DialogDescription>
+                    <span className="font-semibold text-foreground">&ldquo;{unhideSuccess?.title}&rdquo;</span> is now visible to all users again.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button onClick={() => setUnhideSuccess(null)}>Done</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
               <TabsList className="w-full justify-start rounded-lg border border-border/60 bg-white p-0 border border-border h-auto">
@@ -572,6 +597,20 @@ function OrgDetailContent() {
                     {pendingCount > 0 && (
                       <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-kain-amber text-[11px] font-bold text-white">
                         {pendingCount}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                )}
+                {canManage && (
+                  <TabsTrigger
+                    value="hidden"
+                    className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  >
+                    <EyeOff className="h-4 w-4" />
+                    Hidden
+                    {hiddenCount > 0 && (
+                      <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/70 text-[11px] font-bold text-white">
+                        {hiddenCount}
                       </span>
                     )}
                   </TabsTrigger>
@@ -672,6 +711,12 @@ function OrgDetailContent() {
                   </p>
                 )}
 
+                {paperDownloadError && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
+                    {paperDownloadError}
+                  </div>
+                )}
+
                 {!papersLoading && !papersError && papersData?.papers.map((paper, index) => (
                   <motion.div
                     key={paper._id}
@@ -679,7 +724,18 @@ function OrgDetailContent() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.04, duration: 0.22 }}
                   >
-                    <PaperCard paper={paper} hideOrgInfo />
+                    <PaperCard
+                      paper={paper}
+                      hideOrgInfo
+                      onDownload={async () => {
+                        try {
+                          setPaperDownloadError('');
+                          await downloadPaper.mutateAsync(paper._id);
+                        } catch {
+                          setPaperDownloadError('Unable to download this file right now. Please try again.');
+                        }
+                      }}
+                    />
                   </motion.div>
                 ))}
 
@@ -975,6 +1031,86 @@ function OrgDetailContent() {
                         <div className="flex flex-col items-center py-8 text-center">
                           <Inbox className="mb-2 h-8 w-8 text-muted-foreground/30" />
                           <p className="text-[15px] text-muted-foreground">No posts pending review.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
+
+              {/* Hidden posts tab */}
+              {canManage && (
+                <TabsContent value="hidden" className="mt-4">
+                  <Card className="rounded-xl border-border/60 bg-white border border-border">
+                    <CardContent className="p-6">
+                      {hiddenPostsData?.posts && hiddenPostsData.posts.length > 0 ? (
+                        <div className="flex flex-col gap-4">
+                          {hiddenPostsData.posts.map((post, index) => {
+                            const authorName = typeof post.authorId === 'object' ? post.authorId.displayName : 'Unknown';
+                            const authorAvatar = typeof post.authorId === 'object' ? post.authorId.avatar ?? undefined : undefined;
+                            const authorProfileId = typeof post.authorId === 'object' ? post.authorId._id : '';
+                            return (
+                              <motion.div
+                                key={post._id}
+                                className="rounded-xl border border-border/50 bg-muted/20 p-4"
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.04, duration: 0.22 }}
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex items-start gap-3 min-w-0">
+                                    <Avatar className="mt-0.5 h-9 w-9 shrink-0">
+                                      <AvatarImage src={authorAvatar} alt={authorName} />
+                                      <AvatarFallback className="text-[12px]">{initials(authorName)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="min-w-0">
+                                      <Link href={`/profile/${authorProfileId}`} className="text-[15px] font-semibold text-foreground hover:underline">
+                                        {authorName}
+                                      </Link>
+                                      <Link href={`/posts/${post._id}`} className="mt-0.5 block text-[17px] font-semibold text-foreground line-clamp-2 hover:text-primary transition-colors">
+                                        {post.title}
+                                      </Link>
+                                      {post.bodyText && (
+                                        <p className="mt-1 text-[14px] text-muted-foreground line-clamp-2">{post.bodyText}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-2">
+                                    <Button
+                                      size="default"
+                                      variant="outline"
+                                      className="gap-1.5 text-[14px]"
+                                      asChild
+                                    >
+                                      <Link href={`/posts/${post._id}`}>
+                                        <Eye className="h-4 w-4" />
+                                        View
+                                      </Link>
+                                    </Button>
+                                    <Button
+                                      size="default"
+                                      className="gap-1.5 text-[14px]"
+                                      disabled={adminHidePost.isPending}
+                                      onClick={() => {
+                                        adminHidePost.mutate(
+                                          { postId: post._id },
+                                          { onSuccess: () => setUnhideSuccess({ title: post.title }) }
+                                        );
+                                      }}
+                                    >
+                                      {adminHidePost.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                                      Unhide
+                                    </Button>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center py-8 text-center">
+                          <EyeOff className="mb-2 h-8 w-8 text-muted-foreground/30" />
+                          <p className="text-[15px] text-muted-foreground">No hidden posts.</p>
                         </div>
                       )}
                     </CardContent>

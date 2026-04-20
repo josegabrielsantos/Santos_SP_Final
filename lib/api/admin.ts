@@ -213,6 +213,7 @@ export function useAdminToggleHidePost() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['posts'] });
+      qc.invalidateQueries({ queryKey: ['organizations'] });
       qc.invalidateQueries({ queryKey: ['admin', 'stats'] });
       qc.invalidateQueries({ queryKey: ['admin', 'moderation-logs'] });
     },

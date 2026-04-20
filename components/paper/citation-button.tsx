@@ -9,28 +9,35 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Quote, Check } from 'lucide-react';
-import type { Paper } from '@/lib/types';
 
-function formatAPA(paper: Paper): string {
+export interface CitationData {
+  title: string;
+  authors: string[];
+  year: number | null;
+  journal: string | null;
+  doi: string | null;
+}
+
+function formatAPA(paper: CitationData): string {
   const authors = paper.authors?.join(', ') || 'Unknown Author';
   const year = paper.year ? `(${paper.year})` : '';
   const doi = paper.doi ? ` https://doi.org/${paper.doi}` : '';
   return `${authors} ${year}. ${paper.title}. ${paper.journal ?? ''}.${doi}`.replace(/\s+/g, ' ').trim();
 }
 
-function formatMLA(paper: Paper): string {
+function formatMLA(paper: CitationData): string {
   const firstAuthor = paper.authors?.[0] ?? 'Unknown Author';
   const year = paper.year ?? 'n.d.';
   return `${firstAuthor}. "${paper.title}." ${paper.journal ?? ''}, ${year}.`.replace(/\s+/g, ' ').trim();
 }
 
-function formatChicago(paper: Paper): string {
+function formatChicago(paper: CitationData): string {
   const authors = paper.authors?.join(', ') || 'Unknown Author';
   const year = paper.year ?? 'n.d.';
   return `${authors}. "${paper.title}." ${paper.journal ?? ''} (${year}).`.replace(/\s+/g, ' ').trim();
 }
 
-export function CitationButton({ paper }: { paper: Paper }) {
+export function CitationButton({ paper }: { paper: CitationData }) {
   const [copied, setCopied] = useState<string | null>(null);
 
   const copy = (text: string, label: string) => {
@@ -43,7 +50,11 @@ export function CitationButton({ paper }: { paper: Paper }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-1.5 text-[13px] text-muted-foreground hover:text-foreground">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5 text-[13px] border border-border hover:bg-muted/50"
+        >
           <Quote className="h-3.5 w-3.5" />
           Cite
         </Button>

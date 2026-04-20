@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -163,6 +164,18 @@ function LogRow({ log }: { log: ModerationLog }) {
     targetLabel = log.targetId;
   }
 
+  // If the target is a post or a comment (which belongs to a post), build a link
+  // back to the post so admins can act on it (e.g., unhide) directly from the log.
+  // For deleted posts, linking is pointless — the record is gone.
+  let targetHref: string | null = null;
+  if (log.targetType === 'post' && log.action !== 'post_deleted') {
+    targetHref = `/posts/${log.targetId}`;
+  } else if (log.targetType === 'comment' && meta?.postId) {
+    targetHref = `/posts/${meta.postId}`;
+  }
+
+  const displayLabel = targetLabel.length > 80 ? targetLabel.slice(0, 80) + '…' : targetLabel;
+
   return (
     <div className="flex items-start gap-4 border-b border-border/25 px-5 py-3.5 last:border-b-0 transition-colors hover:bg-muted/20">
       {/* Admin avatar */}
@@ -183,9 +196,19 @@ function LogRow({ log }: { log: ModerationLog }) {
 
         <div className="mt-1 flex items-center gap-1.5 text-[13px] text-muted-foreground">
           {TARGET_ICONS[log.targetType]}
-          <span className="truncate max-w-md" title={targetLabel}>
-            {targetLabel.length > 80 ? targetLabel.slice(0, 80) + '…' : targetLabel}
-          </span>
+          {targetHref ? (
+            <Link
+              href={targetHref}
+              className="truncate max-w-md text-primary hover:underline"
+              title={targetLabel}
+            >
+              {displayLabel}
+            </Link>
+          ) : (
+            <span className="truncate max-w-md" title={targetLabel}>
+              {displayLabel}
+            </span>
+          )}
         </div>
 
         {log.details && (

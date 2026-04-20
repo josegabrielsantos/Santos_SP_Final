@@ -19,6 +19,10 @@ import Link from 'next/link';
 
 type SortOption = 'name' | 'members' | 'posts';
 
+// Feature flag — organization creation requests are temporarily disabled in the UI
+// while the workflow is being reworked. Flip to true to restore.
+const ORG_REQUESTS_ENABLED = false;
+
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'name', label: 'Name' },
   { value: 'members', label: 'Most Members' },
@@ -104,7 +108,7 @@ export default function OrganizationsPage() {
                     }}
                   />
                 </div>
-                {user && !isAdmin && (
+                {ORG_REQUESTS_ENABLED && user && !isAdmin && (
                   <div className="flex items-center gap-2 shrink-0">
                     <Button
                       className="gap-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
@@ -257,13 +261,13 @@ export default function OrganizationsPage() {
                       No results for &ldquo;{search}&rdquo;
                     </h3>
                     <p className="mt-1.5 max-w-sm text-[13px] text-muted-foreground">
-                      Try a different keyword, or request a new organization if it doesn&rsquo;t exist yet.
+                      Try a different keyword.
                     </p>
                     <div className="mt-4 flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => setSearch('')}>
                         Clear search
                       </Button>
-                      {user && !isAdmin && (
+                      {ORG_REQUESTS_ENABLED && user && !isAdmin && (
                         <Button size="sm" onClick={() => setShowRequestDialog(true)}>
                           <Plus className="mr-1.5 h-3.5 w-3.5" />
                           Request Organization
@@ -280,9 +284,9 @@ export default function OrganizationsPage() {
                       No organizations yet
                     </h3>
                     <p className="mt-1.5 max-w-sm text-[13px] text-muted-foreground">
-                      Be the first to create one! Organizations let you collaborate and share research with others.
+                      Check back later. Organizations collect research and discussion from different groups.
                     </p>
-                    {user && !isAdmin && (
+                    {ORG_REQUESTS_ENABLED && user && !isAdmin && (
                       <Button size="sm" className="mt-4" onClick={() => setShowRequestDialog(true)}>
                         <Plus className="mr-1.5 h-3.5 w-3.5" />
                         Request Organization
@@ -317,7 +321,7 @@ export default function OrganizationsPage() {
                 </Button>
               </div>
             )}
-      {showRequestDialog && <RequestOrgDialog onClose={() => setShowRequestDialog(false)} />}
+      {ORG_REQUESTS_ENABLED && showRequestDialog && <RequestOrgDialog onClose={() => setShowRequestDialog(false)} />}
     </AuthenticatedLayout>
   );
 }

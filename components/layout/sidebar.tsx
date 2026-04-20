@@ -13,6 +13,10 @@ import { useUserOrganizations } from '@/lib/api/users';
 
 type OrgSortOption = 'name' | 'members' | 'posts';
 
+// Feature flag — organization creation requests are temporarily disabled in the UI.
+// Flip to true to restore the "My Requests" sidebar link.
+const ORG_REQUESTS_ENABLED = false;
+
 const browseItems = [
   { label: 'Home',             href: '/home',          icon: Home },
   { label: 'Organizations',    href: '/organizations', icon: Building2 },
@@ -137,18 +141,20 @@ export function Sidebar() {
             </Link>
           )}
 
-          <Link
-            href="/org-requests"
-            className={cn(
-              'flex items-center gap-2.5 rounded-md px-3 py-1.5 transition-all border-l-[3px]',
-              pathname === '/org-requests' || pathname.startsWith('/org-requests/')
-                ? 'border-primary bg-primary/5 text-primary'
-                : 'border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-            )}
-          >
-            <ClipboardList className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-            <span className="text-[12px] font-medium">My Requests</span>
-          </Link>
+          {ORG_REQUESTS_ENABLED && (
+            <Link
+              href="/org-requests"
+              className={cn(
+                'flex items-center gap-2.5 rounded-md px-3 py-1.5 transition-all border-l-[3px]',
+                pathname === '/org-requests' || pathname.startsWith('/org-requests/')
+                  ? 'border-primary bg-primary/5 text-primary'
+                  : 'border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+              )}
+            >
+              <ClipboardList className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+              <span className="text-[12px] font-medium">My Requests</span>
+            </Link>
+          )}
 
           <div className="flex flex-col gap-0.5 mt-0.5">
             {sortedOrgs.map((org) => {

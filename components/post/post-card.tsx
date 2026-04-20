@@ -53,6 +53,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { ShieldAlert } from 'lucide-react';
 import { TopicBadge } from '@/components/ui/topic-badge';
+import { CitationButton } from '@/components/paper/citation-button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -649,6 +650,21 @@ export function PostCard({ post, orgAccessRole = 'member', isOrgAdmin = false, i
               View
             </a>
           )}
+          <div onClick={(e) => e.stopPropagation()}>
+            <CitationButton
+              paper={{
+                title: meta?.researchTitle || post.title,
+                authors: meta?.authors ?? [],
+                year: meta?.datePublished
+                  ? new Date(meta.datePublished).getFullYear()
+                  : post.publishedAt
+                    ? new Date(post.publishedAt).getFullYear()
+                    : null,
+                journal: meta?.journal ?? null,
+                doi: meta?.doi ?? null,
+              }}
+            />
+          </div>
           <button
             onClick={handleCopyLink}
             className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted/50"

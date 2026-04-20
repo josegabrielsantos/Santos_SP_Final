@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAppSelector } from '@/store/hooks';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Users, Building2, ArrowLeft, ShieldCheck, BarChart2, MessageSquare, ClipboardList, ScrollText, Flag } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, ArrowLeft, ShieldCheck, BarChart2, ClipboardList, ScrollText, Flag } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useOrgRequestPendingCount } from '@/lib/api/org-requests';
 import { useAdminReports } from '@/lib/api/reports';
@@ -13,7 +13,6 @@ import { useEffect } from 'react';
 const adminNav = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Analytics', href: '/admin/analytics', icon: BarChart2 },
-  { label: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
   { label: 'Users', href: '/admin/users', icon: Users },
   { label: 'Organizations', href: '/admin/organizations', icon: Building2 },
   { label: 'Org Requests', href: '/admin/org-requests', icon: ClipboardList },

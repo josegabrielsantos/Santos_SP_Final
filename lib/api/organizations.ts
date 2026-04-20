@@ -224,6 +224,19 @@ export function useOrgPendingPosts(orgId: string | undefined) {
   });
 }
 
+export function useOrgHiddenPosts(orgId: string | undefined, enabled = true) {
+  return useQuery<{ posts: Post[] }>({
+    queryKey: ['organizations', orgId, 'posts', 'hidden'],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<{ posts: Post[] }>(
+        `/organizations/${orgId}/posts/hidden`
+      );
+      return data;
+    },
+    enabled: !!orgId && enabled,
+  });
+}
+
 export function useApprovePost() {
   const qc = useQueryClient();
   return useMutation({

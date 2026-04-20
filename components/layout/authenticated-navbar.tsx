@@ -24,7 +24,6 @@ import {
   ShieldCheck,
   FileText,
   BookOpen,
-  MessageSquare,
   X,
 } from 'lucide-react';
 import { NotificationDropdown } from './notification-dropdown';
@@ -32,7 +31,6 @@ import { useBulkUploadProgress } from '@/hooks/useBulkUploadProgress';
 import { DuplicatePaperDialog } from '@/components/paper/duplicate-paper-dialog';
 import { useBulkCreatePapers } from '@/lib/api/papers';
 import { toast } from 'sonner';
-import { SusModal } from '@/components/feedback/sus-modal';
 
 export function AuthenticatedNavbar() {
   const { user } = useAppSelector((s) => s.auth);
@@ -44,7 +42,6 @@ export function AuthenticatedNavbar() {
   // Global listener for bulk upload socket events → sonner toasts
   const { pendingDuplicates, clearDuplicates } = useBulkUploadProgress();
   const bulkCreateMutation = useBulkCreatePapers();
-  const [showSus, setShowSus] = useState(false);
 
   const { data: suggestions } = useSuggest(searchQuery);
 
@@ -194,10 +191,6 @@ export function AuthenticatedNavbar() {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setShowSus(true)} className="cursor-pointer gap-2.5 text-[13px] py-2">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" /> Give Feedback
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}
                   disabled={logoutMutation.isPending}
@@ -210,7 +203,6 @@ export function AuthenticatedNavbar() {
             </DropdownMenu>
           </div>
         </div>
-        <SusModal open={showSus} onClose={() => setShowSus(false)} />
       </header>
 
       {/* Duplicate paper confirmation dialog (triggered by bulk upload) */}
