@@ -549,31 +549,31 @@ function OrgDetailContent() {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-              <TabsList className="w-full justify-start rounded-lg border border-border/60 bg-white p-0 border border-border h-auto">
+              <TabsList className="w-full justify-start rounded-lg border border-border/60 bg-white p-0 border border-border h-auto overflow-x-auto flex-nowrap">
                 <TabsTrigger
                   value="posts"
-                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-3.5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none shrink-0"
                 >
                   <FileText className="h-4 w-4" />
                   Posts
                 </TabsTrigger>
                 <TabsTrigger
                   value="papers"
-                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-3.5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none shrink-0"
                 >
                   <BookOpen className="h-4 w-4" />
                   Papers
                 </TabsTrigger>
                 <TabsTrigger
                   value="members"
-                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-3.5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none shrink-0"
                 >
                   <Users className="h-4 w-4" />
                   Members
                 </TabsTrigger>
                 <TabsTrigger
                   value="followers"
-                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-3.5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none shrink-0"
                 >
                   <Heart className="h-4 w-4" />
                   Followers
@@ -581,16 +581,21 @@ function OrgDetailContent() {
                 {canManage && (
                   <TabsTrigger
                     value="requests"
-                    className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                    className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-3.5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none shrink-0"
                   >
                     <Clock className="h-4 w-4" />
                     Join Requests
+                    {(members?.pendingMembers?.length ?? 0) > 0 && (
+                      <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-kain-amber text-[11px] font-bold text-white">
+                        {members!.pendingMembers!.length}
+                      </span>
+                    )}
                   </TabsTrigger>
                 )}
                 {canManage && (
                   <TabsTrigger
                     value="pending"
-                    className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                    className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-3.5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none shrink-0"
                   >
                     <Inbox className="h-4 w-4" />
                     Pending Posts
@@ -604,7 +609,7 @@ function OrgDetailContent() {
                 {canManage && (
                   <TabsTrigger
                     value="hidden"
-                    className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                    className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-3.5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none shrink-0"
                   >
                     <EyeOff className="h-4 w-4" />
                     Hidden
@@ -618,7 +623,7 @@ function OrgDetailContent() {
                 {canManage && (
                   <TabsTrigger
                     value="reports"
-                    className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                    className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-3.5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none shrink-0"
                   >
                     <Flag className="h-4 w-4" />
                     Reports
@@ -631,7 +636,7 @@ function OrgDetailContent() {
                 )}
                 <TabsTrigger
                   value="analytics"
-                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  className="flex items-center gap-2 rounded-none border-b-2 border-transparent px-3.5 py-3 text-[14px] font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none shrink-0"
                 >
                   <BarChart2 className="h-4 w-4" />
                   Analytics
