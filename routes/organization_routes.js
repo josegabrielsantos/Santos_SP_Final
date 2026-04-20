@@ -18,6 +18,7 @@ import {
   rejectJoin,
   leaveOrganization,
   getPendingOrgPosts,
+  getHiddenOrgPosts,
   approveOrgPost,
   rejectOrgPost,
   pinOrgPost,
@@ -57,6 +58,7 @@ router.post('/:id/unfollow', protectRoute, unfollowOrganization);
 
 // Post approval pipeline (org admin only) — must be before /:id/posts to avoid ambiguity
 router.get('/:id/posts/pending', protectRoute, requireOrgAdmin, getPendingOrgPosts);
+router.get('/:id/posts/hidden', protectRoute, requireOrgAdmin, getHiddenOrgPosts);
 router.get('/:id/posts/pinned', getOrgPinnedPosts);
 router.post('/:id/posts/pin', protectRoute, requireOrgAdmin, pinOrgPost);
 router.post('/:id/posts/:postId/approve', protectRoute, requireOrgAdmin, approveOrgPost);

@@ -7,7 +7,7 @@ import Notification from '../models/notification_model.js';
 import UserActivity from '../models/user_activity_model.js';
 import InsightCache from '../models/insight_cache_model.js';
 import ModerationLog from '../models/moderation_log_model.js';
-import { emitToHome, emitToPost, disconnectUser } from '../socket.js';
+import { emitToHome, emitToPost, emitToOrg, disconnectUser } from '../socket.js';
 import { deleteFromSpaces, keyFromUrl } from '../lib/spaces.js';
 import { deletePost as esDeletePost } from '../elastic/esSync.js';
 import { removeUserFromAllOrgs } from '../utils/org_membership.js';
@@ -59,6 +59,13 @@ const toggleHidePost = async (req, res) => {
       });
 
       emitToHome('post:deleted', { postId: post._id.toString() });
+      if (post.organizationId) {
+        emitToOrg(post.organizationId.toString(), 'org:post-moderated', {
+          orgId: post.organizationId.toString(),
+          postId: post._id.toString(),
+          action: 'hidden',
+        });
+      }
       res.status(200).json({ message: 'Post hidden.', status: 'hidden' });
     } else if (wasHidden) {
       post.status = 'published';
@@ -76,6 +83,13 @@ const toggleHidePost = async (req, res) => {
       });
 
       emitToHome('post:new', { postId: post._id.toString() });
+      if (post.organizationId) {
+        emitToOrg(post.organizationId.toString(), 'org:post-moderated', {
+          orgId: post.organizationId.toString(),
+          postId: post._id.toString(),
+          action: 'unhidden',
+        });
+      }
       res.status(200).json({ message: 'Post unhidden.', status: 'published' });
     } else {
       return res.status(400).json({ error: `Cannot toggle hide on a post with status "${post.status}".` });

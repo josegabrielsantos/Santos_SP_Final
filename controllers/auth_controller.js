@@ -69,10 +69,17 @@ const googleAuth = async (req, res) => {
 
       if (user) {
         // Link the existing account to this Google ID
+        const isFirstLogin = !user.lastLogin;
         user.googleId = googleId;
         user.lastLogin = new Date();
         if (!user.avatar && picture) {
           user.avatar = picture;
+        }
+        // For pre-seeded stubs (never logged in), refresh displayName from Google
+        // so placeholder names get replaced with real ones. Users who have logged
+        // in before keep whatever name they've set.
+        if (isFirstLogin && name) {
+          user.displayName = name;
         }
         await user.save();
       } else {

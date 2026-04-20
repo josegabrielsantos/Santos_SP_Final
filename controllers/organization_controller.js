@@ -860,6 +860,27 @@ const getPendingOrgPosts = async (req, res) => {
 };
 
 /**
+ * GET /api/organizations/:id/posts/hidden
+ * List posts that have been hidden by a moderator for this org. Org admin only.
+ */
+const getHiddenOrgPosts = async (req, res) => {
+  try {
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Organization not found.' });
+
+    const posts = await Post.find({ organizationId: org._id, status: 'hidden' })
+      .sort({ updatedAt: -1 })
+      .populate('authorId', 'displayName avatar _id')
+      .populate('organizationId', 'name slug avatar');
+
+    res.status(200).json({ posts });
+  } catch (error) {
+    console.log('Error in getHiddenOrgPosts:', error.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+};
+
+/**
  * POST /api/organizations/:id/posts/:postId/approve
  * Approve a pending post. Org admin only.
  */
@@ -1016,6 +1037,7 @@ export {
   rejectJoin,
   leaveOrganization,
   getPendingOrgPosts,
+  getHiddenOrgPosts,
   approveOrgPost,
   rejectOrgPost,
   pinOrgPost,

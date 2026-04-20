@@ -6,9 +6,23 @@ import crypto from 'crypto';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function computeContextHash(topics, tags, title) {
-  const input = [...(topics || []), ...(tags || []), title || ''].filter(Boolean).sort().join('|');
-  return crypto.createHash('md5').update(input).digest('hex');
+function computeContextHash(topics, tags, title, bodyText, paperMetadata) {
+  const paperKey = paperMetadata
+    ? [paperMetadata.researchTitle, paperMetadata.doi, paperMetadata.abstract]
+        .filter(Boolean)
+        .join('::')
+    : '';
+  const bodyDigest = bodyText
+    ? crypto.createHash('md5').update(bodyText).digest('hex')
+    : '';
+  const input = [...(topics || []), ...(tags || []), title || '']
+    .filter(Boolean)
+    .sort()
+    .join('|');
+  return crypto
+    .createHash('md5')
+    .update(`${input}||${bodyDigest}||${paperKey}`)
+    .digest('hex');
 }
 
 // ── Phase 1: Related Posts (ES-powered) ─────────────────────────────────────
@@ -382,7 +396,7 @@ export const getInsightSummary = async (req, res) => {
       .lean();
     if (!post) return res.status(404).json({ error: 'Post not found.' });
 
-    const contextHash = computeContextHash(post.topics, post.tags, post.title);
+    const contextHash = computeContextHash(post.topics, post.tags, post.title, post.bodyText, post.paperMetadata);
 
     // Check cache (skip on force refresh)
     if (!forceRefresh) {
@@ -430,6 +444,8 @@ export const getInsightSummary = async (req, res) => {
       title: post.title,
       topics: post.topics || [],
       tags: post.tags || [],
+      bodyText: post.bodyText || '',
+      paperMetadata: post.paperMetadata || null,
     };
 
     const insight = await generateInsight(postContext, topicSummary, relatedPosts, relatedPapers);
