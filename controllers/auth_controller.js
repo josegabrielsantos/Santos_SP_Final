@@ -1,8 +1,58 @@
 import User from '../models/user_model.js';
+import Organization from '../models/organization_model.js';
 import { generateTokenandSetCookie, COOKIE_OPTIONS } from '../lib/util/generateToken.js';
 import { OAuth2Client } from 'google-auth-library';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+/**
+ * Testing-window auto-join. On first login only, if AUTO_JOIN_ORG_SLUG is set
+ * in the environment, add the new user to that org's memberIds and followerIds.
+ *
+ * Reversible: unset the env var to disable. Existing memberships are not
+ * retroactively removed — only future first-logins are affected.
+ *
+ * Wrapped in try/catch so auth never fails because of this.
+ */
+async function autoJoinOrgOnFirstLogin(userId) {
+  const slug = process.env.AUTO_JOIN_ORG_SLUG;
+  if (!slug) return;
+
+  try {
+    const org = await Organization.findOne({ slug });
+    if (!org) {
+      console.warn(`[auto-join] AUTO_JOIN_ORG_SLUG="${slug}" but no org found with that slug — skipping`);
+      return;
+    }
+    if (!org.isActive) {
+      console.warn(`[auto-join] org "${slug}" is deactivated — skipping`);
+      return;
+    }
+
+    const uidStr = userId.toString();
+    const isOwner = org.ownerId?.toString() === uidStr;
+    const isAdmin = (org.adminIds || []).some((id) => id.toString() === uidStr);
+    const isMember = (org.memberIds || []).some((id) => id.toString() === uidStr);
+
+    if (isOwner || isAdmin || isMember) return;
+
+    org.memberIds.push(userId);
+    if (!(org.followerIds || []).some((id) => id.toString() === uidStr)) {
+      org.followerIds.push(userId);
+    }
+
+    // Clear any stale pending request for this user in the same org
+    const pendingIdx = (org.pendingMemberIds || []).findIndex((id) => id.toString() === uidStr);
+    if (pendingIdx !== -1) {
+      org.pendingMemberIds.splice(pendingIdx, 1);
+    }
+
+    await org.save();
+    console.log(`[auto-join] user ${uidStr} added to org "${slug}" on first login`);
+  } catch (err) {
+    console.warn(`[auto-join] failed for user ${userId}: ${err.message}`);
+  }
+}
 
 /**
  * Resolve Google user info from either an ID-token (credential)
@@ -82,6 +132,9 @@ const googleAuth = async (req, res) => {
           user.displayName = name;
         }
         await user.save();
+        if (isFirstLogin) {
+          await autoJoinOrgOnFirstLogin(user._id);
+        }
       } else {
         // First-time login - create user
         user = new User({
@@ -92,6 +145,7 @@ const googleAuth = async (req, res) => {
           lastLogin: new Date(),
         });
         await user.save();
+        await autoJoinOrgOnFirstLogin(user._id);
       }
     } else {
       // Returning user - update lastLogin and optionally refresh profile info
