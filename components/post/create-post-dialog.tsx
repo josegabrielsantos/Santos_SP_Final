@@ -641,7 +641,7 @@ export function CreatePostDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="post">Article</SelectItem>
+                      <SelectItem value="post">Regular Post</SelectItem>
                       <SelectItem value="poll">Poll</SelectItem>
                       <SelectItem value="research_paper">Research Paper</SelectItem>
                       <SelectItem value="update">Update</SelectItem>
