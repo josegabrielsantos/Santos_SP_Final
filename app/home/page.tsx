@@ -108,7 +108,7 @@ export default function HomePage() {
                 Welcome, {user?.displayName?.split(' ')[0] || 'Researcher'}!
               </h2>
               <p className="mt-2.5 text-[13px] leading-relaxed text-gray-700">
-                Welcome to the Interdisciplinary Studies Center - Food and Nutrition Security (ICS-FaNS) Knowledge Hub, your gateway to pioneering research in food security, nutrition, and agricultural science. This platform is dedicated to empowering researchers, students, and stakeholders by providing seamless access to valuable research, fostering collaboration, and promoting innovation.
+                Welcome to the Interdisciplinary Studies Center - Food and Nutrition Security (IDCS-FaNS) Knowledge Hub, your gateway to pioneering research in food security, nutrition, and agricultural science. This platform is dedicated to empowering researchers, students, and stakeholders by providing seamless access to valuable research, fostering collaboration, and promoting innovation.
               </p>
               <div className="mt-4 grid grid-cols-3 gap-3">
                 <div className="rounded-lg bg-primary/15 px-3 py-2.5 text-center">

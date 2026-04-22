@@ -2,8 +2,19 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAdminStats } from '@/lib/api/admin';
+import { useAdminStats, useReindex } from '@/lib/api/admin';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
   Users,
   FileText,
@@ -14,8 +25,11 @@ import {
   Megaphone,
   Plus,
   BookOpen,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import { CreateAnnouncementDialog } from '@/components/announcement/create-announcement-dialog';
 
 /* ─── Loading skeleton for a single stat card ─────────────────── */
@@ -35,6 +49,15 @@ function StatCardSkeleton() {
 
 export default function AdminDashboardPage() {
   const { data: stats, isLoading } = useAdminStats();
+  const reindex = useReindex();
+
+  const handleReindex = () => {
+    toast.promise(reindex.mutateAsync(), {
+      loading: 'Rebuilding search index…',
+      success: 'Search index rebuilt from MongoDB.',
+      error: 'Reindex failed. Check server logs.',
+    });
+  };
 
   const cards = stats
     ? [
@@ -107,12 +130,48 @@ export default function AdminDashboardPage() {
             Overview of the UPLB FaNS Knowledge Hub platform
           </p>
         </div>
-        <CreateAnnouncementDialog>
-          <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
-            <Megaphone className="h-4 w-4" />
-            Create Announcement
-          </Button>
-        </CreateAnnouncementDialog>
+        <div className="flex items-center gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="gap-2"
+                disabled={reindex.isPending}
+              >
+                {reindex.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                Rebuild Search Index
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Rebuild search index?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Drops the Elasticsearch <code>kms_posts</code> and{' '}
+                  <code>kms_papers</code> indexes and rebuilds them from MongoDB.
+                  Use this to clear out orphaned documents (e.g. papers deleted
+                  from Mongo that still appear in search). Search will be briefly
+                  unavailable while this runs.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleReindex}>
+                  Rebuild
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <CreateAnnouncementDialog>
+            <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+              <Megaphone className="h-4 w-4" />
+              Create Announcement
+            </Button>
+          </CreateAnnouncementDialog>
+        </div>
       </motion.div>
 
       {/* Stats grid — skeletons while loading */}

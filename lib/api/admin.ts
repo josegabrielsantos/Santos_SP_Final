@@ -293,6 +293,24 @@ export function useAdminToggleBan() {
   });
 }
 
+// ─── Elasticsearch reindex (admin) ──────────────────────────────
+
+export function useReindex() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await axiosInstance.post<{ message: string }>('/admin/reindex');
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['search'] });
+      qc.invalidateQueries({ queryKey: ['papers'] });
+      qc.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+}
+
 // ─── Moderation logs ────────────────────────────────────────────
 
 export function useModerationLogs(params?: { page?: number; limit?: number; action?: string; targetType?: string }) {
