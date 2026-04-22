@@ -3,7 +3,7 @@ import { protectRoute, requireWebsiteAdmin } from '../middleware/protectRoute.js
 import { getAllUsers, updateUserRole, toggleUserActive, getAdminStats } from '../controllers/user_controller.js';
 import { deactivateOrganization, hardDeleteOrganization, getAdminOrganizations } from '../controllers/organization_controller.js';
 import { getAdminCharts } from '../controllers/analytics_controller.js';
-import { syncExistingData, ensureIndexes } from '../elastic/elastic_client.js';
+import esClient, { syncExistingData, ensureIndexes } from '../elastic/elastic_client.js';
 import {
   toggleHidePost,
   adminDeletePost,
@@ -43,6 +43,7 @@ router.get('/reports', protectRoute, requireWebsiteAdmin, getAdminReports);
 
 router.post('/reindex', protectRoute, requireWebsiteAdmin, async (req, res) => {
   try {
+    await esClient.indices.delete({ index: ['kms_posts', 'kms_papers'], ignore_unavailable: true });
     await ensureIndexes();
     await syncExistingData();
     res.status(200).json({ message: 'Reindex complete.' });
