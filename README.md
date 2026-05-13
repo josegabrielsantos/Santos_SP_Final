@@ -1,4 +1,4 @@
-# UPLB IdSC-FaNS Knowledge Hub
+# UPLB IdSC-FaNS Knowledge Hub (https://uplb-fans-knowledge-hub.me)
 
 A Knowledge Management System for food and nutrition security research, built as a Special Problem at the UPLB Institute of Computer Science. It pulls research from across UPLB and partner institutions into one place. Organizations curate and moderate what gets published, and AI handles the slow parts (extracting metadata from uploaded papers, generating research insights for each post) on top of full-text search.
 
