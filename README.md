@@ -1,69 +1,63 @@
 # UPLB IdSC-FaNS Knowledge Hub
 
-A Knowledge Management System (KMS) for food and nutrition security research, developed as a Special Problem at the University of the Philippines Los Baños Institute of Computer Science. The platform centralizes food and nutrition security research from across UPLB and partner institutions, supports community-driven curation through organizations, and applies AI-assisted metadata extraction and insight generation on top of full-text search.
+A Knowledge Management System for food and nutrition security research, built as a Special Problem at the UPLB Institute of Computer Science. It pulls research from across UPLB and partner institutions into one place. Organizations curate and moderate what gets published, and AI handles the slow parts (extracting metadata from uploaded papers, generating research insights for each post) on top of full-text search.
 
 ## Repository Contents
 
-- `code/` — Full source code for the web application
-  - `code/frontend/` — Next.js client
-  - `code/backend/` — Express.js API server
-- `Santos_manuscript.pdf` — Final SP manuscript
-- `Santos_poster.pdf` — Defense poster
-- `Santos_journal.pdf` — Journal-format paper
-- `Santos_presentation.pdf` — Defense presentation slides
+- `code/` contains the source code for the web app
+  - `code/frontend/` is the Next.js client
+  - `code/backend/` is the Express.js API
+- `Santos_manuscript.pdf` is the final thesis manuscript
+- `Santos_poster.pdf` is the defense poster
+- `Santos_journal.pdf` is the journal-format paper
+- `Santos_presentation.pdf` is the defense presentation slides
 
 ## Features
 
-- **Centralized research repository.** Posts and research papers are organized under Organizations, with a four-tier role hierarchy (Owner, Admin, Member, Follower) plus a site-wide administrator. Submissions enter a pending state and are published only after an organization administrator approves them.
-- **Advanced search.** BM25-weighted full-text search across posts and papers via Elasticsearch, with field-level boosting (title, abstract, keywords, authors), filters, sorting, fuzzy matching, and result highlighting.
-- **AI-assisted metadata extraction.** Uploaded PDFs are sent to Google Gemini 2.5 Flash, which returns title, authors, abstract, keywords, and year/journal. Extracted fields prefill the create-paper form for user review (human-in-the-loop).
-- **AI-generated research insights.** Each post page renders a Gemini-generated summary, key themes, and research gaps related to the post's topics. Insights are cached for 7 days to reduce API usage.
-- **Automatic topic classification.** Each post is categorized into eight subtopics: Food Security, Nutrition & Health, Food Science & Technology, Agricultural Systems, Policy & Governance, Traditional Knowledge, Education & Communication, and Environment & Sustainability.
-- **Analytics and data visualization.** Fourteen charts across site, organization, and public scopes — posts/papers over time, top tags, post-type distribution, organization comparisons, and more — rendered with Recharts on top of Elasticsearch aggregations.
-- **Real-time notifications.** Persistent Socket.io websocket channel for delivering activity notifications.
-- **Bulk paper upload** for organization administrators, with duplicate detection.
-- **Google OAuth sign-in** with JWT session cookies.
+- Search posts and papers with Elasticsearch (filters, sorting, fuzzy matching, BM25 scoring, highlighted results)
+- Upload a PDF and Gemini extracts the metadata for you to review before saving
+- Every post gets an AI-generated summary, key themes, and research gaps (cached for 7 days)
+- Posts are auto-categorized into 8 topics (Food Security, Nutrition & Health, Policy & Governance, and more)
+- Site, organization, and public analytics with 14 charts built on Elasticsearch aggregations
+- Real-time notifications over Socket.io
+- Bulk PDF upload for org admins, with duplicate detection
+- Google sign-in with JWT session cookies
+- Organizations with a four-tier role hierarchy (Owner, Admin, Member, Follower) and a post-approval workflow
 
 ## Tech Stack
 
 ### Frontend
-- **Next.js** — React framework with server-side rendering
-- **React** — UI library
-- **Tailwind CSS** — utility-first CSS framework
-- **shadcn/ui + Radix UI** — accessible component primitives
-- **TanStack React Query** — server-state management, caching, and synchronization
-- **Axios** — HTTP client
-- **Recharts** — charting library
-- **Socket.io client** — real-time updates
-- **Google Auth** — sign-in
+- Next.js (React framework, SSR)
+- Tailwind CSS and shadcn/ui for styling
+- TanStack React Query for server state
+- Axios for HTTP
+- Recharts for charts
+- Socket.io client for live updates
+- Google Auth for sign-in
 
 ### Backend
-- **Node.js** — runtime
-- **Express.js** — REST API framework
-- **MongoDB + Mongoose** — primary datastore
-- **Elasticsearch** — search index and analytics aggregations
-- **Socket.io** — websocket server
-- **Google Gemini 2.5 Flash** — AI metadata extraction and insight generation
-- **CrossRef REST API** — DOI-based metadata enrichment
+- Node.js with Express.js
+- MongoDB (via Mongoose) as the primary database
+- Elasticsearch for search and analytics
+- Socket.io for websockets
+- Gemini 2.5 Flash for the AI features
+- CrossRef API for DOI lookups
 
 ### Infrastructure
-- **DigitalOcean App Platform** — frontend and backend hosting
-- **DigitalOcean Managed MongoDB** — production database
-- **DigitalOcean Managed Elasticsearch** — production search
-- **DigitalOcean Spaces + CDN** — PDF and image object storage (S3-compatible)
+- DigitalOcean App Platform for both frontend and backend
+- DigitalOcean Managed MongoDB and Elasticsearch
+- DigitalOcean Spaces + CDN for PDF and image storage
 
 ## Prerequisites
 
-Before running the app you will need:
+You'll need the following before running the app:
 
-- **Node.js** v20 or higher and **npm**
-- A running **MongoDB** instance (local or managed)
-- A running **Elasticsearch** instance (local or managed)
-- A **Google Cloud project** with:
-  - OAuth 2.0 credentials (for Google Sign-In)
-  - A **Gemini API** key
-- An **S3-compatible object store** (DigitalOcean Spaces, AWS S3, or MinIO) with an access key, secret key, and bucket name
-- A **CrossRef** user-agent / email (for DOI enrichment; no API key required)
+- Node.js v20 or higher, and npm
+- A MongoDB instance (local or managed)
+- An Elasticsearch instance (local or managed)
+- A Google Cloud project with OAuth 2.0 credentials and a Gemini API key
+- An S3-compatible object store (DigitalOcean Spaces, AWS S3, or MinIO) with access key, secret key, and bucket name
+- A CrossRef contact email for the user-agent header (no API key needed)
 
 ## Getting Started
 
@@ -107,7 +101,7 @@ Start the backend:
 npm run dev
 ```
 
-The API will be available at `http://localhost:3001`.
+The API runs on `http://localhost:3001`.
 
 ### 3. Set up the frontend
 
@@ -132,45 +126,45 @@ Start the frontend:
 npm run dev
 ```
 
-The app will be available at `http://localhost:3000`.
+The app runs on `http://localhost:3000`.
 
 ### 4. Initial data
 
-The site administrator account, organization seeding, and Elasticsearch index creation are handled by backend startup scripts. On first launch the backend will create the `kms_posts` and `kms_papers` indices automatically. Refer to `code/backend/scripts/` for any seed or migration utilities.
+The backend creates the `kms_posts` and `kms_papers` Elasticsearch indices on first launch. Any seed or migration scripts live under `code/backend/scripts/`.
 
 ## Project Architecture
 
-### High-Level
+### High-level
 
-The system is a separated frontend and backend deployed on DigitalOcean App Platform. The Next.js frontend is compiled to a production bundle and communicates with the Express backend over a REST API using Axios. Authentication uses JWT session cookies set as `httpOnly`, `Secure`, and `SameSite=None` to allow cross-origin requests from the authenticated frontend. A persistent Socket.io websocket channel runs alongside the REST API to deliver real-time notifications.
+The frontend and backend are deployed separately on DigitalOcean App Platform. The Next.js frontend talks to the Express backend over a REST API using Axios, with auth handled by JWT session cookies (httpOnly, Secure, SameSite=None). A Socket.io websocket runs alongside the REST API for real-time notifications.
 
-### Polyglot Persistence (MongoDB + Elasticsearch)
+### Two databases (MongoDB and Elasticsearch)
 
-The application uses two databases to balance transactional integrity with search performance:
+The app uses two databases instead of one. MongoDB handles everything transactional: users, organizations, posts, papers, notifications, moderation logs, and the AI-insight cache. Elasticsearch stores denormalized projections of posts (`kms_posts`) and papers (`kms_papers`) optimized for search.
 
-- **MongoDB** stores all transactional and relational data: users, organizations, posts, papers, notifications, organization-creation requests, user activities, featured posts, reports, moderation logs, and the AI-insight cache. Mongoose is the ODM.
-- **Elasticsearch** stores denormalized projections of posts (`kms_posts` index) and papers (`kms_papers` index), optimized for full-text search and aggregations. Elasticsearch provides field-level boosting, BM25 relevance scoring, `<mark>` result highlighting, fuzzy matching, and analytics aggregations — capabilities MongoDB's text index lacks.
+Elasticsearch is there because MongoDB's text index can't do field-level boosting, BM25 relevance scoring, result highlighting, fuzzy matching, or the aggregations the analytics charts depend on.
 
-Synchronization from MongoDB to Elasticsearch is handled by Mongoose `post('save')` and `post('findOneAndUpdate')` hooks defined directly on the Post and Paper schemas. The hooks fire after each write and project the document into the corresponding Elasticsearch index, keeping the two stores consistent without a separate sync service.
+Syncing MongoDB to Elasticsearch is handled by Mongoose `post('save')` and `post('findOneAndUpdate')` hooks on the Post and Paper schemas. Every write fires a hook that projects the document into the matching Elasticsearch index. No separate sync service.
 
-### File Storage
+### File storage
 
-PDFs and images are uploaded to DigitalOcean Spaces (S3-compatible object storage) and served through the Spaces CDN. MongoDB persists only the CDN URL on the relevant document, keeping document size small and offloading file delivery to the CDN.
+PDFs and images go straight to DigitalOcean Spaces (S3-compatible) and are served through the Spaces CDN. MongoDB only stores the CDN URL, which keeps document size small.
 
-### AI Integration
+### AI integration
 
-- **Metadata extraction.** A PDF uploaded through the Submit-a-Post dialog is sent to Gemini 2.5 Flash as base64 with a prompt instructing it to return structured paper metadata. The result prefills the create-paper form for user review before submission — a human-in-the-loop design consistent with Human-Centered AI principles.
-- **Related insights.** When a post page is viewed, the backend requests a Gemini-generated summary, key themes, and research gaps related to the post's topics. Each insight is cached in MongoDB for 7 days to reduce Gemini API consumption.
+When a user uploads a paper, the PDF is sent to Gemini 2.5 Flash as base64 along with a prompt asking for structured metadata. The result prefills the create-paper form so the user can review and edit before saving (human-in-the-loop).
 
-### Authentication and Authorization
+For related insights, the backend asks Gemini for a summary, key themes, and research gaps related to the post's topics. Each insight is cached in MongoDB for 7 days to keep Gemini usage down.
 
-Google OAuth handles sign-in; the backend verifies the Google ID token and issues a JWT session cookie. Authorization is role-based:
+### Auth
 
-- **Site roles:** Registered User, Site Administrator
-- **Organization roles:** Follower, Member, Admin, Owner
+Google OAuth handles sign-in. The backend verifies the Google ID token and issues a JWT session cookie. Roles are split into two levels:
 
-Permissions cascade — for example, Organization Admins inherit all Member capabilities plus the ability to approve/reject posts, manage members, and bulk-upload papers.
+- Site: Registered User, Site Administrator
+- Organization: Follower, Member, Admin, Owner
+
+Permissions cascade. For example, Org Admins can do everything Members can, plus approve or reject posts, manage members, and bulk-upload papers.
 
 ### Deployment
 
-Both the frontend and backend are deployed as separate components on DigitalOcean App Platform (`sgp1` region). MongoDB and Elasticsearch run as DigitalOcean managed services. Object storage and CDN are handled by DigitalOcean Spaces. Outbound integrations are Google (OAuth + Gemini) and CrossRef.
+Frontend and backend run as separate components on DigitalOcean App Platform (`sgp1` region). MongoDB and Elasticsearch are DigitalOcean managed services. PDFs and images live in Spaces with CDN delivery. The only external APIs are Google (OAuth + Gemini) and CrossRef.
