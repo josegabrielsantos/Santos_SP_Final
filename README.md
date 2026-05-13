@@ -7,7 +7,7 @@ A Knowledge Management System (KMS) for food and nutrition security research, de
 - `code/` — Full source code for the web application
   - `code/frontend/` — Next.js client
   - `code/backend/` — Express.js API server
-- `Santos_manuscript.pdf` — Final thesis manuscript
+- `Santos_manuscript.pdf` — Final SP manuscript
 - `Santos_poster.pdf` — Defense poster
 - `Santos_journal.pdf` — Journal-format paper
 - `Santos_presentation.pdf` — Defense presentation slides
