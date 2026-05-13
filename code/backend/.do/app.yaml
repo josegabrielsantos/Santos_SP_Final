@@ -1,0 +1,69 @@
+name: kms-backend
+region: sgp1
+services:
+  - name: api
+    environment_slug: node-js
+    source_dir: .
+    build_command: npm ci --omit=dev
+    run_command: npm run start
+    http_port: 3001
+    health_check:
+      http_path: /api/health
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    envs:
+      - key: NODE_ENV
+        scope: RUN_TIME
+        value: production
+      - key: PORT
+        scope: RUN_TIME
+        value: "3001"
+      - key: FRONTEND_URL
+        scope: RUN_TIME
+        value: https://king-prawn-app-apx6t.ondigitalocean.app
+      - key: MONGO_URI
+        scope: RUN_TIME
+        type: SECRET
+        value: your_mongodb_connection_string
+      - key: JWT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: your_jwt_secret
+      - key: GOOGLE_CLIENT_ID
+        scope: RUN_TIME
+        value: 786829784177-pvntoed2n3g0t6u52j91v6n711k9cglc.apps.googleusercontent.com
+      - key: ELASTICSEARCH_URL
+        scope: RUN_TIME
+        value: http://your-elasticsearch-host:9200
+      - key: ELASTICSEARCH_USERNAME
+        scope: RUN_TIME
+        type: SECRET
+        value: your_elasticsearch_username
+      - key: ELASTICSEARCH_PASSWORD
+        scope: RUN_TIME
+        type: SECRET
+        value: your_elasticsearch_password
+      - key: DO_SPACES_ENDPOINT
+        scope: RUN_TIME
+        value: https://your-space-region.digitaloceanspaces.com
+      - key: DO_SPACES_REGION
+        scope: RUN_TIME
+        value: your-space-region
+      - key: DO_SPACES_BUCKET
+        scope: RUN_TIME
+        value: your-space-bucket
+      - key: DO_SPACES_CDN_ENDPOINT
+        scope: RUN_TIME
+        value: https://your-space-cdn-endpoint
+      - key: DO_SPACES_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: your_spaces_access_key
+      - key: DO_SPACES_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: your_spaces_secret_key
+      - key: GEMINI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: your_gemini_api_key

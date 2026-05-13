@@ -1,0 +1,56 @@
+import express from 'express';
+import { protectRoute, requireWebsiteAdmin } from '../middleware/protectRoute.js';
+import { getAllUsers, updateUserRole, toggleUserActive, getAdminStats } from '../controllers/user_controller.js';
+import { deactivateOrganization, hardDeleteOrganization, getAdminOrganizations } from '../controllers/organization_controller.js';
+import { getAdminCharts } from '../controllers/analytics_controller.js';
+import esClient, { syncExistingData, ensureIndexes } from '../elastic/elastic_client.js';
+import {
+  toggleHidePost,
+  adminDeletePost,
+  toggleHideComment,
+  adminDeleteComment,
+  toggleBanUser,
+  getModerationLogs,
+} from '../controllers/moderation_controller.js';
+import { getAdminReports } from '../controllers/report_controller.js';
+
+const router = express.Router();
+
+// Admin endpoints (all require website_admin role)
+router.get('/stats', protectRoute, requireWebsiteAdmin, getAdminStats);
+router.get('/analytics', protectRoute, requireWebsiteAdmin, getAdminCharts);
+router.get('/users', protectRoute, requireWebsiteAdmin, getAllUsers);
+router.patch('/users/:id/role', protectRoute, requireWebsiteAdmin, updateUserRole);
+router.patch('/users/:id/deactivate', protectRoute, requireWebsiteAdmin, toggleUserActive);
+router.patch('/users/:id/ban', protectRoute, requireWebsiteAdmin, toggleBanUser);
+router.get('/organizations', protectRoute, requireWebsiteAdmin, getAdminOrganizations);
+router.patch('/organizations/:id/deactivate', protectRoute, requireWebsiteAdmin, deactivateOrganization);
+router.delete('/organizations/:id', protectRoute, requireWebsiteAdmin, hardDeleteOrganization);
+
+// Post moderation (website_admin + org admins — controller checks org-level auth)
+router.patch('/posts/:id/hide', protectRoute, toggleHidePost);
+router.delete('/posts/:id', protectRoute, adminDeletePost);
+
+// Comment moderation (website_admin + org admins — controller checks org-level auth)
+router.patch('/comments/:id/hide', protectRoute, toggleHideComment);
+router.delete('/comments/:id', protectRoute, adminDeleteComment);
+
+// Moderation logs
+router.get('/moderation-logs', protectRoute, requireWebsiteAdmin, getModerationLogs);
+
+// Reports
+router.get('/reports', protectRoute, requireWebsiteAdmin, getAdminReports);
+
+router.post('/reindex', protectRoute, requireWebsiteAdmin, async (req, res) => {
+  try {
+    await esClient.indices.delete({ index: ['kms_posts', 'kms_papers'], ignore_unavailable: true });
+    await ensureIndexes();
+    await syncExistingData();
+    res.status(200).json({ message: 'Reindex complete.' });
+  } catch (err) {
+    console.log('Error in reindex:', err.message);
+    res.status(500).json({ error: 'Internal Server Error.' });
+  }
+});
+
+export default router;
